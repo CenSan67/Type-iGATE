@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(find / -iname \"*chromium-cli*\" 2>/dev/null | head -20)",
+      "Read(//c//**)",
+      "Bash(find / -maxdepth 6 -iname \"chrome.exe\" 2>/dev/null | head -3)",
+      "Bash(cp \"C:\\\\Users\\\\Cener\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Cener-OneDrive-Documents-CAPISTON-SKUL-JUAN-iGATE\\\\2ffd731a-ce65-4355-bee6-3de28678eb5f\\\\scratchpad\\\\test-payment.js\" \"/c/Users/Cener/OneDrive/Documents/CAPISTON/SKUL JUAN/iGATE/test-payment.mjs.cjs\")",
+      "Bash(cp test-payment.mjs.cjs test-payment.js)",
+      "Bash(node test-payment.js)",
+      "Bash(npm install *)",
+      "Bash(node test-profile2.js)",
+      "Bash(node test-remark.js)",
+      "Bash(node test-sidebar.js)"
+    ]
+  }
+}
