@@ -1,16 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
-
-const records = [
-  { date: 'April 22', time: '10:45 AM', name: 'Michael Jordan', plate: 'DEF-5678', department: 'BSIT', userType: 'Faculty', vehicle: 'Car', direction: 'IN' },
-  { date: 'April 23', time: '09:50 AM', name: 'Stephen Curry', plate: 'GHI-1234', department: 'BSIT', userType: 'Student', vehicle: 'Motorcycle', direction: 'OUT' },
-  { date: 'April 1', time: '09:13 AM', name: 'Kobe Bryant', plate: 'JKL-5678', department: 'BSIT', userType: 'Faculty', vehicle: 'Car', direction: 'IN' },
-  { date: 'April 10', time: '08:30 AM', name: 'Magic Johnson', plate: 'MNO-1234', department: 'BSIT', userType: 'Faculty', vehicle: 'Car', direction: 'IN' },
-  { date: 'April 14', time: '06:29 AM', name: 'Justin Brownlee', plate: 'PQRS-5678', department: 'BSIT', userType: 'Visitor', vehicle: 'Motorcycle', direction: 'OUT' },
-  { date: 'April 6', time: '07:29 AM', name: 'Lebron James', plate: 'WXY-1234', department: 'BSIT', userType: 'Student', vehicle: 'Motorcycle', direction: 'IN' },
-  { date: 'April 9', time: '11:29 AM', name: 'Larry Bird', plate: 'ZAB-5678', department: 'BSIT', userType: 'Faculty', vehicle: 'Car', direction: 'OUT' },
-  { date: 'April 20', time: '05:29 PM', name: 'Kevin Durant', plate: 'CDE-1234', department: 'BSIT', userType: 'Student', vehicle: 'Motorcycle', direction: 'IN' },
-]
+import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 
 const quickSelects = ['Today', 'This week', 'This month']
 
@@ -29,6 +19,7 @@ export default function ReportsPage(){
   const [userType, setUserType] = useState('All')
   const [vehicleType, setVehicleType] = useState('All')
   const [page, setPage] = useState(1)
+  const entries = useEnrichedGateLogs()
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
@@ -38,16 +29,28 @@ export default function ReportsPage(){
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
+  const records = useMemo(() => entries.map((entry) => ({
+    id: entry.id,
+    date: entry.timestamp ? new Date(entry.timestamp).toLocaleDateString([], { month: 'long', day: 'numeric' }) : '—',
+    time: entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—',
+    name: entry.name,
+    plate: entry.plateNumber,
+    department: entry.department,
+    userType: entry.role,
+    vehicle: entry.vehicleType,
+    direction: entry.direction,
+  })), [entries])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return records.filter((r) => {
-      const matchesQuery = !q || [r.name, r.plate, r.department, r.userType, r.vehicle].some((f) => f.toLowerCase().includes(q))
+      const matchesQuery = !q || [r.name, r.plate, r.department, r.userType, r.vehicle].some((f) => (f || '').toLowerCase().includes(q))
       const matchesStatus = status === 'All' || r.direction === status
       const matchesUserType = userType === 'All' || r.userType === userType
       const matchesVehicle = vehicleType === 'All' || r.vehicle === vehicleType
       return matchesQuery && matchesStatus && matchesUserType && matchesVehicle
     })
-  }, [query, status, userType, vehicleType])
+  }, [records, query, status, userType, vehicleType])
 
   return (
     <div className="dashboard-main">
@@ -100,7 +103,7 @@ export default function ReportsPage(){
                 </thead>
                 <tbody>
                   {filtered.map((r) => (
-                    <tr key={r.plate} className="activity-row">
+                    <tr key={r.id} className="activity-row">
                       <td>{r.date}</td>
                       <td>{r.time}</td>
                       <td className="report-link">{r.name}</td>

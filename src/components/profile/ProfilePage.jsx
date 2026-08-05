@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ChangePasswordModal from '../modals/ChangePasswordModal'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
+import { useAuth } from '../../context/AuthContext'
+import { listenToAdminProfile, saveAdminProfile } from '../../services/firebase'
 
 const STORAGE_KEY = 'igate_admin_profile'
 
@@ -19,7 +21,20 @@ const defaultProfile = {
 
 const roleOptions = ['Administrator', 'Super Admin', 'Staff', 'Security Guard']
 
-function loadProfile(){
+// Signed-in users get their profile from RTDB (adminProfiles/{uid}), keyed to their
+// real Firebase account. The hardcoded login bypass has no uid, so it falls back to
+// this localStorage copy instead of writing to a shared/unowned database record.
+function buildDefaultProfile(user){
+  return {
+    ...defaultProfile,
+    email: user?.email || defaultProfile.email,
+    joinedDate: user?.metadata?.creationTime
+      ? new Date(user.metadata.creationTime).toISOString().slice(0, 10)
+      : defaultProfile.joinedDate,
+  }
+}
+
+function loadLocalProfile(){
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     const parsed = raw ? { ...defaultProfile, ...JSON.parse(raw) } : defaultProfile
@@ -61,8 +76,9 @@ function ProfileField({ label, value, displayValue, editing, onChange, type = 't
 
 export default function ProfilePage(){
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [now, setNow] = useState(new Date())
-  const [profile, setProfile] = useState(loadProfile)
+  const [profile, setProfile] = useState(() => buildDefaultProfile(user))
   const [draft, setDraft] = useState(profile)
   const [editing, setEditing] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
@@ -72,12 +88,31 @@ export default function ProfilePage(){
     return () => clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    if (user?.uid) {
+      const unsub = listenToAdminProfile(user.uid, (stored) => {
+        const next = stored ? { ...buildDefaultProfile(user), ...stored } : buildDefaultProfile(user)
+        setProfile(next)
+        setDraft(next)
+      })
+      return () => unsub && unsub()
+    }
+
+    const local = loadLocalProfile()
+    setProfile(local)
+    setDraft(local)
+  }, [user?.uid])
+
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
   const persist = (next) => {
     setProfile(next)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    if (user?.uid) {
+      saveAdminProfile(user.uid, next)
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    }
   }
 
   const handleAvatarChange = (e) => {
@@ -158,7 +193,7 @@ export default function ProfilePage(){
 
           <div className="profile-fields-col">
             <ProfileField label="Full Name:" value={editing ? draft.fullName : profile.fullName} editing={editing} onChange={updateDraft('fullName')} />
-            <ProfileField label="Email:" value={editing ? draft.email : profile.email} editing={editing} onChange={updateDraft('email')} type="email" />
+            <ProfileField label="Email:" value={editing ? draft.email : profile.email} editing={editing && !user} onChange={updateDraft('email')} type="email" />
             <ProfileField label="Phone:" value={editing ? draft.phone : profile.phone} editing={editing} onChange={updateDraft('phone')} />
             <ProfileField label="Address:" value={editing ? draft.address : profile.address} editing={editing} onChange={updateDraft('address')} />
             <ProfileField label="Role:" value={editing ? draft.role : profile.role} editing={editing} onChange={updateDraft('role')} options={roleOptions} />

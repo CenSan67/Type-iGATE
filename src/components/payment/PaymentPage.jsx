@@ -2,15 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useAppState } from '../../context/AppStateContext'
 import RegistrationModal from '../modals/RegistrationModal'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
-
-const initialTransactions = [
-  { id: 'TXN-1001', date: '2026-04-22', time: '10:32 AM', rfid: 'RFID-1943K', name: 'Allan Escorpizo', department: 'BSIT', plate: 'ABC-3983', paymentType: 'Registration', amount: 250, status: 'Paid' },
-  { id: 'TXN-1002', date: '2026-04-20', time: '09:15 AM', rfid: 'RFID-3970', name: 'Jims Rid', department: 'BSIT', plate: 'ABC-3570', paymentType: 'Renewal', amount: 250, status: 'Paid' },
-  { id: 'TXN-1003', date: '2026-04-18', time: '01:05 PM', rfid: 'RFID-3570', name: 'Rey Declaro', department: 'BSIT', plate: 'ABC-4021', paymentType: 'Registration', amount: 250, status: 'Paid' },
-  { id: 'TXN-1004', date: '2026-04-15', time: '03:47 PM', rfid: 'RFID-4021', name: 'Cener Santos', department: 'BSIT', plate: 'ABC-8238', paymentType: 'Renewal', amount: 250, status: 'Paid' },
-]
+import { listenToPayments, recordPayment, upsertRfidUser } from '../../services/firebase'
 
 const PAGE_SIZE = 4
+const VALIDITY_MONTHS = 5
 
 const PdfIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 2h9l5 5v13a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><path d="M14 2v5h5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
@@ -27,7 +22,7 @@ function formatDate(iso){
 export default function PaymentPage(){
   const { state, dispatch } = useAppState()
   const [now, setNow] = useState(new Date())
-  const [transactions, setTransactions] = useState(initialTransactions)
+  const [transactions, setTransactions] = useState([])
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('All')
   const [paymentTypeFilter, setPaymentTypeFilter] = useState('All')
@@ -39,6 +34,24 @@ export default function PaymentPage(){
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    const unsub = listenToPayments((payments) => {
+      setTransactions(payments.map((p) => ({
+        id: p.id,
+        date: p.date || (p.timestamp ? new Date(p.timestamp).toISOString().slice(0, 10) : ''),
+        time: p.time || (p.timestamp ? new Date(p.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : ''),
+        rfid: p.rfidId || 'N/A',
+        name: p.name || 'Unknown',
+        department: p.department || '—',
+        plate: p.plateNumber || '—',
+        paymentType: p.paymentType || '—',
+        amount: Number(p.amount) || 0,
+        status: p.status || 'Paid',
+      })))
+    })
+    return () => unsub && unsub()
   }, [])
 
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
@@ -69,20 +82,38 @@ export default function PaymentPage(){
   const openRegistration = (type) => dispatch({ type: 'OPEN_MODAL', payload: { type: 'registration', initialType: type } })
   const closeModal = () => dispatch({ type: 'CLOSE_MODAL' })
 
-  const handleRegister = (form) => {
-    const next = {
-      id: `TXN-${1000 + transactions.length + 1}`,
-      date: now.toISOString().slice(0, 10),
-      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
-      rfid: form.rfid.trim(),
-      name: form.name.trim(),
-      department: form.department.trim() || 'BSIT',
-      plate: form.plate.trim().toUpperCase(),
+  const handleRegister = async (form) => {
+    const rfidId = form.rfid.trim()
+    const name = form.name.trim()
+    const department = form.department.trim() || 'BSIT'
+    const plateNumber = form.plate.trim().toUpperCase()
+
+    const validUntilDate = new Date(now)
+    validUntilDate.setMonth(validUntilDate.getMonth() + VALIDITY_MONTHS)
+
+    // A successful payment doubles as registration: it creates the rfidUsers
+    // record if this card is new, or refreshes it (and its 5-month validity) on renewal.
+    await upsertRfidUser({
+      rfidId,
+      name,
+      department,
+      plateNumber,
+      vehicleType: form.vehicle,
+      role: form.role,
+    })
+
+    await recordPayment({
+      rfidId,
+      name,
+      department,
+      plateNumber,
       paymentType: form.paymentType,
       amount: Number(form.amount) || 0,
       status: 'Paid',
-    }
-    setTransactions((list) => [next, ...list])
+      date: now.toISOString().slice(0, 10),
+      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+      validUntil: validUntilDate.getTime(),
+    })
     closeModal()
   }
 

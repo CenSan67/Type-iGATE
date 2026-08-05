@@ -1,14 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
-
-const accounts = [
-  { date: 'March 23, 2026', name: 'Allan Escorpizo', rfid: 'RFID-1943K', role: 'Student', vehicle: 'Car', payment: 'Paid', status: 'Active' },
-  { date: 'March 16, 2026', name: 'Jims Rid', rfid: 'RFID-3970', role: 'Faculty', vehicle: 'Motorcycle', payment: 'Unpaid', status: 'Expired' },
-  { date: 'March 3, 2026', name: 'Rey Declaro', rfid: 'RFID-3570', role: 'Student', vehicle: 'Car', payment: 'Paid', status: 'Active' },
-  { date: 'February 4, 2026', name: 'Cener Santos', rfid: 'RFID-4021', role: 'Visitor', vehicle: 'E-Bike', payment: 'Unpaid', status: 'Expired' },
-  { date: 'January 19, 2026', name: 'MJ Escoreal', rfid: 'RFID-YNDK', role: 'Student', vehicle: 'Car', payment: 'Paid', status: 'Active' },
-  { date: 'January 5, 2026', name: 'Grace Villanueva', rfid: 'RFID-8842', role: 'Faculty', vehicle: 'Car', payment: 'Paid', status: 'Active' },
-]
+import { listenToRfidUsers, listenToPayments } from '../../services/firebase'
 
 const filters = ['All', 'Paid', 'Unpaid', 'Active', 'Expired']
 
@@ -26,14 +18,46 @@ export default function AccountManagementPage(){
   const [now, setNow] = useState(new Date())
   const [activeFilter, setActiveFilter] = useState('All')
   const [query, setQuery] = useState('')
+  const [users, setUsers] = useState([])
+  const [payments, setPayments] = useState([])
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    const unsub = listenToRfidUsers(setUsers)
+    return () => unsub && unsub()
+  }, [])
+
+  useEffect(() => {
+    const unsub = listenToPayments(setPayments)
+    return () => unsub && unsub()
+  }, [])
+
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+
+  const accounts = useMemo(() => users.map((user) => {
+    const userPayments = payments.filter((p) => (p.rfidId || '').toLowerCase() === (user.rfidId || '').toLowerCase())
+    // "Paid" reflects whether a payment was ever made; "Active" reflects whether the
+    // most recent payment's 5-month validity window hasn't lapsed yet.
+    const latestPayment = userPayments.reduce((latest, p) => (!latest || (p.timestamp || 0) > (latest.timestamp || 0) ? p : latest), null)
+    const isActive = Boolean(latestPayment?.validUntil) && now.getTime() <= latestPayment.validUntil
+
+    return {
+      id: user.id,
+      date: user.createdAt ? new Date(user.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—',
+      name: user.name || 'Unknown',
+      rfid: user.rfidId || 'N/A',
+      role: user.role || '—',
+      vehicle: user.vehicleType || '—',
+      payment: userPayments.length > 0 ? 'Paid' : 'Unpaid',
+      status: isActive ? 'Active' : 'Expired',
+      validUntil: latestPayment?.validUntil ? new Date(latestPayment.validUntil).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—',
+    }
+  }), [users, payments, now])
 
   const summary = useMemo(() => ({
     total: accounts.length,
@@ -41,16 +65,16 @@ export default function AccountManagementPage(){
     unpaid: accounts.filter((a) => a.payment === 'Unpaid').length,
     active: accounts.filter((a) => a.status === 'Active').length,
     expired: accounts.filter((a) => a.status === 'Expired').length,
-  }), [])
+  }), [accounts])
 
   const filteredAccounts = useMemo(() => {
     return accounts.filter((a) => {
       const matchesFilter = activeFilter === 'All' || a.payment === activeFilter || a.status === activeFilter
       const q = query.trim().toLowerCase()
-      const matchesQuery = !q || [a.name, a.rfid, a.role, a.vehicle].some((field) => field.toLowerCase().includes(q))
+      const matchesQuery = !q || [a.name, a.rfid, a.role, a.vehicle].some((field) => (field || '').toLowerCase().includes(q))
       return matchesFilter && matchesQuery
     })
-  }, [activeFilter, query])
+  }, [accounts, activeFilter, query])
 
   return (
     <div className="dashboard-main">
@@ -149,11 +173,12 @@ export default function AccountManagementPage(){
                 <th>Vehicle</th>
                 <th>Payment</th>
                 <th>Status</th>
+                <th>Valid Until</th>
               </tr>
             </thead>
             <tbody>
               {filteredAccounts.map((row) => (
-                <tr key={row.rfid} className="activity-row">
+                <tr key={row.id} className="activity-row">
                   <td>{row.date}</td>
                   <td>{row.name}</td>
                   <td>{row.rfid}</td>
@@ -169,11 +194,12 @@ export default function AccountManagementPage(){
                       {row.status === 'Active' ? <CheckIcon /> : <AlertIcon />} {row.status}
                     </span>
                   </td>
+                  <td>{row.validUntil}</td>
                 </tr>
               ))}
               {filteredAccounts.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="accounts-empty">No accounts match your search or filter.</td>
+                  <td colSpan={8} className="accounts-empty">No accounts match your search or filter.</td>
                 </tr>
               )}
             </tbody>

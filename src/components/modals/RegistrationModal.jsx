@@ -1,7 +1,9 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import Modal from './Modal'
+import useRfidScanner from '../../hooks/useRfidScanner'
 
 const defaultAmounts = { Registration: 250, Renewal: 250 }
+const VALIDITY_MONTHS = 5
 
 export default function RegistrationModal({ initialType = 'Registration', onClose, onSubmit }){
   const [form, setForm] = useState({
@@ -11,9 +13,22 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
     department: 'BSIT',
     plate: '',
     vehicle: 'Car',
+    role: 'Student',
     amount: defaultAmounts[initialType] ?? 250,
   })
   const [error, setError] = useState('')
+  const { scanning, startScan, stopScan } = useRfidScanner()
+
+  const validUntilPreview = useMemo(() => {
+    const d = new Date()
+    d.setMonth(d.getMonth() + VALIDITY_MONTHS)
+    return d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
+  }, [])
+
+  const handleScan = () => {
+    setError('')
+    startScan((rfid) => setForm((f) => ({ ...f, rfid })))
+  }
 
   const update = (field) => (e) => {
     const value = e.target.value
@@ -45,7 +60,16 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
         </label>
         <label>
           RFID-ID
-          <input value={form.rfid} onChange={update('rfid')} placeholder="RFID-XXXXXXX" />
+          <div className="rfid-scan-row">
+            <input value={form.rfid} readOnly placeholder="Tap Scan RFID and present the card" />
+            <button
+              type="button"
+              className={`scan-btn ${scanning ? 'scanning' : ''}`}
+              onClick={scanning ? stopScan : handleScan}
+            >
+              {scanning ? 'Waiting for card…' : 'Scan RFID'}
+            </button>
+          </div>
         </label>
         <label>
           Full Name
@@ -68,9 +92,20 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
           </select>
         </label>
         <label>
+          Role
+          <select value={form.role} onChange={update('role')}>
+            <option>Student</option>
+            <option>Faculty</option>
+            <option>Staff</option>
+            <option>Visitor</option>
+          </select>
+        </label>
+        <label>
           Amount (₱)
           <input type="number" min="0" step="1" value={form.amount} onChange={update('amount')} />
         </label>
+
+        <p className="form-hint">Valid until {validUntilPreview}</p>
 
         {error && <p className="form-error">{error}</p>}
 

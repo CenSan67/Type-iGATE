@@ -23,9 +23,9 @@ export default function Sidebar({ open, onToggle, onOpen }){
   return (
     <aside className={`sidebar ${open ? 'open' : 'collapsed'}`} onClick={() => !open && onOpen()}>
       <button type="button" className="sidebar-toggle" onClick={(e) => { e.stopPropagation(); onToggle() }}>
-        <span />
-        <span />
-        <span />
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </button>
 
       <div className="sidebar-items">

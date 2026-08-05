@@ -3,31 +3,10 @@ import { useRemarks } from '../../hooks/useRemarks'
 import RemarkModal from '../modals/RemarkModal'
 import { RemarkTick } from '../shared/RemarkBadge'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
+import { listenToRfidUsers } from '../../services/firebase'
+import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 
 const searchTypes = ['Plate No.', 'RFID-ID', 'Name']
-
-const person = {
-  name: 'Jims Rid',
-  rfid: 'RFID-XZNXH03Q',
-  plate: 'ABC-3570',
-  role: 'Student',
-  vehicle: 'Car',
-  section: 'BSIT-3CG1',
-  dateRegistered: 'January 16, 2025',
-}
-
-const logs = [
-  { time: '10:45 AM', date: 'March 23, 2026', role: 'Student', direction: 'IN' },
-  { time: '4:00 PM', date: 'March 22, 2026', role: 'Student', direction: 'OUT' },
-  { time: '6:45 AM', date: 'March 22, 2026', role: 'Student', direction: 'IN' },
-  { time: '1:00 PM', date: 'March 21, 2026', role: 'Student', direction: 'OUT' },
-  { time: '6:30 AM', date: 'March 21, 2026', role: 'Student', direction: 'IN' },
-  { time: '3:00 PM', date: 'March 20, 2026', role: 'Student', direction: 'OUT' },
-  { time: '6:00 AM', date: 'March 19, 2026', role: 'Student', direction: 'IN' },
-  { time: '5:00 PM', date: 'March 19, 2026', role: 'Student', direction: 'OUT' },
-  { time: '7:45 AM', date: 'March 18, 2026', role: 'Student', direction: 'IN' },
-  { time: '5:00 PM', date: 'March 17, 2026', role: 'Student', direction: 'OUT' },
-]
 
 const PersonIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 12c2.7614 0 5-2.2386 5-5s-2.2386-5-5-5-5 2.2386-5 5 2.2386 5 5 5z" fill="currentColor" /><path d="M4 20c0-3.3137 2.6863-6 6-6h4c3.3137 0 6 2.6863 6 6v1H4v-1z" fill="currentColor" /></svg>
@@ -42,24 +21,50 @@ const SearchIcon = () => (
 export default function SearchHistoryPage(){
   const [now, setNow] = useState(new Date())
   const [searchType, setSearchType] = useState('Plate No.')
-  const [query, setQuery] = useState(person.plate)
-  const [submittedQuery, setSubmittedQuery] = useState(person.plate)
+  const [query, setQuery] = useState('')
+  const [submittedQuery, setSubmittedQuery] = useState('')
   const { remarks, saveRemark } = useRemarks()
   const [showRemarkModal, setShowRemarkModal] = useState(false)
+  const [users, setUsers] = useState([])
+  const entries = useEnrichedGateLogs()
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    const unsub = listenToRfidUsers(setUsers)
+    return () => unsub && unsub()
+  }, [])
+
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
-  const hasMatch = useMemo(() => {
+  const person = useMemo(() => {
     const q = submittedQuery.trim().toLowerCase()
-    if (!q) return false
-    return [person.plate, person.rfid, person.name].some((field) => field.toLowerCase().includes(q))
-  }, [submittedQuery])
+    if (!q) return null
+    return users.find((u) => {
+      if (searchType === 'Plate No.') return (u.plateNumber || '').toLowerCase().includes(q)
+      if (searchType === 'RFID-ID') return (u.rfidId || '').toLowerCase().includes(q)
+      return (u.name || '').toLowerCase().includes(q)
+    }) || null
+  }, [users, submittedQuery, searchType])
+
+  const logs = useMemo(() => {
+    if (!person?.rfidId) return []
+    const rfid = person.rfidId.toString().toLowerCase()
+    return entries
+      .filter((entry) => (entry.rfidId || '').toString().toLowerCase() === rfid)
+      .map((entry) => ({
+        time: entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—',
+        date: entry.timestamp ? new Date(entry.timestamp).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—',
+        role: person.role || '—',
+        direction: entry.direction,
+      }))
+  }, [entries, person])
+
+  const hasMatch = Boolean(person)
 
   return (
     <div className="dashboard-main">
@@ -121,15 +126,15 @@ export default function SearchHistoryPage(){
                 <span className="result-avatar"><PersonIcon /></span>
                 <div>
                   <span className="name-with-remark">
-                    <strong>{person.name}</strong>
-                    {remarks[person.rfid] && <RemarkTick onClick={() => setShowRemarkModal(true)} title="View remark" />}
+                    <strong>{person.name || 'Unknown'}</strong>
+                    {remarks[person.rfidId] && <RemarkTick onClick={() => setShowRemarkModal(true)} title="View remark" />}
                   </span>
-                  <div className="result-rfid">{person.rfid}</div>
+                  <div className="result-rfid">{person.rfidId}</div>
                 </div>
-                <span className="plate-pill">{person.plate}</span>
-                <span className="tag-pill">{person.role}</span>
-                <span className="tag-pill">{person.vehicle}</span>
-                <span className="tag-pill">{person.section}</span>
+                <span className="plate-pill">{person.plateNumber || '—'}</span>
+                <span className="tag-pill">{person.role || '—'}</span>
+                <span className="tag-pill">{person.vehicleType || '—'}</span>
+                <span className="tag-pill">{person.department || '—'}</span>
               </div>
 
               <table className="activity-table">
@@ -142,7 +147,9 @@ export default function SearchHistoryPage(){
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log, i) => (
+                  {logs.length === 0 ? (
+                    <tr><td colSpan={4} className="empty-state">No gate activity recorded for this RFID yet.</td></tr>
+                  ) : logs.map((log, i) => (
                     <tr key={i} className="activity-row">
                       <td>{log.time}</td>
                       <td>{log.date}</td>
@@ -167,7 +174,7 @@ export default function SearchHistoryPage(){
               <div className="camera-card">
                 <div className="camera-feed">
                   <CameraIcon />
-                  <div className="camera-caption"><span className="rec-dot" /> CAM-IN | {logs[0].time}</div>
+                  <div className="camera-caption"><span className="rec-dot" /> CAM-IN | {logs[0]?.time || '—'}</div>
                 </div>
               </div>
 
@@ -176,16 +183,16 @@ export default function SearchHistoryPage(){
                 <div className="info-person">
                   <span className="result-avatar"><PersonIcon /></span>
                   <div>
-                    <strong>{person.name}</strong>
-                    <div><span className="tag-pill role-pill">{person.role}</span></div>
+                    <strong>{person.name || 'Unknown'}</strong>
+                    <div><span className="tag-pill role-pill">{person.role || '—'}</span></div>
                   </div>
                 </div>
                 <div className="info-rows">
-                  <div className="info-row"><span>RFID-ID:</span><span>{person.rfid}</span></div>
-                  <div className="info-row"><span>Plate No:</span><span className="plate-pill">{person.plate}</span></div>
-                  <div className="info-row"><span>Vehicle Type:</span><span>{person.vehicle}</span></div>
-                  <div className="info-row"><span>Section:</span><span>{person.section}</span></div>
-                  <div className="info-row"><span>Date Registered:</span><span>{person.dateRegistered}</span></div>
+                  <div className="info-row"><span>RFID-ID:</span><span>{person.rfidId}</span></div>
+                  <div className="info-row"><span>Plate No:</span><span className="plate-pill">{person.plateNumber || '—'}</span></div>
+                  <div className="info-row"><span>Vehicle Type:</span><span>{person.vehicleType || '—'}</span></div>
+                  <div className="info-row"><span>Department:</span><span>{person.department || '—'}</span></div>
+                  <div className="info-row"><span>Date Registered:</span><span>{person.createdAt ? new Date(person.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—'}</span></div>
                 </div>
               </div>
 
@@ -207,10 +214,10 @@ export default function SearchHistoryPage(){
       {showRemarkModal && (
         <RemarkModal
           name={person.name}
-          rfid={person.rfid}
-          initialRemark={remarks[person.rfid]}
+          rfid={person.rfidId}
+          initialRemark={remarks[person.rfidId]}
           onClose={() => setShowRemarkModal(false)}
-          onSave={(text) => saveRemark(person.rfid, text)}
+          onSave={(text) => saveRemark(person.rfidId, text)}
         />
       )}
     </div>

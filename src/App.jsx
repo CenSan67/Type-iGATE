@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './components/auth/LoginForm'
 import DashboardWrapper from './components/dashboard/DashboardWrapper'
@@ -10,8 +10,13 @@ import SettingsWrapper from './components/settings/SettingsWrapper'
 import ProfileWrapper from './components/profile/ProfileWrapper'
 import { AuthProvider } from './context/AuthContext'
 import { AppStateProvider } from './context/AppStateContext'
+import { initializeFirebaseCollections } from './services/firebase'
 
 export default function App() {
+  useEffect(() => {
+    initializeFirebaseCollections()
+  }, [])
+
   return (
     <AuthProvider>
       <AppStateProvider>

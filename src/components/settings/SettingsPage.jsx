@@ -1,22 +1,29 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import GateButton from './GateButton'
 import ChangePasswordModal from '../modals/ChangePasswordModal'
 import { logOut } from '../../services/auth'
+import { useAuth } from '../../context/AuthContext'
+import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
 
-const initialLogs = [
-  { id: 1, text: 'RFID Detected - Car (ABC-3983)', tone: 'warn' },
-  { id: 2, text: 'Gate Opened - 10:23 AM', tone: 'success' },
-  { id: 3, text: 'Login Success - Admin', tone: 'success' },
-]
+const VISIBLE_LOGS_COLLAPSED = 3
+const VISIBLE_LOGS_EXPANDED = 20
 
-const olderLogs = [
-  { id: 4, text: 'Gate Closed - 10:26 AM', tone: 'warn' },
-  { id: 5, text: 'RFID Detected - Motorcycle (ABC-3570)', tone: 'warn' },
-  { id: 6, text: 'Gate Opened - 09:50 AM', tone: 'success' },
-  { id: 7, text: 'Login Success - Admin', tone: 'success' },
-]
+// Turns a real RTDB gate scan (from useEnrichedGateLogs) into the same
+// {id, text, tone, timestamp} shape as the locally-generated toggle/login entries,
+// so both can be merged into one chronological "Recent Logs" list.
+function scanEntryToLog(entry){
+  const time = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
+  const vehicle = entry.vehicleType && entry.vehicleType !== '—' ? entry.vehicleType : 'Vehicle'
+  const plate = entry.plateNumber && entry.plateNumber !== '—' ? ` (${entry.plateNumber})` : ''
+  return {
+    id: `scan-${entry.id}`,
+    text: `RFID ${entry.direction === 'OUT' ? 'Exit' : 'Entry'} - ${vehicle}${plate} - ${time}`,
+    tone: entry.direction === 'OUT' ? 'warn' : 'success',
+    timestamp: entry.timestamp || 0,
+  }
+}
 
 const CheckIcon = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -36,18 +43,34 @@ const LogoutIcon = () => (
 
 export default function SettingsPage(){
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [now, setNow] = useState(new Date())
   const [entranceOpen, setEntranceOpen] = useState(false)
   const [exitOpen, setExitOpen] = useState(false)
-  const [logs, setLogs] = useState(initialLogs)
+  const [sessionLogs, setSessionLogs] = useState([])
   const [showAllLogs, setShowAllLogs] = useState(false)
   const [modal, setModal] = useState(null)
   const [loggingOut, setLoggingOut] = useState(false)
+  const scanEntries = useEnrichedGateLogs()
+  const loggedLoginRef = useRef(false)
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
+
+  // Records a real login event the first time an authenticated user shows up in this
+  // session (the hardcoded bypass login has no `user`, so it won't produce one).
+  useEffect(() => {
+    if (user && !loggedLoginRef.current) {
+      loggedLoginRef.current = true
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+      setSessionLogs((list) => [
+        { id: `login-${Date.now()}`, text: `Login Success - ${user.email || 'Admin'} - ${time}`, tone: 'success', timestamp: Date.now() },
+        ...list,
+      ])
+    }
+  }, [user])
 
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
@@ -59,8 +82,8 @@ export default function SettingsPage(){
 
     const label = gate === 'entrance' ? 'Entrance Gate' : 'Exit Gate'
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-    setLogs((list) => [
-      { id: Date.now(), text: `${label} ${willOpen ? 'Opened' : 'Closed'} - ${time}`, tone: willOpen ? 'success' : 'warn' },
+    setSessionLogs((list) => [
+      { id: `toggle-${Date.now()}`, text: `${label} ${willOpen ? 'Opened' : 'Closed'} - ${time}`, tone: willOpen ? 'success' : 'warn', timestamp: Date.now() },
       ...list,
     ])
   }
@@ -74,7 +97,10 @@ export default function SettingsPage(){
     }
   }
 
-  const visibleLogs = showAllLogs ? [...logs, ...olderLogs] : logs
+  const visibleLogs = useMemo(() => {
+    const combined = [...sessionLogs, ...scanEntries.map(scanEntryToLog)].sort((a, b) => b.timestamp - a.timestamp)
+    return combined.slice(0, showAllLogs ? VISIBLE_LOGS_EXPANDED : VISIBLE_LOGS_COLLAPSED)
+  }, [sessionLogs, scanEntries, showAllLogs])
 
   return (
     <div className="dashboard-main">
@@ -111,7 +137,9 @@ export default function SettingsPage(){
           <div>
             <div className="settings-card-header">Recent Logs</div>
             <div className="logs-list-card">
-              {visibleLogs.map((log) => (
+              {visibleLogs.length === 0 ? (
+                <div className="log-item empty-state">No activity recorded yet.</div>
+              ) : visibleLogs.map((log) => (
                 <div key={log.id} className="log-item">
                   <span className={`log-dot ${log.tone}`}>{log.tone === 'success' ? <CheckIcon /> : <AlertIcon />}</span>
                   <span>{log.text}</span>

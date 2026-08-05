@@ -17,5 +17,5 @@ npm run dev
 ```
 
 Notes:
-- This scaffold uses Vite + React + Firebase modular SDK (v9+)
+- Uses Vite + React + Firebase modular SDK (v9+) — Auth + Realtime Database (not Firestore)
 - Implement UI components according to the provided wireframes in `src/components`

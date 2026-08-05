@@ -1,25 +1,54 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRemarks } from '../../hooks/useRemarks'
 import RemarkModal from '../modals/RemarkModal'
+import RegisterRfidModal from '../modals/RegisterRfidModal'
 import { RemarkAddButton, RemarkTick } from '../shared/RemarkBadge'
-
-const sampleLogs = [
-  { time: '10:45 AM', rfid: 'RFID-Y9AX103K', plate: 'ABC-3983', name: 'Allan Escorpizo', vehicle: 'Car', department: 'BSIT', role: 'Student', direction: 'IN' },
-  { time: '09:50 AM', rfid: 'RFID-XZNXH03Q', plate: 'ABC-3570', name: 'Jims Rid', vehicle: 'Motorcycle', department: 'BSIT', role: 'Faculty', direction: 'IN' },
-  { time: '09:13 AM', rfid: 'RFID-1HDKKPOQ', plate: 'ABC-4021', name: 'Rey Declaro', vehicle: 'Car', department: 'BSIT', role: 'Student', direction: 'IN' },
-  { time: '08:30 AM', rfid: 'RFID-D47YKD4H', plate: 'ABC-8238', name: 'Cener Santos', vehicle: 'Motorcycle', department: 'BSIT', role: 'Visitor', direction: 'OUT' },
-  { time: '06:29 AM', rfid: 'RFID-NF41YLYY', plate: 'ABC-4736', name: 'MJ Escoreal', vehicle: 'E-Bike', department: 'BSIT', role: 'Faculty', direction: 'OUT' },
-]
+import { listenToGateLogs } from '../../services/firebase'
 
 export default function RecentActivityTable(){
   const { remarks, saveRemark } = useRemarks()
   const [activeRow, setActiveRow] = useState(null)
+  const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [logs, setLogs] = useState([])
+
+  useEffect(() => {
+    const unsub = listenToGateLogs((entries) => {
+      const nextLogs = entries
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+        .slice(0, 5)
+        .map((entry) => {
+          const rawDirection = entry.direction || entry.dir || 'IN'
+          const normalizedDirection = rawDirection.toString().trim().toUpperCase()
+
+          return {
+            ...entry,
+            name: entry.name || entry.userName || 'Unknown',
+            plateNumber: entry.plateNumber || entry.plate || '—',
+            vehicleType: entry.vehicleType || entry.vehicle || '—',
+            department: entry.department || '—',
+            role: entry.role || '—',
+            direction: normalizedDirection === 'OUT' ? 'OUT' : 'IN',
+            time: entry.timestamp && typeof entry.timestamp === 'number'
+              ? new Date(entry.timestamp).toLocaleString()
+              : 'Pending'
+          }
+        })
+      setLogs(nextLogs)
+    })
+
+    return () => unsub && unsub()
+  }, [])
 
   return (
     <div className="activity-panel">
       <div className="activity-header">
-        <h3>Recent Vehicle Activity</h3>
-        <p>Real-time entry and exit logs</p>
+        <div>
+          <h3>Recent Vehicle Activity</h3>
+          <p>Real-time entry and exit logs</p>
+        </div>
+        <button className="primary-btn" type="button" onClick={() => setShowRegisterModal(true)}>
+          Register RFID
+        </button>
       </div>
       <table className="activity-table">
         <thead>
@@ -31,26 +60,30 @@ export default function RecentActivityTable(){
             <th>Vehicle</th>
             <th>Department</th>
             <th>Role</th>
-            <th>Dir</th>
+            <th>Direction</th>
           </tr>
         </thead>
         <tbody>
-          {sampleLogs.map((row) => (
-            <tr key={row.rfid} className="activity-row">
+          {logs.length === 0 ? (
+            <tr>
+              <td colSpan="8" className="empty-state">No RFID activity yet.</td>
+            </tr>
+          ) : logs.map((row) => (
+            <tr key={row.id} className="activity-row">
               <td>{row.time}</td>
-              <td>{row.rfid}</td>
-              <td>{row.plate}</td>
+              <td>{row.cardId || row.rfidId || 'N/A'}</td>
+              <td>{row.plateNumber || '—'}</td>
               <td>
                 <span className="name-with-remark">
-                  {row.name}
+                  {row.name || 'Unknown'}
                   <RemarkAddButton onClick={() => setActiveRow(row)} />
-                  {remarks[row.rfid] && <RemarkTick onClick={() => setActiveRow(row)} />}
+                  {remarks[row.id] && <RemarkTick onClick={() => setActiveRow(row)} />}
                 </span>
               </td>
-              <td>{row.vehicle}</td>
-              <td>{row.department}</td>
-              <td>{row.role}</td>
-              <td>{row.direction === 'IN' ? <span className="direction-in">+ IN</span> : <span className="direction-out">- OUT</span>}</td>
+              <td>{row.vehicleType || row.vehicle || '—'}</td>
+              <td>{row.department || '—'}</td>
+              <td>{row.role || '—'}</td>
+              <td>{row.direction === 'OUT' ? <span className="direction-out">- OUT</span> : <span className="direction-in">+ IN</span>}</td>
             </tr>
           ))}
         </tbody>
@@ -58,13 +91,20 @@ export default function RecentActivityTable(){
 
       {activeRow && (
         <RemarkModal
-          name={activeRow.name}
-          rfid={activeRow.rfid}
-          initialRemark={remarks[activeRow.rfid]}
+          name={activeRow.name || activeRow.cardId || 'Unknown'}
+          rfid={activeRow.id}
+          initialRemark={remarks[activeRow.id]}
           onClose={() => setActiveRow(null)}
-          onSave={(text) => saveRemark(activeRow.rfid, text)}
+          onSave={(text) => saveRemark(activeRow.id, text)}
         />
       )}
+
+      {showRegisterModal ? (
+        <RegisterRfidModal
+          onClose={() => setShowRegisterModal(false)}
+          onRegistered={() => setShowRegisterModal(false)}
+        />
+      ) : null}
     </div>
   )
 }
