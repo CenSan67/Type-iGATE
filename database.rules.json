@@ -2,8 +2,8 @@
   "rules": {
     "gateLogs": {
       ".read": "auth != null",
-      ".write": "auth != null",
       "$logId": {
+        ".write": "auth != null && (!data.exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' || (newData.exists() && data.child('cardId').val() === newData.child('cardId').val() && data.child('cardHex').val() === newData.child('cardHex').val() && data.child('direction').val() === newData.child('direction').val() && data.child('timestamp').val() === newData.child('timestamp').val() && data.child('source').val() === newData.child('source').val()))",
         ".validate": "newData.hasChild('timestamp') && newData.child('timestamp').isNumber() && (!newData.hasChild('direction') || newData.child('direction').val() === 'IN' || newData.child('direction').val() === 'OUT')",
 
         "imageUrl": {
@@ -18,8 +18,16 @@
         ".write": "auth != null && (newData.exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
         ".validate": "newData.hasChildren(['name', 'rfidId']) && newData.child('name').isString() && newData.child('rfidId').isString()",
 
+        "rfidId": {
+          ".validate": "!data.exists() || data.val() === newData.val() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator'"
+        },
+
         "email": {
           ".validate": "newData.val() == '' || newData.val().matches(/^[^@]+@[^@]+\\.[^@]+$/)"
+        },
+
+        "phone": {
+          ".validate": "newData.val() == '' || newData.val().matches(/^09[0-9]{9}$/)"
         },
 
         "status": {
@@ -34,8 +42,8 @@
 
     "payments": {
       ".read": "auth != null",
-      ".write": "auth != null",
       "$paymentId": {
+        ".write": "auth != null && (!data.exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
         ".validate": "newData.hasChildren(['rfidId', 'amount']) && newData.child('rfidId').isString() && newData.child('amount').isNumber()"
       }
     },
@@ -54,10 +62,11 @@
     "settings": {
       "app": {
         ".read": "auth != null",
-        ".write": "auth != null",
+        ".write": "auth != null && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
         ".validate": "newData.hasChild('appName')",
 
         "gateStatus": {
+          ".write": "auth != null",
           ".validate": "newData.hasChildren(['state', 'updatedAt']) && (newData.child('state').val() === 'OPEN' || newData.child('state').val() === 'CLOSED') && newData.child('updatedAt').isNumber()"
         }
       }
@@ -66,9 +75,14 @@
     "users": {
       "system": {
         ".read": "auth != null",
-        ".write": "auth != null",
+        ".write": "auth != null && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
         ".validate": "newData.hasChild('displayName')"
       }
+    },
+
+    "smsLogs": {
+      ".read": "auth != null",
+      ".write": false
     }
   }
 }

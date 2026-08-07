@@ -57,7 +57,7 @@ export async function logGateEntry({ cardId, cardHex, direction = 'IN', source =
   return entryRef.key
 }
 
-export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email }) {
+export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, phone, expiresAt, hostName, purpose }) {
   const usersRef = ref(rtdb, 'rfidUsers')
   const snapshot = await get(usersRef)
   const existingUsers = snapshot.exists() ? Object.values(snapshot.val() || {}) : []
@@ -67,7 +67,7 @@ export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType,
   }
 
   const newUserRef = push(usersRef)
-  await set(newUserRef, validateRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, createdAt: Date.now() }))
+  await set(newUserRef, validateRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, phone, expiresAt, hostName, purpose, createdAt: Date.now() }))
 
   return newUserRef.key
 }
@@ -75,7 +75,7 @@ export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType,
 // Used by the Payment flow: a successful payment registers the card if it's new,
 // or refreshes its details if it's a renewal — unlike registerRfidUser, it never
 // throws on an existing RFID since renewals are expected to already be registered.
-export async function upsertRfidUser({ rfidId, name, department, plateNumber, vehicleType, role, email }) {
+export async function upsertRfidUser({ rfidId, name, department, plateNumber, vehicleType, role, email, phone }) {
   const usersRef = ref(rtdb, 'rfidUsers')
   const snapshot = await get(usersRef)
   const existing = snapshot.exists() ? Object.entries(snapshot.val() || {}) : []
@@ -91,12 +91,13 @@ export async function upsertRfidUser({ rfidId, name, department, plateNumber, ve
       vehicleType: vehicleType || value.vehicleType,
       role: role || value.role,
       email: email || value.email,
+      phone: phone || value.phone,
     }))
     return id
   }
 
   const newUserRef = push(usersRef)
-  await set(newUserRef, validateRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, createdAt: Date.now() }))
+  await set(newUserRef, validateRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, phone, createdAt: Date.now() }))
 
   return newUserRef.key
 }

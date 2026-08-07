@@ -16,11 +16,15 @@ import { initializeFirebaseCollections } from './services/firebase'
 import { ADMIN_ROLES } from './constants/roles'
 
 function AppRoutes() {
-  const { user } = useAuth()
+  const { user, role, loading } = useAuth()
 
+  // Phase 9: settings/app and users/system are now Super Admin/Administrator-only
+  // writes (database.rules.json) - this bootstrap seed would otherwise throw a
+  // permission-denied on every Security Guard login. Only admins need to run it
+  // anyway, since it's an idempotent seed, not something every login must repeat.
   useEffect(() => {
-    if (user) initializeFirebaseCollections()
-  }, [user])
+    if (!loading && user && ADMIN_ROLES.includes(role)) initializeFirebaseCollections()
+  }, [user, role, loading])
 
   return (
     <Routes>

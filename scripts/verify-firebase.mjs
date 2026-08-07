@@ -15,11 +15,20 @@
 //   IGATE_TEST_EMAIL=you@bulsu.edu.ph IGATE_TEST_PASSWORD=****** node scripts/verify-firebase.mjs
 // CLI flags also work if you prefer:
 //   node scripts/verify-firebase.mjs --email you@bulsu.edu.ph --password ******
+//
+// Phase 9: the authenticated section below reads the account's OWN role back from
+// adminProfiles/{uid} first, then picks expectAllowed vs expectDenied per-check based
+// on whether that role is Super Admin/Administrator or Security Guard - so the exact
+// same script correctly validates EITHER direction depending on which account you run
+// it with. To fully cover the RBAC audit, run this TWICE: once with a Security Guard
+// account, once with an Administrator or Super Admin account.
 
 import { initializeApp } from 'firebase/app'
 import { getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { getDatabase, ref, set, get, remove, push } from 'firebase/database'
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+
+const ADMIN_ROLES = ['Super Admin', 'Administrator']
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCiUx-CAXk45UrgEGW99fbIO2rOJ84-B7o',
@@ -74,6 +83,14 @@ async function expectAllowed(name, op) {
   }
 }
 
+// Picks expectAllowed vs expectDenied based on the CURRENT account's role, so the
+// same admin-gated check works correctly whichever role's credentials this script is
+// run with (see the Phase 9 note at the top of this file).
+async function expectAllowedIfAdmin(isAdmin, name, op) {
+  const label = `${name} (as ${isAdmin ? 'admin' : 'non-admin'})`
+  return isAdmin ? expectAllowed(label, op) : expectDenied(label, op)
+}
+
 async function main() {
   console.log('--- iGate Firebase RTDB verification ---\n')
   console.log('Unauthenticated checks (rules should deny all of these):')
@@ -92,34 +109,60 @@ async function main() {
       const uid = cred.user.uid
       record('Sign in with provided Firebase Auth account', true, uid)
 
-      await expectAllowed('Read own adminProfiles/{uid}', async () => {
-        const snap = await get(ref(db, `adminProfiles/${uid}`))
-        return snap.exists() ? `role: ${snap.val().role}` : 'no profile found for this uid'
-      })
+      const profileSnap = await get(ref(db, `adminProfiles/${uid}`))
+      const role = profileSnap.exists() ? profileSnap.val().role : null
+      const isAdmin = ADMIN_ROLES.includes(role)
+      console.log(`  -> signed-in role: ${role || '(no adminProfiles record found)'} (isAdmin=${isAdmin})\n`)
+
+      await expectAllowed('Read own adminProfiles/{uid}', async () => `role: ${role}`)
 
       await expectDenied('Read entire adminProfiles tree (should be scoped to owner only)', () => get(ref(db, 'adminProfiles')))
 
       let gateLogKey = null
-      await expectAllowed('Authenticated write to gateLogs', async () => {
+      await expectAllowed('Create a NEW gateLogs entry (any authenticated role)', async () => {
         const newRef = push(ref(db, 'gateLogs'))
-        await set(newRef, { cardId: 'TEST-CARD', cardHex: 'DEADBEEF', source: 'verify-script', timestamp: Date.now() })
+        await set(newRef, { cardId: 'TEST-CARD', cardHex: 'DEADBEEF', direction: 'IN', source: 'verify-script', timestamp: Date.now() })
         gateLogKey = newRef.key
         return gateLogKey
       })
-      if (gateLogKey) await remove(ref(db, `gateLogs/${gateLogKey}`)).catch(() => {})
+
+      if (gateLogKey) {
+        await expectAllowed('Attach imageUrl to an EXISTING gateLogs entry (any authenticated role)', () =>
+          set(ref(db, `gateLogs/${gateLogKey}/imageUrl`), 'https://example.com/test.png')
+        )
+        // Phase 9: core fields (direction/cardId/cardHex/timestamp/source) of an EXISTING
+        // gateLogs entry are now admin-only - see database.rules.json.
+        await expectAllowedIfAdmin(isAdmin, 'Change direction on an EXISTING gateLogs entry', () =>
+          set(ref(db, `gateLogs/${gateLogKey}/direction`), 'OUT')
+        )
+        // Deleting an existing entry is admin-only; a non-admin run will correctly fail
+        // to clean this up (rules working as intended) - delete TEST-CARD entries
+        // manually via an admin account/the console afterward if that happens.
+        await expectAllowedIfAdmin(isAdmin, 'Delete an EXISTING gateLogs entry', () => remove(ref(db, `gateLogs/${gateLogKey}`)))
+      }
 
       let rfidKey = null
-      await expectAllowed('Authenticated write of a VALID rfidUser (create)', async () => {
+      const originalRfidId = `TEST-${Date.now()}`
+      await expectAllowed('Create a NEW rfidUser (any authenticated role)', async () => {
         const newRef = push(ref(db, 'rfidUsers'))
-        await set(newRef, { name: 'Test Seed User', rfidId: `TEST-${Date.now()}`, plateNumber: 'TEST-0000', vehicleType: 'Car', department: 'BSIT', role: 'Student', status: 'Active', email: '', createdAt: Date.now() })
+        await set(newRef, { name: 'Test Seed User', rfidId: originalRfidId, plateNumber: 'TEST-0000', vehicleType: 'Car', department: 'BSIT', role: 'Student', status: 'Active', email: '', phone: '', createdAt: Date.now() })
         rfidKey = newRef.key
         return rfidKey
       })
 
       if (rfidKey) {
-        await expectAllowed('Admin can change rfidUser status (deactivate)', () => set(ref(db, `rfidUsers/${rfidKey}/status`), 'Inactive'))
+        await expectAllowed('Any authenticated role can update a non-identity field (department) on an EXISTING rfidUser', () =>
+          set(ref(db, `rfidUsers/${rfidKey}/department`), 'BSCS')
+        )
+        // Phase 9: reassigning an EXISTING rfidUser's rfidId (which physical card it's
+        // bound to) is now admin-only - see database.rules.json.
+        await expectAllowedIfAdmin(isAdmin, 'Reassign rfidId on an EXISTING rfidUser', () =>
+          set(ref(db, `rfidUsers/${rfidKey}/rfidId`), `${originalRfidId}-REASSIGNED`)
+        )
+        await expectAllowedIfAdmin(isAdmin, 'Change rfidUser status (deactivate)', () => set(ref(db, `rfidUsers/${rfidKey}/status`), 'Inactive'))
         await expectDenied('Schema validation: malformed email on rfidUser is rejected', () => set(ref(db, `rfidUsers/${rfidKey}/email`), 'not-an-email'))
-        await expectAllowed('Admin can delete an rfidUser', () => remove(ref(db, `rfidUsers/${rfidKey}`)))
+        await expectDenied('Schema validation: malformed phone on rfidUser is rejected', () => set(ref(db, `rfidUsers/${rfidKey}/phone`), '12345'))
+        await expectAllowedIfAdmin(isAdmin, 'Delete an rfidUser', () => remove(ref(db, `rfidUsers/${rfidKey}`)))
       }
 
       await expectDenied('Schema validation: rfidUser missing required "name" is rejected', () =>
@@ -129,6 +172,31 @@ async function main() {
       await expectDenied('Schema validation: adminProfiles role outside the enum ("Staff") is rejected', () =>
         set(ref(db, `adminProfiles/${uid}/role`), 'Staff')
       )
+
+      // Phase 9: settings/app (appName/campus/status/createdAt) is now admin-only,
+      // but gateStatus is deliberately carved out - Security Guards must retain the
+      // ability to trigger the manual barrier-gate override from the Dashboard
+      // (Phase 6, existing/working functionality this phase must not break).
+      await expectAllowedIfAdmin(isAdmin, 'Write settings/app/campus (general app settings)', () =>
+        set(ref(db, 'settings/app/campus'), 'Bustos Campus')
+      )
+      await expectAllowed('Write settings/app/gateStatus (any authenticated role - Phase 6 guard override)', () =>
+        set(ref(db, 'settings/app/gateStatus'), { state: 'CLOSED', updatedAt: Date.now(), updatedBy: uid, updatedByName: email })
+      )
+
+      // Phase 9: payments are append-only for non-admins - create is fine, modifying/
+      // deleting an EXISTING payment record is admin-only.
+      let paymentKey = null
+      await expectAllowed('Create a NEW payment record (any authenticated role)', async () => {
+        const newRef = push(ref(db, 'payments'))
+        await set(newRef, { rfidId: originalRfidId, amount: 1, name: 'verify-script', status: 'Paid', timestamp: Date.now() })
+        paymentKey = newRef.key
+        return paymentKey
+      })
+      if (paymentKey) {
+        await expectAllowedIfAdmin(isAdmin, 'Modify an EXISTING payment record', () => set(ref(db, `payments/${paymentKey}/amount`), 2))
+        await expectAllowedIfAdmin(isAdmin, 'Delete an EXISTING payment record', () => remove(ref(db, `payments/${paymentKey}`)))
+      }
 
       const imgPath = `vehicle-snapshots/_verify/${Date.now()}.png`
       await expectAllowed('Authenticated upload of a valid image to Storage', async () => {

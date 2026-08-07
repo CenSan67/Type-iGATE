@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import Modal from './Modal'
 import { updateRfidUser } from '../../services/firebase'
-import { isValidRfid, isValidPlate, isValidEmail } from '../../utils/validators'
+import { isValidRfid, isValidPlate, isValidEmail, isValidPhone } from '../../utils/validators'
 import { VEHICLE_OWNER_ROLES, VEHICLE_TYPES } from '../../models/rfidUser'
 
 export default function EditRfidUserModal({ user, onClose, onSaved }){
@@ -13,6 +13,7 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
     department: user.department || '',
     role: user.role || 'Student',
     email: user.email || '',
+    phone: user.phone || '',
   })
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -41,6 +42,10 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
       setError('Email format looks invalid.')
       return
     }
+    if (!isValidPhone(form.phone)) {
+      setError('Phone format looks invalid (expected a PH mobile number, e.g. 09171234567).')
+      return
+    }
 
     setSaving(true)
     setError('')
@@ -53,6 +58,7 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
         department: form.department.trim(),
         role: form.role,
         email: form.email.trim(),
+        phone: form.phone.trim(),
       })
       onSaved?.()
       onClose()
@@ -103,6 +109,11 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
         <label>
           Email (optional)
           <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="name@example.com" />
+        </label>
+
+        <label>
+          Phone (optional — enables SMS gate alerts)
+          <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="09171234567" />
         </label>
 
         {error && <p className="form-error">{error}</p>}

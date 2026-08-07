@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { registerRfidUser } from '../../services/firebase'
 import useRfidScanner from '../../hooks/useRfidScanner'
-import { isValidRfid, isValidPlate, isValidEmail } from '../../utils/validators'
+import { isValidRfid, isValidPlate, isValidEmail, isValidPhone } from '../../utils/validators'
 
 const initialForm = {
   name: '',
@@ -11,7 +11,21 @@ const initialForm = {
   department: '',
   role: 'Student',
   email: '',
+  phone: '',
+  hostName: '',
+  purpose: '',
+  visitDuration: '8h',
 }
+
+// Temporary visitor pass durations, offered only when role === 'Visitor'. Converted to
+// an absolute rfidUsers/{id}/expiresAt timestamp at submit time - see handleSubmit.
+const VISIT_DURATIONS = [
+  { value: '4h', label: '4 hours', ms: 4 * 60 * 60 * 1000 },
+  { value: '8h', label: '8 hours (single shift)', ms: 8 * 60 * 60 * 1000 },
+  { value: '24h', label: '24 hours', ms: 24 * 60 * 60 * 1000 },
+  { value: '3d', label: '3 days', ms: 3 * 24 * 60 * 60 * 1000 },
+  { value: '7d', label: '7 days', ms: 7 * 24 * 60 * 60 * 1000 },
+]
 
 export default function RegisterRfidModal({ onClose, onRegistered }) {
   const [form, setForm] = useState(initialForm)
@@ -48,6 +62,14 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
       setMessage('Email format looks invalid.')
       return
     }
+    if (!isValidPhone(form.phone)) {
+      setMessage('Phone format looks invalid (expected a PH mobile number, e.g. 09171234567).')
+      return
+    }
+
+    const isVisitor = form.role === 'Visitor'
+    const duration = VISIT_DURATIONS.find((d) => d.value === form.visitDuration)
+    const expiresAt = isVisitor ? Date.now() + (duration?.ms ?? VISIT_DURATIONS[1].ms) : null
 
     setSubmitting(true)
     setMessage('')
@@ -61,6 +83,10 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
         department: form.department.trim(),
         role: form.role,
         email: form.email.trim(),
+        phone: form.phone.trim(),
+        expiresAt,
+        hostName: isVisitor ? form.hostName.trim() : '',
+        purpose: isVisitor ? form.purpose.trim() : '',
       })
 
       onRegistered?.()
@@ -72,11 +98,13 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
     }
   }
 
+  const isVisitor = form.role === 'Visitor'
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card" onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
-          <h3>Register New RFID User</h3>
+          <h3>{isVisitor ? 'Register Visitor Pass' : 'Register New RFID User'}</h3>
           <button type="button" className="modal-close" onClick={onClose}>×</button>
         </div>
 
@@ -135,12 +163,38 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
             <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="name@example.com" />
           </label>
 
+          <label>
+            Phone (optional — enables SMS gate alerts)
+            <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="09171234567" />
+          </label>
+
+          {isVisitor ? (
+            <>
+              <label>
+                Visiting / Host Name
+                <input name="hostName" value={form.hostName} onChange={handleChange} placeholder="Who they're visiting" />
+              </label>
+
+              <label>
+                Purpose of Visit
+                <input name="purpose" value={form.purpose} onChange={handleChange} placeholder="e.g. Delivery, Meeting, Campus tour" />
+              </label>
+
+              <label>
+                Pass Valid For
+                <select name="visitDuration" value={form.visitDuration} onChange={handleChange}>
+                  {VISIT_DURATIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+                </select>
+              </label>
+            </>
+          ) : null}
+
           {message ? <p className="form-message">{message}</p> : null}
 
           <div className="modal-actions">
             <button type="button" className="secondary-btn" onClick={onClose}>Cancel</button>
             <button type="submit" className="primary-btn" disabled={submitting}>
-              {submitting ? 'Saving...' : 'Register RFID'}
+              {submitting ? 'Saving...' : isVisitor ? 'Issue Visitor Pass' : 'Register RFID'}
             </button>
           </div>
         </form>

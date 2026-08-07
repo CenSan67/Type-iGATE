@@ -703,10 +703,13 @@ html, body, #root {
 
 .modal-card {
   width: min(560px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
   background: #fff;
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+  box-sizing: border-box;
 }
 
 .modal-header {
