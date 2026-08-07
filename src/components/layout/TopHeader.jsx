@@ -1,5 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
+import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 
 const BellIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -15,7 +17,25 @@ const PersonIcon = () => (
   </svg>
 )
 
+const RECENT_COUNT = 5
+
+function timeAgo(timestamp) {
+  if (!timestamp) return ''
+  const diffMs = Date.now() - timestamp
+  const mins = Math.floor(diffMs / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  return new Date(timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
 export default function TopHeader(){
+  const navigate = useNavigate()
+  const [showNotifications, setShowNotifications] = useState(false)
+  const entries = useEnrichedGateLogs()
+  const recent = entries.slice(0, RECENT_COUNT)
+
   return (
     <header className="app-topbar">
       <div className="app-topbar-branding">
@@ -27,9 +47,52 @@ export default function TopHeader(){
       </div>
 
       <div className="app-topbar-actions">
-        <button type="button" className="app-topbar-bell" title="Notifications">
-          <BellIcon />
-        </button>
+        <div className="app-topbar-notifications">
+          <button
+            type="button"
+            className="app-topbar-bell"
+            title="Notifications"
+            onClick={() => setShowNotifications((v) => !v)}
+          >
+            <BellIcon />
+            {recent.length > 0 && <span className="app-topbar-bell-dot" />}
+          </button>
+
+          {showNotifications && (
+            <>
+              <div className="notification-backdrop" onClick={() => setShowNotifications(false)} />
+              <div className="notification-dropdown">
+                <div className="notification-dropdown-header">Recent Gate Activity</div>
+                {recent.length === 0 ? (
+                  <div className="notification-empty">No recent activity yet.</div>
+                ) : (
+                  <ul className="notification-list">
+                    {recent.map((entry) => (
+                      <li key={entry.id} className="notification-item">
+                        <span className={`notification-dot ${entry.direction === 'OUT' ? 'warn' : 'success'}`} />
+                        <div className="notification-item-body">
+                          <div className="notification-item-title">
+                            {entry.name || 'Unknown'} <strong>{entry.direction === 'OUT' ? 'exited' : 'entered'}</strong>
+                            {entry.plateNumber && entry.plateNumber !== '—' ? ` · ${entry.plateNumber}` : ''}
+                          </div>
+                          <div className="notification-item-time">{timeAgo(entry.timestamp)}</div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button
+                  type="button"
+                  className="notification-view-all"
+                  onClick={() => { setShowNotifications(false); navigate('/search-history') }}
+                >
+                  View all in Search History
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
         <span className="app-topbar-admin">Admin</span>
         <span className="app-topbar-avatar">
           <PersonIcon />

@@ -183,7 +183,12 @@ html, body, #root {
   gap: 20px;
 }
 
+.app-topbar-notifications {
+  position: relative;
+}
+
 .app-topbar-bell {
+  position: relative;
   width: 38px;
   height: 38px;
   border-radius: 50%;
@@ -198,6 +203,111 @@ html, body, #root {
 
 .app-topbar-bell:hover {
   background: rgba(255, 255, 255, 0.24);
+}
+
+.app-topbar-bell-dot {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 1.5px solid var(--maroon);
+}
+
+.notification-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: #fff;
+  color: #222;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+  overflow: hidden;
+  z-index: 91;
+}
+
+.notification-dropdown-header {
+  padding: 14px 16px;
+  font-weight: 700;
+  color: var(--maroon);
+  font-size: 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.notification-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f6f6f6;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-dot {
+  margin-top: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.notification-dot.success { background: #2da82d; }
+.notification-dot.warn { background: #c12d2d; }
+
+.notification-item-title {
+  font-size: 13px;
+  color: #333;
+  line-height: 1.4;
+}
+
+.notification-item-time {
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.notification-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+}
+
+.notification-view-all {
+  width: 100%;
+  border: none;
+  background: #faf5f5;
+  color: var(--maroon);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.notification-view-all:hover {
+  background: #f4e8e8;
 }
 
 .app-topbar-admin {
@@ -249,7 +359,13 @@ html, body, #root {
 .sidebar-toggle {
   position: absolute;
   top: 20px;
-  right: -14px;
+  /* Fixed at a constant screen position (not tied to the sidebar's own moving right
+     edge) so it's always in the same spot to click whether the sidebar is collapsed
+     (76px) or open (260px) - anchoring via `right` here previously made the button
+     jump ~176px between states, so clicking the same spot twice (open, then trying
+     to close) missed the button entirely on the second click and hit inert sidebar
+     background instead. */
+  left: 46px;
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -306,12 +422,6 @@ html, body, #root {
 .sidebar-item:hover .sidebar-icon img {
   filter: none;
 }
-.sidebar.collapsed .sidebar-item:hover .sidebar-icon {
-  background: var(--gold);
-  border-radius: 8px;
-  padding: 6px;
-}
-
 .sidebar-item.active {
   background: var(--gold);
   color: var(--maroon);
@@ -322,10 +432,13 @@ html, body, #root {
   filter: brightness(0) saturate(100%);
 }
 
+/* Collapsed-state icon badge: background/radius only, box size never changes between
+   normal/hover/active - a previous version grew the box via `padding` on hover/active,
+   which (combined with align-items:center recentering the taller/wider box) visibly
+   shifted the icon off its resting position every time you hovered it. */
+.sidebar.collapsed .sidebar-item:hover .sidebar-icon,
 .sidebar.collapsed .sidebar-item.active .sidebar-icon {
   background: var(--gold);
-  border-radius: 8px;
-  padding: 6px;
 }
 
 .sidebar-icon {
@@ -335,6 +448,8 @@ html, body, #root {
   width: 28px;
   height: 28px;
   min-width: 28px;
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
 .sidebar-icon img {
@@ -354,6 +469,49 @@ html, body, #root {
 
 .sidebar.open .sidebar-label {
   opacity: 1;
+}
+
+/* Barrier Gate quick-access (all roles, incl. Security Guard - full control lives on
+   System Settings, which Guards can't reach). Separated from the page nav items with
+   a divider since it opens a modal rather than navigating. */
+.sidebar-gate-item {
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sidebar-gate-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--maroon);
+  background: #9a9a9a;
+}
+
+.sidebar-gate-dot.is-open { background: #2da82d; }
+.sidebar-gate-dot.is-closed { background: #c12d2d; }
+
+.sidebar-gate-item .sidebar-icon {
+  position: relative;
+}
+
+/* Stripped-down GateStatusCard when it's reused inside the sidebar's quick-access
+   modal (Modal.jsx already provides the card chrome - avoids a card nested in a card).
+   The h3 is hidden too since Modal's own header already shows "Barrier Gate" - keeps
+   the status badge and subtitle, drops just the duplicate title text. */
+.modal-body .gate-control-card {
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.modal-body .gate-control-card .gate-status-header-row h3 {
+  display: none;
 }
 
 /* Dynamic content shifting wrapper */
@@ -706,6 +864,9 @@ html, body, #root {
   max-height: 90vh;
   overflow-y: auto;
   background: #fff;
+  color: #222; /* self-contained text color - this can be mounted inside ancestors with
+                  their own color (e.g. the maroon, white-text sidebar), and without
+                  this it would inherit white-on-white and become invisible */
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.2);
@@ -1148,6 +1309,16 @@ html, body, #root {
   background: #fff;
   color: #555;
   cursor: pointer;
+  font-size: 12px;
+}
+
+.pagination-ellipsis {
+  min-width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
   font-size: 12px;
 }
 

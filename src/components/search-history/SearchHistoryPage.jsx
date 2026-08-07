@@ -7,6 +7,7 @@ import { listenToRfidUsers } from '../../services/firebase'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
 import { downloadCsv } from '../../utils/csv'
+import { buildPageList } from '../../utils/pagination'
 
 const searchTypes = ['Plate No.', 'RFID-ID', 'Name']
 const PAGE_SIZE = 10
@@ -360,8 +361,10 @@ export default function SearchHistoryPage(){
           <span>Showing {pageItems.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1} to {(page - 1) * PAGE_SIZE + pageItems.length} of {filteredLogs.length} entries</span>
           <div className="pagination-controls">
             <button type="button" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-              <button key={n} type="button" className={page === n ? 'active' : ''} onClick={() => setPage(n)}>{n}</button>
+            {buildPageList(page, totalPages).map((n, i) => (
+              n === '…'
+                ? <span key={`ellipsis-${i}`} className="pagination-ellipsis">…</span>
+                : <button key={n} type="button" className={page === n ? 'active' : ''} onClick={() => setPage(n)}>{n}</button>
             ))}
             <button type="button" disabled={page === totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next ›</button>
           </div>

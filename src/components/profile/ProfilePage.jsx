@@ -4,7 +4,6 @@ import ChangePasswordModal from '../modals/ChangePasswordModal'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
 import { useAuth } from '../../context/AuthContext'
 import { listenToAdminProfile, saveAdminProfile } from '../../services/firebase'
-import { ROLES } from '../../constants/roles'
 
 const STORAGE_KEY = 'igate_admin_profile'
 
@@ -19,8 +18,6 @@ const defaultProfile = {
   joinedDate: '2026-03-17',
   avatar: null,
 }
-
-const roleOptions = ROLES
 
 // Signed-in users get their profile from RTDB (adminProfiles/{uid}), keyed to their
 // real Firebase account. The hardcoded login bypass has no uid, so it falls back to
@@ -197,7 +194,11 @@ export default function ProfilePage(){
             <ProfileField label="Email:" value={editing ? draft.email : profile.email} editing={editing && !user} onChange={updateDraft('email')} type="email" />
             <ProfileField label="Phone:" value={editing ? draft.phone : profile.phone} editing={editing} onChange={updateDraft('phone')} />
             <ProfileField label="Address:" value={editing ? draft.address : profile.address} editing={editing} onChange={updateDraft('address')} />
-            <ProfileField label="Role:" value={editing ? draft.role : profile.role} editing={editing} onChange={updateDraft('role')} options={roleOptions} />
+            {/* Role is intentionally always read-only here, even in edit mode - self-service
+                role editing was a privilege-escalation bug (any user, including a Security
+                Guard, could grant themselves Super Admin). Role changes belong in Account
+                Management, gated to Super Admin only. */}
+            <ProfileField label="Role:" value={profile.role} editing={false} />
             <ProfileField
               label="Joined Date:"
               value={editing ? draft.joinedDate : profile.joinedDate}

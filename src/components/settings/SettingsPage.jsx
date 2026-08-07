@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import GateButton from './GateButton'
+import GateStatusCard from '../dashboard/GateStatusCard'
 import ChangePasswordModal from '../modals/ChangePasswordModal'
 import { logOut } from '../../services/auth'
 import { useAuth } from '../../context/AuthContext'
@@ -45,8 +45,6 @@ export default function SettingsPage(){
   const navigate = useNavigate()
   const { user } = useAuth()
   const [now, setNow] = useState(new Date())
-  const [entranceOpen, setEntranceOpen] = useState(false)
-  const [exitOpen, setExitOpen] = useState(false)
   const [sessionLogs, setSessionLogs] = useState([])
   const [showAllLogs, setShowAllLogs] = useState(false)
   const [modal, setModal] = useState(null)
@@ -74,19 +72,6 @@ export default function SettingsPage(){
 
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-
-  const toggleGate = (gate) => {
-    const willOpen = gate === 'entrance' ? !entranceOpen : !exitOpen
-    if (gate === 'entrance') setEntranceOpen(willOpen)
-    else setExitOpen(willOpen)
-
-    const label = gate === 'entrance' ? 'Entrance Gate' : 'Exit Gate'
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-    setSessionLogs((list) => [
-      { id: `toggle-${Date.now()}`, text: `${label} ${willOpen ? 'Opened' : 'Closed'} - ${time}`, tone: willOpen ? 'success' : 'warn', timestamp: Date.now() },
-      ...list,
-    ])
-  }
 
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -123,15 +108,7 @@ export default function SettingsPage(){
       <div className="settings-panel">
         <h2>Settings</h2>
 
-        <div className="gate-control-card">
-          <h3>Gate Control</h3>
-          <p>Select Gate & Open Remotely</p>
-          <hr />
-          <div className="gate-buttons-row">
-            <GateButton label="ENTRANCE GATE" isOpen={entranceOpen} onToggle={() => toggleGate('entrance')} />
-            <GateButton label="EXIT GATE" isOpen={exitOpen} onToggle={() => toggleGate('exit')} />
-          </div>
-        </div>
+        <GateStatusCard />
 
         <div className="settings-bottom-grid">
           <div>

@@ -268,4 +268,23 @@ export function listenToAdminProfile(uid, callback) {
   })
 }
 
+// Super Admin only (enforced by database.rules.json - a non-Super-Admin's read of the
+// whole adminProfiles tree is denied). Powers Account Management's staff/role list.
+export function listenToAllAdminProfiles(callback) {
+  return onValue(ref(rtdb, 'adminProfiles'), (snapshot) => {
+    if (!snapshot.exists()) {
+      callback([])
+      return
+    }
+    callback(Object.entries(snapshot.val() || {}).map(([id, value]) => ({ id, ...value })))
+  })
+}
+
+// Super Admin only (enforced server-side). Changes another staff member's role -
+// writes the full profile object, not just the role leaf, since adminProfiles/{uid}'s
+// own .validate requires hasChildren(['fullName','email','role','status']) on every write.
+export async function setAdminRole(uid, role, currentProfile) {
+  await set(ref(rtdb, `adminProfiles/${uid}`), validateAdminProfile({ ...currentProfile, role }))
+}
+
 export default app

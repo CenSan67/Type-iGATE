@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
-import { listenToRfidUsers, listenToPayments, deleteRfidUser, setRfidUserStatus } from '../../services/firebase'
+import { listenToRfidUsers, listenToPayments, deleteRfidUser, setRfidUserStatus, listenToAllAdminProfiles, setAdminRole } from '../../services/firebase'
 import EditRfidUserModal from '../modals/EditRfidUserModal'
 import ConfirmModal from '../modals/ConfirmModal'
+import { useAuth } from '../../context/AuthContext'
+import { ROLES } from '../../constants/roles'
 
 const filters = ['All', 'Paid', 'Unpaid', 'Active', 'Expired']
 
@@ -26,6 +28,8 @@ const TrashIcon = () => (
 )
 
 export default function AccountManagementPage(){
+  const { user, role } = useAuth()
+  const isSuperAdmin = role === 'Super Admin'
   const [now, setNow] = useState(new Date())
   const [activeFilter, setActiveFilter] = useState('All')
   const [query, setQuery] = useState('')
@@ -34,6 +38,12 @@ export default function AccountManagementPage(){
   const [editingUser, setEditingUser] = useState(null)
   const [pendingAction, setPendingAction] = useState(null) // { type: 'delete'|'deactivate'|'activate', user }
   const [actionError, setActionError] = useState('')
+
+  // Staff/role management - Super Admin only (task: role assignment must only be
+  // manageable here, by a Super Admin; enforced server-side too, see database.rules.json).
+  const [staffProfiles, setStaffProfiles] = useState([])
+  const [pendingRoleChange, setPendingRoleChange] = useState(null) // { uid, profile, newRole }
+  const [roleChangeError, setRoleChangeError] = useState('')
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
@@ -49,6 +59,23 @@ export default function AccountManagementPage(){
     const unsub = listenToPayments(setPayments)
     return () => unsub && unsub()
   }, [])
+
+  useEffect(() => {
+    if (!isSuperAdmin) return
+    const unsub = listenToAllAdminProfiles(setStaffProfiles)
+    return () => unsub && unsub()
+  }, [isSuperAdmin])
+
+  const runRoleChange = async () => {
+    if (!pendingRoleChange) return
+    setRoleChangeError('')
+    try {
+      await setAdminRole(pendingRoleChange.uid, pendingRoleChange.newRole, pendingRoleChange.profile)
+      setPendingRoleChange(null)
+    } catch (err) {
+      setRoleChangeError(err.message || 'Unable to change that role right now.')
+    }
+  }
 
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
@@ -282,7 +309,69 @@ export default function AccountManagementPage(){
             </tbody>
           </table>
         </div>
+
+        {isSuperAdmin && (
+          <div className="activity-panel">
+            <div className="activity-header">
+              <h3>Staff Accounts</h3>
+              <p>Assign staff roles - only visible to, and editable by, a Super Admin</p>
+            </div>
+
+            {roleChangeError && <p className="form-error" style={{ margin: '0 24px 16px' }}>{roleChangeError}</p>}
+
+            <table className="activity-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Current Role</th>
+                  <th>Status</th>
+                  <th>Change Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staffProfiles.length === 0 ? (
+                  <tr><td colSpan={5} className="accounts-empty">No staff accounts found.</td></tr>
+                ) : staffProfiles.map((profile) => (
+                  <tr key={profile.id} className="activity-row">
+                    <td>{profile.fullName || profile.displayName || '—'}</td>
+                    <td>{profile.email || '—'}</td>
+                    <td><span className="tag-pill">{profile.role}</span></td>
+                    <td>
+                      <span className={`status-badge ${profile.status === 'Active' ? 'badge-positive' : 'badge-neutral'}`}>{profile.status || 'Active'}</span>
+                    </td>
+                    <td>
+                      <select
+                        value={profile.role}
+                        disabled={profile.id === user?.uid}
+                        title={profile.id === user?.uid ? "Use My Profile to view your own role - it can't be changed from here to avoid locking yourself out" : undefined}
+                        onChange={(e) => {
+                          const newRole = e.target.value
+                          if (newRole === profile.role) return
+                          setPendingRoleChange({ uid: profile.id, profile, newRole })
+                        }}
+                      >
+                        {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      {pendingRoleChange && (
+        <ConfirmModal
+          title="Change staff role?"
+          message={`Change ${pendingRoleChange.profile.fullName || pendingRoleChange.profile.email}'s role from ${pendingRoleChange.profile.role} to ${pendingRoleChange.newRole}? This changes what they can access immediately.`}
+          confirmLabel="Change Role"
+          danger={pendingRoleChange.newRole === 'Super Admin'}
+          onConfirm={runRoleChange}
+          onClose={() => { setPendingRoleChange(null); setRoleChangeError('') }}
+        />
+      )}
 
       {editingUser && (
         <EditRfidUserModal

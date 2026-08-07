@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
+import { buildPageList } from '../../utils/pagination'
 
 const quickSelects = ['Today', 'This week', 'This month']
+const PAGE_SIZE = 10
 
 const SearchIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -51,6 +53,14 @@ export default function ReportsPage(){
       return matchesQuery && matchesStatus && matchesUserType && matchesVehicle
     })
   }, [records, query, status, userType, vehicleType])
+
+  useEffect(() => { setPage(1) }, [query, status, userType, vehicleType])
+
+  // Previously the table rendered every row in `filtered` unpaginated (hundreds of
+  // entries at once) while showing a decorative, non-functional 1-5 page control -
+  // this is what actually paginates it now.
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="dashboard-main">
@@ -102,7 +112,7 @@ export default function ReportsPage(){
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((r) => (
+                  {pageItems.map((r) => (
                     <tr key={r.id} className="activity-row">
                       <td>{r.date}</td>
                       <td>{r.time}</td>
@@ -181,13 +191,15 @@ export default function ReportsPage(){
               </div>
 
               <div className="pagination-row card-style">
-                <span>Showing 1 to {filtered.length} of {filtered.length} entries</span>
+                <span>Showing {pageItems.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1} to {(page - 1) * PAGE_SIZE + pageItems.length} of {filtered.length} entries</span>
                 <div className="pagination-controls">
                   <button type="button" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button key={n} type="button" className={page === n ? 'active' : ''} onClick={() => setPage(n)}>{n}</button>
+                  {buildPageList(page, totalPages).map((n, i) => (
+                    n === '…'
+                      ? <span key={`ellipsis-${i}`} className="pagination-ellipsis">…</span>
+                      : <button key={n} type="button" className={page === n ? 'active' : ''} onClick={() => setPage(n)}>{n}</button>
                   ))}
-                  <button type="button" onClick={() => setPage((p) => Math.min(5, p + 1))}>Next</button>
+                  <button type="button" disabled={page === totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next</button>
                 </div>
               </div>
             </div>

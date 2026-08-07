@@ -49,12 +49,13 @@
     },
 
     "adminProfiles": {
+      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin'",
       "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid",
+        ".read": "auth != null && (auth.uid === $uid || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin')",
+        ".write": "auth != null && (auth.uid === $uid || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin')",
         ".validate": "newData.hasChildren(['fullName', 'email', 'role', 'status'])",
         "role": {
-          ".validate": "(newData.val() === 'Super Admin' || newData.val() === 'Administrator' || newData.val() === 'Security Guard') && (!root.child('adminProfiles').child(auth.uid).child('role').exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === newData.val() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin')"
+          ".validate": "(newData.val() === 'Super Admin' || newData.val() === 'Administrator' || newData.val() === 'Security Guard') && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || (auth.uid === $uid && (!data.exists() || data.val() === newData.val())))"
         }
       }
     },
