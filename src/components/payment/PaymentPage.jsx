@@ -100,6 +100,7 @@ export default function PaymentPage(){
       plateNumber,
       vehicleType: form.vehicle,
       role: form.role,
+      email: form.email?.trim() || '',
     })
 
     await recordPayment({

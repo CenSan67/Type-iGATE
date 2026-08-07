@@ -1,27 +1,34 @@
 import React, { useEffect, useState } from 'react'
 import StatsCards from './StatsCards'
 import RecentActivityTable from './RecentActivityTable'
-import { listenToGateLogs } from '../../services/firebase'
+import GateStatusCard from './GateStatusCard'
+import SimulateScanModal from './SimulateScanModal'
+import UploadSnapshotModal from './UploadSnapshotModal'
+import { listenToNewGateLogs } from '../../services/firebase'
+import { useAuth } from '../../context/AuthContext'
+import { ADMIN_ROLES } from '../../constants/roles'
 
 export default function DashboardPage(){
   const [now, setNow] = useState(new Date())
-  const [gateLogs, setGateLogs] = useState([])
+  const [lastScanAt, setLastScanAt] = useState(null)
+  const [showSimulateModal, setShowSimulateModal] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const { role } = useAuth()
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
 
+  // Genuinely live: this ticks the moment the ESP32 scanner (or the simulate-scan
+  // tool below) posts a new gateLogs entry, independent of the full-history stats.
   useEffect(() => {
-    const unsub = listenToGateLogs((entries) => setGateLogs(entries))
+    const unsub = listenToNewGateLogs((entry) => setLastScanAt(entry.timestamp || Date.now()))
     return () => unsub && unsub()
   }, [])
 
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-  const today = new Date().toDateString()
-  const entriesToday = gateLogs.filter((entry) => entry.direction === 'IN' && entry.timestamp && new Date(entry.timestamp).toDateString() === today).length
-  const exitsToday = gateLogs.filter((entry) => entry.direction === 'OUT' && entry.timestamp && new Date(entry.timestamp).toDateString() === today).length
 
   return (
     <div className="dashboard-main">
@@ -33,21 +40,31 @@ export default function DashboardPage(){
 
         <StatsCards />
 
+        <GateStatusCard />
+
         <div className="overview-grid">
           <div className="overview-card accent">
             <h4>Campus Status</h4>
             <div className="overview-value">Live</div>
-            <p>RFID entries and exits are tracked in real time.</p>
+            <p>{lastScanAt ? `Last scan received ${new Date(lastScanAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Waiting for the first scan of this session…'}</p>
           </div>
-          <div className="overview-card">
-            <h4>Today</h4>
-            <div className="overview-row"><span>Entries</span><strong>{entriesToday}</strong></div>
-            <div className="overview-row"><span>Exits</span><strong>{exitsToday}</strong></div>
-          </div>
+          {ADMIN_ROLES.includes(role) && (
+            <div className="overview-card">
+              <h4>Hardware Testing</h4>
+              <p>No physical scanner nearby? Simulate a card tap to exercise the live dashboard.</p>
+              <div className="modal-actions" style={{ justifyContent: 'flex-start' }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowSimulateModal(true)}>Simulate Scan</button>
+                <button type="button" className="btn-secondary" onClick={() => setShowUploadModal(true)}>Attach Vehicle Photo</button>
+              </div>
+            </div>
+          )}
         </div>
 
         <RecentActivityTable />
       </div>
+
+      {showSimulateModal && <SimulateScanModal onClose={() => setShowSimulateModal(false)} />}
+      {showUploadModal && <UploadSnapshotModal onClose={() => setShowUploadModal(false)} />}
     </div>
   )
 }

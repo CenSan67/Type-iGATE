@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
-import { listenToRfidUsers, listenToPayments } from '../../services/firebase'
+import { listenToRfidUsers, listenToPayments, deleteRfidUser, setRfidUserStatus } from '../../services/firebase'
+import EditRfidUserModal from '../modals/EditRfidUserModal'
+import ConfirmModal from '../modals/ConfirmModal'
 
 const filters = ['All', 'Paid', 'Unpaid', 'Active', 'Expired']
 
@@ -13,6 +15,15 @@ const AlertIcon = () => (
 const ListIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
 )
+const EditIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+)
+const PowerIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M18.4 6.6a9 9 0 11-12.8 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+)
+const TrashIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+)
 
 export default function AccountManagementPage(){
   const [now, setNow] = useState(new Date())
@@ -20,6 +31,9 @@ export default function AccountManagementPage(){
   const [query, setQuery] = useState('')
   const [users, setUsers] = useState([])
   const [payments, setPayments] = useState([])
+  const [editingUser, setEditingUser] = useState(null)
+  const [pendingAction, setPendingAction] = useState(null) // { type: 'delete'|'deactivate'|'activate', user }
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
@@ -41,13 +55,15 @@ export default function AccountManagementPage(){
 
   const accounts = useMemo(() => users.map((user) => {
     const userPayments = payments.filter((p) => (p.rfidId || '').toLowerCase() === (user.rfidId || '').toLowerCase())
-    // "Paid" reflects whether a payment was ever made; "Active" reflects whether the
-    // most recent payment's 5-month validity window hasn't lapsed yet.
+    // "Paid" reflects whether a payment was ever made; "Status" reflects whether the
+    // most recent payment's 5-month validity window hasn't lapsed yet. Neither of these
+    // is the account's enable/disable state below (accountStatus) - that's admin-controlled.
     const latestPayment = userPayments.reduce((latest, p) => (!latest || (p.timestamp || 0) > (latest.timestamp || 0) ? p : latest), null)
     const isActive = Boolean(latestPayment?.validUntil) && now.getTime() <= latestPayment.validUntil
 
     return {
       id: user.id,
+      raw: user,
       date: user.createdAt ? new Date(user.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—',
       name: user.name || 'Unknown',
       rfid: user.rfidId || 'N/A',
@@ -56,6 +72,7 @@ export default function AccountManagementPage(){
       payment: userPayments.length > 0 ? 'Paid' : 'Unpaid',
       status: isActive ? 'Active' : 'Expired',
       validUntil: latestPayment?.validUntil ? new Date(latestPayment.validUntil).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—',
+      accountStatus: user.status || 'Active',
     }
   }), [users, payments, now])
 
@@ -75,6 +92,23 @@ export default function AccountManagementPage(){
       return matchesFilter && matchesQuery
     })
   }, [accounts, activeFilter, query])
+
+  const runAction = async () => {
+    if (!pendingAction) return
+    setActionError('')
+    try {
+      if (pendingAction.type === 'delete') {
+        await deleteRfidUser(pendingAction.user.id)
+      } else if (pendingAction.type === 'deactivate') {
+        await setRfidUserStatus(pendingAction.user.id, 'Inactive')
+      } else if (pendingAction.type === 'activate') {
+        await setRfidUserStatus(pendingAction.user.id, 'Active')
+      }
+      setPendingAction(null)
+    } catch (err) {
+      setActionError(err.message || 'That action could not be completed.')
+    }
+  }
 
   return (
     <div className="dashboard-main">
@@ -163,6 +197,8 @@ export default function AccountManagementPage(){
             </div>
           </div>
 
+          {actionError && <p className="form-error">{actionError}</p>}
+
           <table className="activity-table">
             <thead>
               <tr>
@@ -174,6 +210,8 @@ export default function AccountManagementPage(){
                 <th>Payment</th>
                 <th>Status</th>
                 <th>Valid Until</th>
+                <th>Account</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -195,17 +233,81 @@ export default function AccountManagementPage(){
                     </span>
                   </td>
                   <td>{row.validUntil}</td>
+                  <td>
+                    <span className={`status-badge ${row.accountStatus === 'Active' ? 'badge-positive' : 'badge-negative'}`}>
+                      {row.accountStatus === 'Active' ? <CheckIcon /> : <AlertIcon />} {row.accountStatus}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="row-actions">
+                      <button type="button" className="row-action-btn" title="Edit" onClick={() => setEditingUser(row.raw)}>
+                        <EditIcon />
+                      </button>
+                      {row.accountStatus === 'Active' ? (
+                        <button
+                          type="button"
+                          className="row-action-btn warn"
+                          title="Deactivate"
+                          onClick={() => setPendingAction({ type: 'deactivate', user: row.raw })}
+                        >
+                          <PowerIcon />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="row-action-btn"
+                          title="Activate"
+                          onClick={() => setPendingAction({ type: 'activate', user: row.raw })}
+                        >
+                          <PowerIcon />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="row-action-btn danger"
+                        title="Delete"
+                        onClick={() => setPendingAction({ type: 'delete', user: row.raw })}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </span>
+                  </td>
                 </tr>
               ))}
               {filteredAccounts.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="accounts-empty">No accounts match your search or filter.</td>
+                  <td colSpan={10} className="accounts-empty">No accounts match your search or filter.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {editingUser && (
+        <EditRfidUserModal
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSaved={() => setEditingUser(null)}
+        />
+      )}
+
+      {pendingAction && (
+        <ConfirmModal
+          title={pendingAction.type === 'delete' ? 'Delete RFID User' : pendingAction.type === 'deactivate' ? 'Deactivate Account' : 'Activate Account'}
+          message={
+            pendingAction.type === 'delete'
+              ? `Permanently delete ${pendingAction.user.name || pendingAction.user.rfidId}? This removes the RFID record entirely and cannot be undone.`
+              : pendingAction.type === 'deactivate'
+                ? `Deactivate ${pendingAction.user.name || pendingAction.user.rfidId}? The record and payment history are kept, but the account is marked inactive.`
+                : `Reactivate ${pendingAction.user.name || pendingAction.user.rfidId}?`
+          }
+          confirmLabel={pendingAction.type === 'delete' ? 'Delete' : pendingAction.type === 'deactivate' ? 'Deactivate' : 'Activate'}
+          danger={pendingAction.type === 'delete'}
+          onConfirm={runAction}
+          onClose={() => { setPendingAction(null); setActionError('') }}
+        />
+      )}
     </div>
   )
 }

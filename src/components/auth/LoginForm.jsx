@@ -13,14 +13,6 @@ export default function LoginForm(){
   const handleSubmit = async (e)=>{
     e.preventDefault()
 
-    // --- BYPASS CODE START ---
-    // If you type "admin" and "123456", it will skip Firebase and take you straight inside!
-    if (email === "admin@bulsu.edu.ph" && password === "123456") {
-      navigate('/dashboard')
-      return
-    }
-    // --- BYPASS CODE END ---
-
     try{
       await signIn(email,password)
       navigate('/dashboard')

@@ -1,20 +1,40 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '../services/firebase'
+import { auth, listenToAdminProfile } from '../services/firebase'
 
 const AuthContext = createContext()
+
 export function AuthProvider({children}){
   const [user,setUser] = useState(null)
-  const [loading,setLoading] = useState(true)
+  const [role,setRole] = useState(null)
+  const [authLoading,setAuthLoading] = useState(true)
+  const [roleLoading,setRoleLoading] = useState(true)
 
   useEffect(()=>{
     const unsub = onAuthStateChanged(auth,u=>{
       setUser(u)
-      setLoading(false)
+      setAuthLoading(false)
+      if (!u) {
+        setRole(null)
+        setRoleLoading(false)
+      } else {
+        setRoleLoading(true)
+      }
     })
     return unsub
   },[])
 
-  return <AuthContext.Provider value={{user,loading}}>{children}</AuthContext.Provider>
+  useEffect(() => {
+    if (!user?.uid) return
+    const unsub = listenToAdminProfile(user.uid, (profile) => {
+      setRole(profile?.role || null)
+      setRoleLoading(false)
+    })
+    return () => unsub && unsub()
+  }, [user?.uid])
+
+  const loading = authLoading || roleLoading
+
+  return <AuthContext.Provider value={{user,role,loading}}>{children}</AuthContext.Provider>
 }
 export const useAuth = ()=> useContext(AuthContext)

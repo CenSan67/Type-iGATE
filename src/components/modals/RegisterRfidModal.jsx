@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { registerRfidUser } from '../../services/firebase'
 import useRfidScanner from '../../hooks/useRfidScanner'
+import { isValidRfid, isValidPlate, isValidEmail } from '../../utils/validators'
 
 const initialForm = {
   name: '',
@@ -8,7 +9,8 @@ const initialForm = {
   plateNumber: '',
   vehicleType: 'Car',
   department: '',
-  role: 'Student'
+  role: 'Student',
+  email: '',
 }
 
 export default function RegisterRfidModal({ onClose, onRegistered }) {
@@ -34,6 +36,18 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
       setMessage('Please enter an RFID code.')
       return
     }
+    if (!isValidRfid(form.rfidId)) {
+      setMessage('RFID looks invalid — expected 3-40 letters, numbers or hyphens.')
+      return
+    }
+    if (form.plateNumber.trim() && !isValidPlate(form.plateNumber)) {
+      setMessage('Plate Number format looks invalid (expected e.g. ABC-1234).')
+      return
+    }
+    if (!isValidEmail(form.email)) {
+      setMessage('Email format looks invalid.')
+      return
+    }
 
     setSubmitting(true)
     setMessage('')
@@ -45,7 +59,8 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
         plateNumber: form.plateNumber.trim(),
         vehicleType: form.vehicleType,
         department: form.department.trim(),
-        role: form.role
+        role: form.role,
+        email: form.email.trim(),
       })
 
       onRegistered?.()
@@ -113,6 +128,11 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
               <option value="Staff">Staff</option>
               <option value="Visitor">Visitor</option>
             </select>
+          </label>
+
+          <label>
+            Email (optional)
+            <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="name@example.com" />
           </label>
 
           {message ? <p className="form-message">{message}</p> : null}

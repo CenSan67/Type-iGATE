@@ -6,19 +6,23 @@ import searchIcon from '../../assets/Rectangle 13.png'
 import reportIcon from '../../assets/Rectangle 14.png'
 import paymentIcon from '../../assets/Rectangle 15.png'
 import settingsIcon from '../../assets/image 20.png'
+import { useAuth } from '../../context/AuthContext'
+import { ADMIN_ROLES } from '../../constants/roles'
 
 const navItems = [
   { label: 'Dashboard', icon: dashboardIcon, path: '/dashboard' },
-  { label: 'Account Management', icon: accountIcon, path: '/account-management' },
+  { label: 'Account Management', icon: accountIcon, path: '/account-management', roles: ADMIN_ROLES },
   { label: 'Search History', icon: searchIcon, path: '/search-history' },
   { label: 'Reports', icon: reportIcon, path: '/reports' },
   { label: 'Payment', icon: paymentIcon, path: '/payment' },
-  { label: 'System Settings', icon: settingsIcon, path: '/settings' },
+  { label: 'System Settings', icon: settingsIcon, path: '/settings', roles: ADMIN_ROLES },
 ]
 
 export default function Sidebar({ open, onToggle, onOpen }){
   const navigate = useNavigate()
   const location = useLocation()
+  const { role } = useAuth()
+  const visibleItems = navItems.filter((item) => !item.roles || item.roles.includes(role))
 
   return (
     <aside className={`sidebar ${open ? 'open' : 'collapsed'}`} onClick={() => !open && onOpen()}>
@@ -29,7 +33,7 @@ export default function Sidebar({ open, onToggle, onOpen }){
       </button>
 
       <div className="sidebar-items">
-        {navItems.map((item) => (
+        {visibleItems.map((item) => (
           <button
             key={item.label}
             type="button"

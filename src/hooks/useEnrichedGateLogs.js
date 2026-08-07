@@ -43,6 +43,10 @@ export default function useEnrichedGateLogs(){
       vehicleType: user?.vehicleType || '—',
       department: user?.department || '—',
       role: user?.role || '—',
+      // The scan's own snapshot (this specific entry/exit moment) takes priority;
+      // fall back to the vehicle's on-file reference photo if this scan has none.
+      imageUrl: entry.imageUrl || user?.imageUrl || null,
+      rfidUserId: user?.id || null,
     }
   })
 }

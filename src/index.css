@@ -594,6 +594,14 @@ html, body, #root {
   border-bottom: 1px solid #ededed;
 }
 
+.activity-table th.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  display: table-cell;
+}
+
+.activity-table th.sortable-th:hover { background: #f0dede; }
+
 .activity-table td {
   padding: 18px 20px;
   color: #444;
@@ -602,6 +610,42 @@ html, body, #root {
 
 .activity-row:hover {
   background-color: #fafafa;
+}
+
+.activity-row.just-scanned {
+  animation: just-scanned-flash 2s ease-out 2;
+}
+
+.snapshot-thumb-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: block;
+}
+
+.snapshot-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+.snapshot-thumb-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #f1f1f1;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes just-scanned-flash {
+  0% { background-color: #fff2cc; }
+  100% { background-color: transparent; }
 }
 
 .activity-row .direction-in {
@@ -879,7 +923,7 @@ html, body, #root {
   50% { opacity: 0.6; }
 }
 
-.btn-primary, .btn-secondary {
+.btn-primary, .btn-secondary, .btn-danger {
   border: none;
   border-radius: 999px;
   padding: 10px 18px;
@@ -891,6 +935,8 @@ html, body, #root {
 .btn-primary { background: var(--maroon); color: #fff; }
 .btn-primary:hover { background: var(--maroon-dark); }
 .btn-secondary { background: #f1f1f1; color: #333; }
+.btn-danger { background: #c12d2d; color: #fff; }
+.btn-danger:hover { background: #a02323; }
 
 .password-success p {
   color: #2da82d;
@@ -936,6 +982,31 @@ html, body, #root {
 .badge-neutral { background: #9a9a9a; color: #fff; }
 
 .report-link { color: #1d74c1; }
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row-action-btn {
+  border: none;
+  background: #f1f1f1;
+  color: #444;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.row-action-btn:hover { background: #e6e6e6; }
+.row-action-btn.danger { color: #c12d2d; }
+.row-action-btn.danger:hover { background: #f6dede; }
+.row-action-btn.warn { color: #b8860b; }
+.row-action-btn.warn:hover { background: #f6ecd4; }
 
 .filter-card {
   background: #fff;
@@ -1546,6 +1617,13 @@ html, body, #root {
 }
 
 .gate-control-card h3 { margin: 0; color: var(--maroon); }
+
+.gate-status-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
 
 .gate-control-card p {
   margin: 4px 0 16px;

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import Modal from './Modal'
 import useRfidScanner from '../../hooks/useRfidScanner'
+import { isValidRfid, isValidPlate, isValidEmail } from '../../utils/validators'
 
 const defaultAmounts = { Registration: 250, Renewal: 250 }
 const VALIDITY_MONTHS = 5
@@ -14,6 +15,7 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
     plate: '',
     vehicle: 'Car',
     role: 'Student',
+    email: '',
     amount: defaultAmounts[initialType] ?? 250,
   })
   const [error, setError] = useState('')
@@ -43,6 +45,18 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
     e.preventDefault()
     if (!form.rfid.trim() || !form.name.trim() || !form.plate.trim()) {
       setError('RFID, Name and Plate Number are required.')
+      return
+    }
+    if (!isValidRfid(form.rfid)) {
+      setError('RFID looks invalid — expected 3-40 letters, numbers or hyphens.')
+      return
+    }
+    if (!isValidPlate(form.plate)) {
+      setError('Plate Number format looks invalid (expected e.g. ABC-1234).')
+      return
+    }
+    if (!isValidEmail(form.email)) {
+      setError('Email format looks invalid.')
       return
     }
     onSubmit(form)
@@ -99,6 +113,10 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
             <option>Staff</option>
             <option>Visitor</option>
           </select>
+        </label>
+        <label>
+          Email (optional)
+          <input type="email" value={form.email} onChange={update('email')} placeholder="name@example.com" />
         </label>
         <label>
           Amount (₱)

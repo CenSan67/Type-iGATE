@@ -4,6 +4,7 @@ import ChangePasswordModal from '../modals/ChangePasswordModal'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
 import { useAuth } from '../../context/AuthContext'
 import { listenToAdminProfile, saveAdminProfile } from '../../services/firebase'
+import { ROLES } from '../../constants/roles'
 
 const STORAGE_KEY = 'igate_admin_profile'
 
@@ -19,7 +20,7 @@ const defaultProfile = {
   avatar: null,
 }
 
-const roleOptions = ['Administrator', 'Super Admin', 'Staff', 'Security Guard']
+const roleOptions = ROLES
 
 // Signed-in users get their profile from RTDB (adminProfiles/{uid}), keyed to their
 // real Firebase account. The hardcoded login bypass has no uid, so it falls back to
