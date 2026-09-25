@@ -312,6 +312,14 @@ export async function approveAdminProfile(uid, role) {
   await update(ref(rtdb, `adminProfiles/${uid}`), { role, status: 'Active' })
 }
 
+// Super Admin only (rules: a non-Pending status can only be changed by a Super Admin).
+// Inactive = the account can still sign in to Firebase Auth but is locked out of every
+// database path and bounced to /pending by RequireAuth; Active restores access.
+export async function setAdminStatus(uid, status) {
+  if (!['Active', 'Inactive'].includes(status)) throw new Error(`Cannot set status "${status}"`)
+  await update(ref(rtdb, `adminProfiles/${uid}`), { status })
+}
+
 export async function rejectAdminProfile(uid) {
   await update(ref(rtdb, `adminProfiles/${uid}`), { status: 'Inactive' })
 }

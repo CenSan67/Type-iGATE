@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
-import { listenToRfidUsers, listenToPayments, deleteRfidUser, setRfidUserStatus, listenToAllAdminProfiles, setAdminRole } from '../../services/firebase'
+import { listenToRfidUsers, listenToPayments, deleteRfidUser, setRfidUserStatus, listenToAllAdminProfiles, setAdminRole, setAdminStatus } from '../../services/firebase'
 import EditRfidUserModal from '../modals/EditRfidUserModal'
 import ConfirmModal from '../modals/ConfirmModal'
 import { useAuth } from '../../context/AuthContext'
@@ -45,6 +45,7 @@ export default function AccountManagementPage(){
   const [staffProfiles, setStaffProfiles] = useState([])
   const [pendingRoleChange, setPendingRoleChange] = useState(null) // { uid, profile, newRole }
   const [roleChangeError, setRoleChangeError] = useState('')
+  const [pendingStatusChange, setPendingStatusChange] = useState(null) // { profile, nextStatus }
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
@@ -76,6 +77,18 @@ export default function AccountManagementPage(){
       setPendingRoleChange(null)
     } catch (err) {
       setRoleChangeError(err.message || 'Unable to change that role right now.')
+    }
+  }
+
+  const runStatusChange = async () => {
+    if (!pendingStatusChange) return
+    setRoleChangeError('')
+    try {
+      await setAdminStatus(pendingStatusChange.profile.id, pendingStatusChange.nextStatus)
+      setPendingStatusChange(null)
+    } catch (err) {
+      setRoleChangeError(err.message || 'Unable to change that status right now.')
+      setPendingStatusChange(null)
     }
   }
 
@@ -331,11 +344,12 @@ export default function AccountManagementPage(){
                   <th>Current Role</th>
                   <th>Status</th>
                   <th>Change Role</th>
+                  <th>Account</th>
                 </tr>
               </thead>
               <tbody>
                 {staffProfiles.length === 0 ? (
-                  <tr><td colSpan={5} className="accounts-empty">No staff accounts found.</td></tr>
+                  <tr><td colSpan={6} className="accounts-empty">No staff accounts found.</td></tr>
                 ) : staffProfiles.map((profile) => (
                   <tr key={profile.id} className="activity-row">
                     <td>{profile.fullName || profile.displayName || '—'}</td>
@@ -358,6 +372,21 @@ export default function AccountManagementPage(){
                         {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </td>
+                    <td>
+                      {profile.status === 'Inactive' ? (
+                        <button type="button" className="btn-primary" onClick={() => setPendingStatusChange({ profile, nextStatus: 'Active' })}>Reactivate</button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          disabled={profile.id === user?.uid}
+                          title={profile.id === user?.uid ? "You can't deactivate your own account" : undefined}
+                          onClick={() => setPendingStatusChange({ profile, nextStatus: 'Inactive' })}
+                        >
+                          Deactivate
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -374,6 +403,21 @@ export default function AccountManagementPage(){
           danger={pendingRoleChange.newRole === 'Super Admin'}
           onConfirm={runRoleChange}
           onClose={() => { setPendingRoleChange(null); setRoleChangeError('') }}
+        />
+      )}
+
+      {pendingStatusChange && (
+        <ConfirmModal
+          title={pendingStatusChange.nextStatus === 'Inactive' ? 'Deactivate this account?' : 'Reactivate this account?'}
+          message={
+            pendingStatusChange.nextStatus === 'Inactive'
+              ? `Deactivate ${pendingStatusChange.profile.fullName || pendingStatusChange.profile.email}? They will be signed out of access immediately and can't use iGate until you reactivate them.`
+              : `Reactivate ${pendingStatusChange.profile.fullName || pendingStatusChange.profile.email}? They will get their ${pendingStatusChange.profile.role} access back immediately.`
+          }
+          confirmLabel={pendingStatusChange.nextStatus === 'Inactive' ? 'Deactivate' : 'Reactivate'}
+          danger={pendingStatusChange.nextStatus === 'Inactive'}
+          onConfirm={runStatusChange}
+          onClose={() => setPendingStatusChange(null)}
         />
       )}
 
