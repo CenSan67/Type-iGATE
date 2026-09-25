@@ -364,6 +364,19 @@ html, body, #root {
   color: var(--maroon);
 }
 
+.role-menu-actions {
+  border-top: 1px solid #f0f0f0;
+}
+
+.role-menu-actions:first-child {
+  border-top: none;
+}
+
+.role-option-logout {
+  color: var(--maroon);
+  font-weight: 600;
+}
+
 .app-topbar-avatar {
   width: 40px;
   height: 40px;
@@ -1158,6 +1171,16 @@ html, body, #root {
 
 /* ============================================================
    Shared pill / badge / filter-card primitives reused by
+.confirm-message-large {
+  font-size: 22px;
+  line-height: 1.4;
+  padding: 12px 0 8px;
+  color: #111;
+}
+
+.btn-danger.btn-logout-red { background: #e02424; }
+.btn-danger.btn-logout-red:hover { background: #c81e1e; }
+
    Reports, Payment, Search History and Account Management
    ============================================================ */
 .tag-pill {

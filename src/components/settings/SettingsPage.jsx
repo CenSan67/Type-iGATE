@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import GateStatusCard from '../dashboard/GateStatusCard'
 import ChangePasswordModal from '../modals/ChangePasswordModal'
-import { logOut } from '../../services/auth'
+import LogoutConfirmModal from '../modals/LogoutConfirmModal'
 import { useAuth } from '../../context/AuthContext'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
@@ -48,7 +48,6 @@ export default function SettingsPage(){
   const [sessionLogs, setSessionLogs] = useState([])
   const [showAllLogs, setShowAllLogs] = useState(false)
   const [modal, setModal] = useState(null)
-  const [loggingOut, setLoggingOut] = useState(false)
   const scanEntries = useEnrichedGateLogs()
   const loggedLoginRef = useRef(false)
 
@@ -72,15 +71,6 @@ export default function SettingsPage(){
 
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-
-  const handleLogout = async () => {
-    setLoggingOut(true)
-    try {
-      await logOut()
-    } finally {
-      navigate('/login')
-    }
-  }
 
   const visibleLogs = useMemo(() => {
     const combined = [...sessionLogs, ...scanEntries.map(scanEntryToLog)].sort((a, b) => b.timestamp - a.timestamp)
@@ -137,8 +127,8 @@ export default function SettingsPage(){
               <button type="button" className="action-btn" onClick={() => setModal('password')}>
                 <KeyIcon /> Change Password
               </button>
-              <button type="button" className="action-btn logout" onClick={handleLogout} disabled={loggingOut}>
-                <LogoutIcon /> {loggingOut ? 'Logging out…' : 'Logout'}
+              <button type="button" className="action-btn logout" onClick={() => setModal('logout')}>
+                <LogoutIcon /> Logout
               </button>
             </div>
           </div>
@@ -146,6 +136,7 @@ export default function SettingsPage(){
       </div>
 
       {modal === 'password' && <ChangePasswordModal onClose={() => setModal(null)} />}
+      {modal === 'logout' && <LogoutConfirmModal onClose={() => setModal(null)} />}
     </div>
   )
 }
