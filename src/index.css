@@ -315,6 +315,55 @@ html, body, #root {
   font-size: 15px;
 }
 
+.app-topbar-role {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-topbar-role-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.role-dropdown {
+  left: auto;
+  right: 0;
+  transform: none;
+  width: 220px;
+}
+
+.role-option {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: none;
+  background: transparent;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #222;
+  cursor: pointer;
+  text-align: left;
+}
+
+.role-option:hover {
+  background: #faf5f5;
+}
+
+.role-option.active {
+  font-weight: 700;
+  color: var(--maroon);
+}
+
 .app-topbar-avatar {
   width: 40px;
   height: 40px;

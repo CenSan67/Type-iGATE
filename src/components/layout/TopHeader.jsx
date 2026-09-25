@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
+import { useAuth } from '../../context/AuthContext'
 
 const BellIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -33,6 +34,9 @@ function timeAgo(timestamp) {
 export default function TopHeader(){
   const navigate = useNavigate()
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showRoleMenu, setShowRoleMenu] = useState(false)
+  const { role, availableRoles, switchRole } = useAuth()
+  const canSwitchRole = availableRoles.length > 1
   const entries = useEnrichedGateLogs()
   const recent = entries.slice(0, RECENT_COUNT)
 
@@ -93,10 +97,47 @@ export default function TopHeader(){
           )}
         </div>
 
-        <span className="app-topbar-admin">Admin</span>
-        <span className="app-topbar-avatar">
-          <PersonIcon />
-        </span>
+        <div className="app-topbar-role">
+          {canSwitchRole ? (
+            <button
+              type="button"
+              className="app-topbar-role-button"
+              title="Switch role view"
+              onClick={() => setShowRoleMenu((v) => !v)}
+            >
+              <span className="app-topbar-admin">{role}</span>
+              <span className="app-topbar-avatar"><PersonIcon /></span>
+            </button>
+          ) : (
+            <>
+              <span className="app-topbar-admin">{role || 'Admin'}</span>
+              <span className="app-topbar-avatar"><PersonIcon /></span>
+            </>
+          )}
+
+          {showRoleMenu && canSwitchRole && (
+            <>
+              <div className="notification-backdrop" onClick={() => setShowRoleMenu(false)} />
+              <div className="notification-dropdown role-dropdown">
+                <div className="notification-dropdown-header">Switch Role View</div>
+                <ul className="notification-list">
+                  {availableRoles.map((r) => (
+                    <li key={r}>
+                      <button
+                        type="button"
+                        className={`role-option ${r === role ? 'active' : ''}`}
+                        onClick={() => { switchRole(r); setShowRoleMenu(false) }}
+                      >
+                        {r}
+                        {r === role && <span className="role-option-check">✓</span>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
   )
