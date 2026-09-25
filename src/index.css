@@ -1980,13 +1980,25 @@ html, body, #root {
    ============================================================ */
 .profile-panel h2 { color: var(--maroon); margin: 8px 0 20px; }
 
-.profile-page-crumb {
+.profile-page-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 20px;
+}
+
+.profile-page-heading h2 { margin: 0; }
+
+.profile-back-btn {
+  width: 36px;
+  height: 36px;
   border: none;
   background: transparent;
-  color: #888;
-  font-size: 13px;
+  color: var(--maroon);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  padding: 0;
 }
 
 .profile-card {
@@ -2066,6 +2078,7 @@ html, body, #root {
   background: #fafafa;
   cursor: default;
 }
+  border-radius: 50%;
 
 .profile-status-toggle { cursor: pointer; font-weight: 600; }
 .profile-status-toggle.is-active { color: #2da82d; border-color: #cdeccd; background: #f1fbf1; }
@@ -2073,6 +2086,8 @@ html, body, #root {
 
 .profile-fields-col {
   display: grid;
+.profile-back-btn:hover { background: #f4e8e8; }
+
   gap: 16px;
   align-content: start;
 }

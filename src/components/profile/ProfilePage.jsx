@@ -53,6 +53,10 @@ const CameraIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="12" cy="13" r="3.2" stroke="currentColor" strokeWidth="1.6" /></svg>
 )
 
+const BackIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+)
+
 function ProfileField({ label, value, displayValue, editing, onChange, type = 'text', options }){
   return (
     <div className="profile-field-row">
@@ -124,6 +128,10 @@ export default function ProfilePage(){
     e.target.value = ''
   }
 
+  // Go back to wherever the user came from (Settings, Dashboard, ...); if the page was
+  // opened directly with no history, fall back to the Dashboard every role can reach.
+  const handleBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/dashboard'))
+
   const startEdit = () => { setDraft(profile); setEditing(true) }
   const cancelEdit = () => { setDraft(profile); setEditing(false) }
   const saveEdit = (e) => {
@@ -159,8 +167,12 @@ export default function ProfilePage(){
       </section>
 
       <div className="profile-panel">
-        <button type="button" className="profile-page-crumb" onClick={() => navigate('/settings')}>&lsaquo; My Profile</button>
-        <h2>Admin Profile</h2>
+        <div className="profile-page-heading">
+          <button type="button" className="profile-back-btn" title="Back" aria-label="Go back" onClick={handleBack}>
+            <BackIcon />
+          </button>
+          <h2>Admin Profile</h2>
+        </div>
 
         <form className="profile-card" onSubmit={saveEdit}>
           <div className="profile-photo-col">
