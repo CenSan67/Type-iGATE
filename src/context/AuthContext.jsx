@@ -18,6 +18,7 @@ function writeStoredViewRole(uid, value) {
 export function AuthProvider({children}){
   const [user,setUser] = useState(null)
   const [realRole,setRealRole] = useState(null)
+  const [profile,setProfile] = useState(null)
   const [viewRole,setViewRole] = useState(null)
   const [authLoading,setAuthLoading] = useState(true)
   const [roleLoading,setRoleLoading] = useState(true)
@@ -28,6 +29,7 @@ export function AuthProvider({children}){
       setAuthLoading(false)
       if (!u) {
         setRealRole(null)
+        setProfile(null)
         setViewRole(null)
         setRoleLoading(false)
       } else {
@@ -39,13 +41,14 @@ export function AuthProvider({children}){
 
   useEffect(() => {
     if (!user?.uid) return
-    const unsub = listenToAdminProfile(user.uid, (profile) => {
-      const nextRealRole = profile?.role || null
+    const unsub = listenToAdminProfile(user.uid, (nextProfile) => {
+      const nextRealRole = nextProfile?.role || null
       // Restore the last "view as" choice in the same batch as the real role (no flash of
       // the wrong UI), but only if it's still allowed for that role - so a demoted account,
       // or a tampered localStorage value, can't keep a higher view than it's entitled to.
       const stored = readStoredViewRole(user.uid)
       setRealRole(nextRealRole)
+      setProfile(nextProfile)
       setViewRole(getViewableRoles(nextRealRole).includes(stored) ? stored : nextRealRole)
       setRoleLoading(false)
     })
@@ -65,10 +68,11 @@ export function AuthProvider({children}){
   // enforce this one, so switching view never changes real backend permissions.
   const role = availableRoles.includes(viewRole) ? viewRole : realRole
 
+  const status = profile?.status || null // Pending | Active | Inactive (null = no profile record)
   const loading = authLoading || roleLoading
 
   return (
-    <AuthContext.Provider value={{user,role,realRole,availableRoles,switchRole,loading}}>
+    <AuthContext.Provider value={{user,role,realRole,profile,status,availableRoles,switchRole,loading}}>
       {children}
     </AuthContext.Provider>
   )

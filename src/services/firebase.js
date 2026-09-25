@@ -1,7 +1,7 @@
 // Firebase v9 modular SDK setup
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getDatabase, ref, set, push, get, remove, onValue, onChildAdded } from 'firebase/database'
+import { getDatabase, ref, set, update, push, get, remove, query, orderByChild, equalTo, onValue, onChildAdded } from 'firebase/database'
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { validateGateLog } from '../models/gateLog'
 import { validateRfidUser } from '../models/rfidUser'
@@ -9,6 +9,7 @@ import { validatePayment } from '../models/payment'
 import { validateAdminProfile } from '../models/adminProfile'
 import { validateAppSettings, validateGateStatus } from '../models/appSettings'
 import { validateSystemUser } from '../models/systemUser'
+import { ROLES } from '../constants/roles'
 
 // TODO: replace with your Firebase project values
 const firebaseConfig = {
@@ -285,6 +286,40 @@ export function listenToAllAdminProfiles(callback) {
 // own .validate requires hasChildren(['fullName','email','role','status']) on every write.
 export async function setAdminRole(uid, role, currentProfile) {
   await set(ref(rtdb, `adminProfiles/${uid}`), validateAdminProfile({ ...currentProfile, role }))
+}
+
+// ---- Signup approval flow -------------------------------------------------------------
+// A new signup is stored as status 'Pending' (with the role they asked for in
+// `requestedRole`) and can do nothing until an admin approves it. database.rules.json is
+// the real gate - these helpers are just the client side of the same rules.
+
+// Admin-only. A query-scoped read: Administrators may read *only* the Pending slice of
+// adminProfiles (rules allow that exact query), Super Admins may read everything.
+export function listenToPendingProfiles(callback) {
+  const pendingQuery = query(ref(rtdb, 'adminProfiles'), orderByChild('status'), equalTo('Pending'))
+  return onValue(
+    pendingQuery,
+    (snapshot) => {
+      callback(snapshot.exists() ? Object.entries(snapshot.val()).map(([id, value]) => ({ id, ...value })) : [])
+    },
+    () => callback([]),
+  )
+}
+
+// Targeted update (never a full set) so approving can't clobber the rest of the profile.
+export async function approveAdminProfile(uid, role) {
+  if (!ROLES.includes(role)) throw new Error(`Cannot approve: unknown role "${role}"`)
+  await update(ref(rtdb, `adminProfiles/${uid}`), { role, status: 'Active' })
+}
+
+export async function rejectAdminProfile(uid) {
+  await update(ref(rtdb, `adminProfiles/${uid}`), { status: 'Inactive' })
+}
+
+// Called by the signed-in user themself once Firebase Auth reports their email verified.
+// Rules only accept `true` when the auth token itself says email_verified.
+export async function markProfileEmailVerified(uid) {
+  await update(ref(rtdb, `adminProfiles/${uid}`), { emailVerified: true })
 }
 
 export default app

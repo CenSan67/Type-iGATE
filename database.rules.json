@@ -1,9 +1,9 @@
 {
   "rules": {
     "gateLogs": {
-      ".read": "auth != null",
+      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
       "$logId": {
-        ".write": "auth != null && (!data.exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' || (newData.exists() && data.child('cardId').val() === newData.child('cardId').val() && data.child('cardHex').val() === newData.child('cardHex').val() && data.child('direction').val() === newData.child('direction').val() && data.child('timestamp').val() === newData.child('timestamp').val() && data.child('source').val() === newData.child('source').val()))",
+        ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (!data.exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' || (newData.exists() && data.child('cardId').val() === newData.child('cardId').val() && data.child('cardHex').val() === newData.child('cardHex').val() && data.child('direction').val() === newData.child('direction').val() && data.child('timestamp').val() === newData.child('timestamp').val() && data.child('source').val() === newData.child('source').val()))",
         ".validate": "newData.hasChild('timestamp') && newData.child('timestamp').isNumber() && (!newData.hasChild('direction') || newData.child('direction').val() === 'IN' || newData.child('direction').val() === 'OUT')",
 
         "imageUrl": {
@@ -13,9 +13,9 @@
     },
 
     "rfidUsers": {
-      ".read": "auth != null",
+      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
       "$userId": {
-        ".write": "auth != null && (newData.exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
+        ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (newData.exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
         ".validate": "newData.hasChildren(['name', 'rfidId']) && newData.child('name').isString() && newData.child('rfidId').isString()",
 
         "rfidId": {
@@ -41,33 +41,47 @@
     },
 
     "payments": {
-      ".read": "auth != null",
+      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
       "$paymentId": {
-        ".write": "auth != null && (!data.exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
+        ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (!data.exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
         ".validate": "newData.hasChildren(['rfidId', 'amount']) && newData.child('rfidId').isString() && newData.child('amount').isNumber()"
       }
     },
 
     "adminProfiles": {
-      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin'",
+      ".read": "auth != null && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' && query.orderByChild === 'status' && query.equalTo === 'Pending'))",
+      ".indexOn": ["status"],
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin')",
-        ".write": "auth != null && (auth.uid === $uid || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin')",
+        ".write": "auth != null && (auth.uid === $uid || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' && data.child('status').val() === 'Pending'))",
         ".validate": "newData.hasChildren(['fullName', 'email', 'role', 'status'])",
+
         "role": {
-          ".validate": "(newData.val() === 'Super Admin' || newData.val() === 'Administrator' || newData.val() === 'Security Guard') && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || (auth.uid === $uid && (!data.exists() || data.val() === newData.val())))"
+          ".validate": "(newData.val() === 'Super Admin' || newData.val() === 'Administrator' || newData.val() === 'Security Guard') && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || (auth.uid === $uid && ((!data.exists() && newData.val() === 'Security Guard') || data.val() === newData.val())) || (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' && data.parent().child('status').val() === 'Pending' && newData.val() === 'Security Guard' && data.parent().child('requestedRole').val() === 'Security Guard'))"
+        },
+
+        "requestedRole": {
+          ".validate": "(newData.val() === 'Super Admin' || newData.val() === 'Administrator' || newData.val() === 'Security Guard') && (data.val() === newData.val() || (!data.exists() && auth.uid === $uid) || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin')"
+        },
+
+        "emailVerified": {
+          ".validate": "newData.isBoolean() && (newData.val() === false || data.val() === newData.val() || (auth.uid === $uid && auth.token.email_verified === true))"
+        },
+
+        "status": {
+          ".validate": "(newData.val() === 'Pending' || newData.val() === 'Active' || newData.val() === 'Inactive') && (data.val() === newData.val() || (!data.exists() && auth.uid === $uid && newData.val() === 'Pending') || (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' && data.val() !== 'Pending') || (data.val() === 'Pending' && (newData.val() === 'Inactive' || (newData.val() === 'Active' && data.parent().child('emailVerified').val() === true && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' && data.parent().child('requestedRole').val() === 'Security Guard'))))))"
         }
       }
     },
 
     "settings": {
       "app": {
-        ".read": "auth != null",
-        ".write": "auth != null && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
+        ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
+        ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
         ".validate": "newData.hasChild('appName')",
 
         "gateStatus": {
-          ".write": "auth != null",
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
           ".validate": "newData.hasChildren(['state', 'updatedAt']) && (newData.child('state').val() === 'OPEN' || newData.child('state').val() === 'CLOSED') && newData.child('updatedAt').isNumber()"
         }
       }
@@ -75,14 +89,14 @@
 
     "users": {
       "system": {
-        ".read": "auth != null",
-        ".write": "auth != null && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
+        ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
+        ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
         ".validate": "newData.hasChild('displayName')"
       }
     },
 
     "smsLogs": {
-      ".read": "auth != null",
+      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
       ".write": false
     }
   }

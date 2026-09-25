@@ -5,6 +5,7 @@ import EditRfidUserModal from '../modals/EditRfidUserModal'
 import ConfirmModal from '../modals/ConfirmModal'
 import { useAuth } from '../../context/AuthContext'
 import { ROLES } from '../../constants/roles'
+import PendingApprovalsPanel from './PendingApprovalsPanel'
 
 const filters = ['All', 'Paid', 'Unpaid', 'Active', 'Expired']
 
@@ -62,7 +63,8 @@ export default function AccountManagementPage(){
 
   useEffect(() => {
     if (!isSuperAdmin) return
-    const unsub = listenToAllAdminProfiles(setStaffProfiles)
+    // Pending signups are handled in PendingApprovalsPanel, not by the role dropdown below.
+    const unsub = listenToAllAdminProfiles((all) => setStaffProfiles(all.filter((p) => p.status !== 'Pending')))
     return () => unsub && unsub()
   }, [isSuperAdmin])
 
@@ -309,6 +311,8 @@ export default function AccountManagementPage(){
             </tbody>
           </table>
         </div>
+
+        <PendingApprovalsPanel />
 
         {isSuperAdmin && (
           <div className="activity-panel">

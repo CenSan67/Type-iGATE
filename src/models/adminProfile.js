@@ -8,7 +8,9 @@ import { ROLES } from '../constants/roles'
  * @property {string} phone
  * @property {string} address
  * @property {'Super Admin'|'Administrator'|'Security Guard'} role
- * @property {'Active'|'Inactive'} status
+ * @property {'Pending'|'Active'|'Inactive'} status  Pending = signed up, awaiting admin approval
+ * @property {'Super Admin'|'Administrator'|'Security Guard'} [requestedRole]  role asked for at signup
+ * @property {boolean} [emailVerified]  mirrored from Firebase Auth, checked by rules against the auth token
  * @property {string} joinedDate
  * @property {string|null} avatar
  */
@@ -21,8 +23,11 @@ export function validateAdminProfile(data) {
   if (!data.role || !ROLES.includes(data.role)) {
     throw new Error(`AdminProfile: role must be one of ${ROLES.join(', ')}`)
   }
-  if (data.status && !['Active', 'Inactive'].includes(data.status)) {
-    throw new Error('AdminProfile: status must be Active or Inactive')
+  if (data.status && !['Pending', 'Active', 'Inactive'].includes(data.status)) {
+    throw new Error('AdminProfile: status must be Pending, Active or Inactive')
+  }
+  if (data.requestedRole && !ROLES.includes(data.requestedRole)) {
+    throw new Error(`AdminProfile: requestedRole must be one of ${ROLES.join(', ')}`)
   }
   return {
     fullName: data.fullName || '',
@@ -34,5 +39,9 @@ export function validateAdminProfile(data) {
     status: data.status || 'Active',
     joinedDate: data.joinedDate || '',
     avatar: data.avatar ?? null,
+    // Optional signup-approval fields - only included when present, since RTDB rejects
+    // `undefined` and a full set() must not silently drop them from an existing record.
+    ...(data.requestedRole ? { requestedRole: data.requestedRole } : {}),
+    ...(typeof data.emailVerified === 'boolean' ? { emailVerified: data.emailVerified } : {}),
   }
 }

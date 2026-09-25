@@ -11,3 +11,15 @@ export const getViewableRoles = (realRole) => {
   const idx = ROLES.indexOf(realRole)
   return idx === -1 ? [] : ROLES.slice(idx)
 }
+
+// Interim role stored on a brand-new signup while it is still Pending. The role the user
+// actually asked for lives in `requestedRole` and only replaces this on admin approval.
+export const DEFAULT_SIGNUP_ROLE = 'Security Guard'
+
+// Who may approve which signup request (mirrored server-side in database.rules.json):
+// a Super Admin can approve any requested role; an Administrator only Security Guard requests.
+export const canApproveRole = (approverRole, requestedRole) => {
+  if (approverRole === 'Super Admin') return true
+  if (approverRole === 'Administrator') return requestedRole === 'Security Guard'
+  return false
+}

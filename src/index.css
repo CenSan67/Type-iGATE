@@ -1011,6 +1011,67 @@ html, body, #root {
   text-decoration: none;
 }
 
+/* Signup card is taller than login - leave room above it for the overhanging logo */
+.signup-page {
+  padding-top: 110px;
+  align-items: flex-start;
+}
+
+.signup-role-hint {
+  margin: -6px 4px 0;
+  font-size: 12px;
+  color: #7a7a7a;
+  line-height: 1.4;
+}
+
+.pending-steps {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pending-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+}
+
+.pending-step.is-done { border-color: #cdeccd; background: #f1fbf1; }
+
+.pending-step-mark {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: #e6e6e6;
+  color: #666;
+}
+
+.pending-step.is-done .pending-step-mark { background: #2da82d; color: #fff; }
+
+.pending-step h4 { margin: 0 0 4px; font-size: 14px; color: #222; }
+.pending-step p { margin: 0; font-size: 13px; color: #666; line-height: 1.45; }
+
+.pending-step-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+.pending-note { margin: 10px 0 0; font-size: 13px; color: #555; text-align: center; }
+
+.pending-actions-cell { display: flex; gap: 8px; }
+.pending-actions-cell button:disabled { opacity: 0.45; cursor: not-allowed; }
+
 /* Responsiveness adjustments */
 @media (max-width: 900px) {
   .sidebar,
@@ -1110,6 +1171,16 @@ html, body, #root {
   margin: 0;
 }
 
+.confirm-message-large {
+  font-size: 22px;
+  line-height: 1.4;
+  padding: 12px 0 8px;
+  color: #111;
+}
+
+.btn-danger.btn-logout-red { background: #e02424; }
+.btn-danger.btn-logout-red:hover { background: #c81e1e; }
+
 .rfid-scan-row {
   display: flex;
   gap: 8px;
@@ -1171,16 +1242,6 @@ html, body, #root {
 
 /* ============================================================
    Shared pill / badge / filter-card primitives reused by
-.confirm-message-large {
-  font-size: 22px;
-  line-height: 1.4;
-  padding: 12px 0 8px;
-  color: #111;
-}
-
-.btn-danger.btn-logout-red { background: #e02424; }
-.btn-danger.btn-logout-red:hover { background: #c81e1e; }
-
    Reports, Payment, Search History and Account Management
    ============================================================ */
 .tag-pill {
@@ -2016,6 +2077,7 @@ html, body, #root {
   width: 36px;
   height: 36px;
   border: none;
+  border-radius: 50%;
   background: transparent;
   color: var(--maroon);
   display: flex;
@@ -2023,6 +2085,8 @@ html, body, #root {
   justify-content: center;
   cursor: pointer;
 }
+
+.profile-back-btn:hover { background: #f4e8e8; }
 
 .profile-card {
   background: #fff;
@@ -2101,16 +2165,13 @@ html, body, #root {
   background: #fafafa;
   cursor: default;
 }
-  border-radius: 50%;
 
-.profile-status-toggle { cursor: pointer; font-weight: 600; }
+.profile-status-toggle { font-weight: 600; }
 .profile-status-toggle.is-active { color: #2da82d; border-color: #cdeccd; background: #f1fbf1; }
 .profile-status-toggle.is-inactive { color: #c12d2d; border-color: #f3d3d3; background: #fdf1f1; }
 
 .profile-fields-col {
   display: grid;
-.profile-back-btn:hover { background: #f4e8e8; }
-
   gap: 16px;
   align-content: start;
 }

@@ -142,10 +142,6 @@ export default function ProfilePage(){
 
   const updateDraft = (field) => (e) => setDraft((d) => ({ ...d, [field]: e.target.value }))
 
-  const toggleStatus = () => {
-    persist({ ...profile, status: profile.status === 'Active' ? 'Inactive' : 'Active' })
-  }
-
   const initial = (profile.displayName || profile.fullName || 'A').charAt(0).toUpperCase()
 
   return (
@@ -192,13 +188,10 @@ export default function ProfilePage(){
               <span>{profile.role}</span>
             </div>
             <div className="profile-tag-box">Role, {profile.role}</div>
-            <button
-              type="button"
-              className={`profile-tag-box profile-status-toggle ${profile.status === 'Active' ? 'is-active' : 'is-inactive'}`}
-              onClick={toggleStatus}
-            >
+            {/* Read-only: status is now controlled by admin approval (database.rules.json rejects self-changes) */}
+            <div className={`profile-tag-box profile-status-toggle ${profile.status === 'Active' ? 'is-active' : 'is-inactive'}`}>
               Status, {profile.status}
-            </button>
+            </div>
           </div>
 
           <div className="profile-fields-col">
