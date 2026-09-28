@@ -8,6 +8,10 @@ import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
 import { downloadCsv } from '../../utils/csv'
 import { buildPageList } from '../../utils/pagination'
+import PrintReportModal from '../shared/PrintReportModal'
+import { buildGateLogReport, dayStartMs, dayEndMs } from '../../utils/reportBuilders'
+import { toLocalISODate } from '../../utils/dateRange'
+import useDateRangeFilter from '../../hooks/useDateRangeFilter'
 
 const searchTypes = ['Plate No.', 'RFID-ID', 'Name']
 const PAGE_SIZE = 10
@@ -33,9 +37,7 @@ const SortIcon = ({ active, dir }) => (
   </svg>
 )
 
-function toDateInputValue(timestamp) {
-  return timestamp ? new Date(timestamp).toISOString().slice(0, 10) : ''
-}
+const toDateInputValue = toLocalISODate
 
 export default function SearchHistoryPage(){
   const [now, setNow] = useState(new Date())
@@ -48,14 +50,14 @@ export default function SearchHistoryPage(){
   const entries = useEnrichedGateLogs()
 
   // All Entry & Exit Logs section state
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const { dateFrom, dateTo, maxDate, changeFrom, changeTo } = useDateRangeFilter()
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('All')
   const [rfidFilter, setRfidFilter] = useState('')
   const [driverFilter, setDriverFilter] = useState('')
   const [sortKey, setSortKey] = useState('timestamp')
   const [sortDir, setSortDir] = useState('desc')
   const [page, setPage] = useState(1)
+  const [showPrintReport, setShowPrintReport] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
@@ -297,9 +299,9 @@ export default function SearchHistoryPage(){
         <div className="filter-card" style={{ marginBottom: 16 }}>
           <label className="filter-label">Date Range</label>
           <div className="date-range-row">
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <input type="date" value={dateFrom} max={dateTo || maxDate} onChange={(e) => changeFrom(e.target.value)} />
             <span>to</span>
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <input type="date" value={dateTo} min={dateFrom || undefined} max={maxDate} onChange={(e) => changeTo(e.target.value)} />
           </div>
 
           <label className="filter-label">Vehicle Type</label>
@@ -317,8 +319,8 @@ export default function SearchHistoryPage(){
           <button type="button" className="export-btn" onClick={exportCsv} style={{ marginTop: 12 }}>
             <CsvIcon /> Export as CSV
           </button>
-          <button type="button" className="export-btn" onClick={() => window.print()}>
-            <PdfIcon /> Export as PDF
+          <button type="button" className="export-btn" onClick={() => setShowPrintReport(true)}>
+            <PdfIcon /> Print / Save as PDF
           </button>
         </div>
 
@@ -370,6 +372,14 @@ export default function SearchHistoryPage(){
           </div>
         </div>
       </div>
+
+      {showPrintReport && (
+        <PrintReportModal
+          title="Vehicle Access Report"
+          {...buildGateLogReport(filteredLogs, { from: dayStartMs(dateFrom), to: dayEndMs(dateTo) })}
+          onClose={() => setShowPrintReport(false)}
+        />
+      )}
 
       {showRemarkModal && (
         <RemarkModal
