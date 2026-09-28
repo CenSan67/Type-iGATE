@@ -1,5 +1,5 @@
-import { createUserWithEmailAndPassword, deleteUser, sendEmailVerification, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { auth, saveAdminProfile } from './firebase'
+import { createUserWithEmailAndPassword, deleteUser, EmailAuthProvider, reauthenticateWithCredential, sendEmailVerification, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { auth, saveAdminProfile, deleteAdminProfile } from './firebase'
 import { DEFAULT_SIGNUP_ROLE } from '../constants/roles'
 import { normalizePhone } from '../utils/validators'
 
@@ -46,6 +46,21 @@ export async function refreshEmailVerified(){
   await auth.currentUser.reload()
   await auth.currentUser.getIdToken(true)
   return auth.currentUser.emailVerified
+}
+
+// Firebase only lets a user delete their own login shortly after signing in, so the caller
+// reauthenticates with the password first (this also confirms it's really them).
+export async function reauthenticate(password){
+  const user = auth.currentUser
+  await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password))
+}
+
+// Lets someone whose signup was wrong/declined/removed clear their own login so they can sign
+// up again (e.g. with a corrected email). Profile first: rules need the still-valid session.
+export async function deleteOwnAccount(){
+  const user = auth.currentUser
+  await deleteAdminProfile(user.uid)
+  await deleteUser(user)
 }
 
 export async function logOut(){

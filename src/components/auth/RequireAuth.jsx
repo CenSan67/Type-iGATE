@@ -9,8 +9,9 @@ export default function RequireAuth(){
   if (loading) return null
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />
 
-  // Signed up but not approved (or declined) - nothing behind this guard is available yet.
-  if (status === 'Pending' || status === 'Inactive') return <Navigate to="/pending" replace />
+  // Signed up but not approved (or declined), or a login whose profile was removed (status
+  // null) - nothing behind this guard is available yet. /pending handles all three.
+  if (!status || status === 'Pending' || status === 'Inactive') return <Navigate to="/pending" replace />
 
   return <Outlet />
 }
