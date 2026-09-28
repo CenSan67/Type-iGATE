@@ -31,7 +31,7 @@
         },
 
         "status": {
-          ".validate": "(newData.val() === 'Active' || newData.val() === 'Inactive') && (!data.exists() || data.val() === newData.val() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')"
+          ".validate": "(newData.val() === 'Active' || newData.val() === 'Inactive') && (!data.exists() || data.val() === newData.val() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' || (newData.val() === 'Inactive' && data.parent().child('role').val() === 'Visitor'))"
         },
 
         "imageUrl": {
@@ -44,7 +44,14 @@
       ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
       "$paymentId": {
         ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (!data.exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
-        ".validate": "newData.hasChildren(['rfidId', 'amount']) && newData.child('rfidId').isString() && newData.child('amount').isNumber()"
+        ".validate": "newData.hasChildren(['rfidId', 'amount']) && newData.child('rfidId').isString() && newData.child('amount').isNumber() && (!newData.hasChild('amountTendered') || (newData.child('amountTendered').isNumber() && newData.child('amountTendered').val() >= newData.child('amount').val())) && (data.exists() || newData.child('receivedBy').val() === auth.uid)"
+      }
+    },
+
+    "counters": {
+      "receipt": {
+        ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
+        ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && newData.isNumber() && ((!data.exists() && newData.val() === 1) || newData.val() === data.val() + 1)"
       }
     },
 
@@ -98,6 +105,14 @@
     "smsLogs": {
       ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
       ".write": false
+    },
+
+    "expectedGuests": {
+      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
+      "$guestId": {
+        ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' || (data.exists() && newData.exists() && data.child('name').val() === newData.child('name').val() && data.child('category').val() === newData.child('category').val() && data.child('hostName').val() === newData.child('hostName').val() && data.child('purpose').val() === newData.child('purpose').val() && data.child('validFrom').val() === newData.child('validFrom').val() && data.child('validUntil').val() === newData.child('validUntil').val() && data.child('createdBy').val() === newData.child('createdBy').val() && (data.child('status').val() === 'Expected' || data.child('status').val() === 'Arrived') && (newData.child('status').val() === 'Arrived' || newData.child('status').val() === 'Departed')))",
+        ".validate": "newData.hasChildren(['name', 'category', 'hostName', 'validFrom', 'validUntil', 'status', 'createdBy']) && newData.child('name').isString() && newData.child('validFrom').isNumber() && newData.child('validUntil').isNumber() && (newData.child('status').val() === 'Expected' || newData.child('status').val() === 'Arrived' || newData.child('status').val() === 'Departed' || newData.child('status').val() === 'Cancelled')"
+      }
     }
   }
 }

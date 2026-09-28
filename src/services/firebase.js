@@ -1,7 +1,7 @@
 // Firebase v9 modular SDK setup
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getDatabase, ref, set, update, push, get, remove, query, orderByChild, equalTo, onValue, onChildAdded } from 'firebase/database'
+import { getDatabase, ref, set, update, push, get, remove, query, orderByChild, equalTo, onValue, onChildAdded, runTransaction } from 'firebase/database'
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { validateGateLog } from '../models/gateLog'
 import { validateRfidUser } from '../models/rfidUser'
@@ -9,6 +9,7 @@ import { validatePayment } from '../models/payment'
 import { validateAdminProfile } from '../models/adminProfile'
 import { validateAppSettings, validateGateStatus } from '../models/appSettings'
 import { validateSystemUser } from '../models/systemUser'
+import { validateExpectedGuest } from '../models/expectedGuest'
 import { ROLES } from '../constants/roles'
 
 // TODO: replace with your Firebase project values
@@ -76,7 +77,7 @@ export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType,
 // Used by the Payment flow: a successful payment registers the card if it's new,
 // or refreshes its details if it's a renewal — unlike registerRfidUser, it never
 // throws on an existing RFID since renewals are expected to already be registered.
-export async function upsertRfidUser({ rfidId, name, department, plateNumber, vehicleType, role, email, phone }) {
+export async function upsertRfidUser({ rfidId, name, department, plateNumber, vehicleType, vehicleColor, role, email, phone }) {
   const usersRef = ref(rtdb, 'rfidUsers')
   const snapshot = await get(usersRef)
   const existing = snapshot.exists() ? Object.entries(snapshot.val() || {}) : []
@@ -90,6 +91,7 @@ export async function upsertRfidUser({ rfidId, name, department, plateNumber, ve
       department: department || value.department,
       plateNumber: plateNumber || value.plateNumber,
       vehicleType: vehicleType || value.vehicleType,
+      vehicleColor: vehicleColor || value.vehicleColor,
       role: role || value.role,
       email: email || value.email,
       phone: phone || value.phone,
@@ -98,7 +100,7 @@ export async function upsertRfidUser({ rfidId, name, department, plateNumber, ve
   }
 
   const newUserRef = push(usersRef)
-  await set(newUserRef, validateRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, phone, createdAt: Date.now() }))
+  await set(newUserRef, validateRfidUser({ name, rfidId, plateNumber, vehicleType, vehicleColor, department, role, email, phone, createdAt: Date.now() }))
 
   return newUserRef.key
 }
@@ -206,7 +208,15 @@ export function listenToRfidUsers(callback) {
   })
 }
 
-export async function recordPayment({ rfidId, name, department, plateNumber, paymentType, amount, status = 'Paid', date, time, validUntil }) {
+// Next sequential receipt number (OR-000123). A transaction on counters/receipt, so two guards
+// paying at the same moment can never be issued the same number. If the payment write that
+// follows fails, that number is simply skipped (a gap, never a duplicate).
+export async function getNextReceiptNo() {
+  const result = await runTransaction(ref(rtdb, 'counters/receipt'), (current) => (Number(current) || 0) + 1)
+  return `OR-${String(result.snapshot.val()).padStart(6, '0')}`
+}
+
+export async function recordPayment({ rfidId, name, department, plateNumber, paymentType, amount, status = 'Paid', date, time, validUntil, vehicleType, amountTendered, receiptNo, receivedBy, receivedByName, docsVerified, licenseExpiry, consentAt, privacyNoticeVersion }) {
   const paymentRef = push(ref(rtdb, 'payments'))
   await set(paymentRef, validatePayment({
     rfidId,
@@ -219,6 +229,15 @@ export async function recordPayment({ rfidId, name, department, plateNumber, pay
     date,
     time,
     validUntil,
+    vehicleType,
+    amountTendered,
+    receiptNo,
+    receivedBy,
+    receivedByName,
+    docsVerified,
+    licenseExpiry,
+    consentAt,
+    privacyNoticeVersion,
     timestamp: Date.now()
   }))
 
@@ -320,6 +339,13 @@ export async function setAdminStatus(uid, status) {
   await update(ref(rtdb, `adminProfiles/${uid}`), { status })
 }
 
+// Deletes the profile record only - a client can't delete someone else's Firebase Auth login
+// (that needs the Admin SDK). Used by a Super Admin to remove a declined/deactivated account,
+// and by the account owner via services/auth.js#deleteOwnAccount (rules: owner or Super Admin).
+export async function deleteAdminProfile(uid) {
+  await remove(ref(rtdb, `adminProfiles/${uid}`))
+}
+
 export async function rejectAdminProfile(uid) {
   await update(ref(rtdb, `adminProfiles/${uid}`), { status: 'Inactive' })
 }
@@ -328,6 +354,97 @@ export async function rejectAdminProfile(uid) {
 // Rules only accept `true` when the auth token itself says email_verified.
 export async function markProfileEmailVerified(uid) {
   await update(ref(rtdb, `adminProfiles/${uid}`), { emailVerified: true })
+}
+
+// ---- VIP pre-clearance (expectedGuests) ------------------------------------------------
+// An Administrator enters a guest ahead of time (createExpectedGuest); any staff role can
+// then check them in/out at the gate (checkInGuest/checkOutGuest) without the admin's
+// involvement. database.rules.json enforces that split - a guard's write may only move
+// status Expected->Arrived->Departed and touch the check-in fields, never the guest's core
+// details or Cancelled.
+
+export async function createExpectedGuest(data, actor) {
+  const guestRef = push(ref(rtdb, 'expectedGuests'))
+  await set(guestRef, validateExpectedGuest({
+    ...data,
+    status: 'Expected',
+    createdBy: actor?.uid || '',
+    createdByName: actor?.name || '',
+    createdAt: Date.now(),
+  }))
+  return guestRef.key
+}
+
+export function listenToExpectedGuests(callback) {
+  return onValue(ref(rtdb, 'expectedGuests'), (snapshot) => {
+    if (!snapshot.exists()) {
+      callback([])
+      return
+    }
+    const guests = Object.entries(snapshot.val() || {}).map(([id, value]) => ({ id, ...value }))
+    callback(guests.sort((a, b) => (a.validFrom || 0) - (b.validFrom || 0)))
+  })
+}
+
+// Admin only (rules): withdraws a pre-clearance that hasn't arrived (or was mistaken) rather
+// than deleting it, so there's still a record of what was cancelled and by whom.
+export async function cancelExpectedGuest(id) {
+  const snap = await get(ref(rtdb, `expectedGuests/${id}`))
+  if (!snap.exists()) throw new Error('Guest entry not found.')
+  await set(ref(rtdb, `expectedGuests/${id}`), validateExpectedGuest({ ...snap.val(), status: 'Cancelled' }))
+}
+
+// Any staff role (rules restrict this to only the Expected->Arrived transition plus the
+// check-in fields below - see database.rules.json). Issues the guest a temporary visitor-
+// shaped rfidUsers pass, the same one a walk-in visitor gets, valid until the guest's window
+// closes, then marks them Arrived. No payment is recorded - VIP guests don't pay this fee.
+export async function checkInGuest(id, { rfidId, plateNumber, vehicleType }, actor) {
+  const snap = await get(ref(rtdb, `expectedGuests/${id}`))
+  if (!snap.exists()) throw new Error('Guest entry not found.')
+  const guest = snap.val()
+
+  await registerRfidUser({
+    name: guest.name,
+    rfidId,
+    plateNumber: plateNumber || guest.plateNumber,
+    vehicleType: vehicleType || guest.vehicleType,
+    department: '',
+    role: 'Visitor',
+    email: '',
+    phone: '',
+    expiresAt: guest.validUntil,
+    hostName: guest.hostName,
+    purpose: [guest.category, guest.purpose].filter(Boolean).join(' - '),
+  })
+
+  await set(ref(rtdb, `expectedGuests/${id}`), validateExpectedGuest({
+    ...guest,
+    status: 'Arrived',
+    rfidId,
+    plateNumber: plateNumber || guest.plateNumber,
+    vehicleType: vehicleType || guest.vehicleType,
+    arrivedAt: Date.now(),
+    checkedInBy: actor?.name || '',
+  }))
+}
+
+// Any staff role. Returns the temporary pass issued at check-in (best-effort - an admin who
+// deleted rfidUsers records in between just means there's nothing left to deactivate) and
+// marks the guest Departed.
+export async function checkOutGuest(id) {
+  const snap = await get(ref(rtdb, `expectedGuests/${id}`))
+  if (!snap.exists()) throw new Error('Guest entry not found.')
+  const guest = snap.val()
+
+  if (guest.rfidId) {
+    const usersSnap = await get(ref(rtdb, 'rfidUsers'))
+    const match = usersSnap.exists()
+      ? Object.entries(usersSnap.val() || {}).find(([, v]) => (v.rfidId || '').toString().toLowerCase() === guest.rfidId.toString().toLowerCase())
+      : null
+    if (match) await set(ref(rtdb, `rfidUsers/${match[0]}/status`), 'Inactive')
+  }
+
+  await set(ref(rtdb, `expectedGuests/${id}`), validateExpectedGuest({ ...guest, status: 'Departed', departedAt: Date.now() }))
 }
 
 export default app

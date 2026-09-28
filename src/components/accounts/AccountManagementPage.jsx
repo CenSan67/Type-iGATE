@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
-import { listenToRfidUsers, listenToPayments, deleteRfidUser, setRfidUserStatus, listenToAllAdminProfiles, setAdminRole, setAdminStatus } from '../../services/firebase'
+import { listenToRfidUsers, listenToPayments, deleteRfidUser, setRfidUserStatus, listenToAllAdminProfiles, setAdminRole, setAdminStatus, deleteAdminProfile } from '../../services/firebase'
 import EditRfidUserModal from '../modals/EditRfidUserModal'
 import ConfirmModal from '../modals/ConfirmModal'
 import { useAuth } from '../../context/AuthContext'
 import { ROLES } from '../../constants/roles'
 import PendingApprovalsPanel from './PendingApprovalsPanel'
+import VipGuestsPanel from './VipGuestsPanel'
+import { getErrorMessage } from '../../utils/errors'
+import { useToast } from '../../context/ToastContext'
 
 const filters = ['All', 'Paid', 'Unpaid', 'Active', 'Expired']
 
@@ -38,14 +41,14 @@ export default function AccountManagementPage(){
   const [payments, setPayments] = useState([])
   const [editingUser, setEditingUser] = useState(null)
   const [pendingAction, setPendingAction] = useState(null) // { type: 'delete'|'deactivate'|'activate', user }
-  const [actionError, setActionError] = useState('')
+  const { showError } = useToast()
 
   // Staff/role management - Super Admin only (task: role assignment must only be
   // manageable here, by a Super Admin; enforced server-side too, see database.rules.json).
   const [staffProfiles, setStaffProfiles] = useState([])
   const [pendingRoleChange, setPendingRoleChange] = useState(null) // { uid, profile, newRole }
-  const [roleChangeError, setRoleChangeError] = useState('')
   const [pendingStatusChange, setPendingStatusChange] = useState(null) // { profile, nextStatus }
+  const [pendingRemoval, setPendingRemoval] = useState(null) // profile of a declined/deactivated account
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
@@ -71,25 +74,33 @@ export default function AccountManagementPage(){
 
   const runRoleChange = async () => {
     if (!pendingRoleChange) return
-    setRoleChangeError('')
     try {
       await setAdminRole(pendingRoleChange.uid, pendingRoleChange.newRole, pendingRoleChange.profile)
       setPendingRoleChange(null)
     } catch (err) {
-      setRoleChangeError(err.message || 'Unable to change that role right now.')
+      showError(getErrorMessage(err, 'Unable to change that role right now.'))
     }
   }
 
   const runStatusChange = async () => {
     if (!pendingStatusChange) return
-    setRoleChangeError('')
     try {
       await setAdminStatus(pendingStatusChange.profile.id, pendingStatusChange.nextStatus)
       setPendingStatusChange(null)
     } catch (err) {
-      setRoleChangeError(err.message || 'Unable to change that status right now.')
+      showError(getErrorMessage(err, 'Unable to change that status right now.'))
       setPendingStatusChange(null)
     }
+  }
+
+  const runRemoval = async () => {
+    if (!pendingRemoval) return
+    try {
+      await deleteAdminProfile(pendingRemoval.id)
+    } catch (err) {
+      showError(getErrorMessage(err, 'Unable to remove that account right now.'))
+    }
+    setPendingRemoval(null)
   }
 
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
@@ -137,7 +148,6 @@ export default function AccountManagementPage(){
 
   const runAction = async () => {
     if (!pendingAction) return
-    setActionError('')
     try {
       if (pendingAction.type === 'delete') {
         await deleteRfidUser(pendingAction.user.id)
@@ -148,7 +158,7 @@ export default function AccountManagementPage(){
       }
       setPendingAction(null)
     } catch (err) {
-      setActionError(err.message || 'That action could not be completed.')
+      showError(getErrorMessage(err, 'That action could not be completed.'))
     }
   }
 
@@ -239,8 +249,6 @@ export default function AccountManagementPage(){
             </div>
           </div>
 
-          {actionError && <p className="form-error">{actionError}</p>}
-
           <table className="activity-table">
             <thead>
               <tr>
@@ -327,14 +335,14 @@ export default function AccountManagementPage(){
 
         <PendingApprovalsPanel />
 
+        <VipGuestsPanel />
+
         {isSuperAdmin && (
           <div className="activity-panel">
             <div className="activity-header">
               <h3>Staff Accounts</h3>
               <p>Assign staff roles - only visible to, and editable by, a Super Admin</p>
             </div>
-
-            {roleChangeError && <p className="form-error" style={{ margin: '0 24px 16px' }}>{roleChangeError}</p>}
 
             <table className="activity-table">
               <thead>
@@ -374,7 +382,10 @@ export default function AccountManagementPage(){
                     </td>
                     <td>
                       {profile.status === 'Inactive' ? (
-                        <button type="button" className="btn-primary" onClick={() => setPendingStatusChange({ profile, nextStatus: 'Active' })}>Reactivate</button>
+                        <div className="pending-actions-cell">
+                          <button type="button" className="btn-primary" onClick={() => setPendingStatusChange({ profile, nextStatus: 'Active' })}>Reactivate</button>
+                          <button type="button" className="btn-secondary" disabled={profile.id === user?.uid} onClick={() => setPendingRemoval(profile)}>Remove</button>
+                        </div>
                       ) : (
                         <button
                           type="button"
@@ -402,7 +413,7 @@ export default function AccountManagementPage(){
           confirmLabel="Change Role"
           danger={pendingRoleChange.newRole === 'Super Admin'}
           onConfirm={runRoleChange}
-          onClose={() => { setPendingRoleChange(null); setRoleChangeError('') }}
+          onClose={() => setPendingRoleChange(null)}
         />
       )}
 
@@ -418,6 +429,17 @@ export default function AccountManagementPage(){
           danger={pendingStatusChange.nextStatus === 'Inactive'}
           onConfirm={runStatusChange}
           onClose={() => setPendingStatusChange(null)}
+        />
+      )}
+
+      {pendingRemoval && (
+        <ConfirmModal
+          title="Remove this account?"
+          message={`Remove ${pendingRemoval.fullName || pendingRemoval.email}'s account record? They lose all access. Their sign-in itself isn't deleted - when they next sign in they can choose "Start over" to clear it and sign up again.`}
+          confirmLabel="Remove"
+          danger
+          onConfirm={runRemoval}
+          onClose={() => setPendingRemoval(null)}
         />
       )}
 
@@ -442,7 +464,7 @@ export default function AccountManagementPage(){
           confirmLabel={pendingAction.type === 'delete' ? 'Delete' : pendingAction.type === 'deactivate' ? 'Deactivate' : 'Activate'}
           danger={pendingAction.type === 'delete'}
           onConfirm={runAction}
-          onClose={() => { setPendingAction(null); setActionError('') }}
+          onClose={() => setPendingAction(null)}
         />
       )}
     </div>

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import StatsCards from './StatsCards'
 import RecentActivityTable from './RecentActivityTable'
+import GuestClearancePanel from './GuestClearancePanel'
+import VisitorPassesPanel from './VisitorPassesPanel'
 import SimulateScanModal from './SimulateScanModal'
 import UploadSnapshotModal from './UploadSnapshotModal'
 import { listenToNewGateLogs } from '../../services/firebase'
@@ -58,6 +60,8 @@ export default function DashboardPage(){
         </div>
 
         <RecentActivityTable />
+        <GuestClearancePanel />
+        <VisitorPassesPanel />
       </div>
 
       {showSimulateModal && <SimulateScanModal onClose={() => setShowSimulateModal(false)} />}
