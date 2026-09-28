@@ -2,10 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useAppState } from '../../context/AppStateContext'
 import RegistrationModal from '../modals/RegistrationModal'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
-import { listenToPayments, recordPayment, upsertRfidUser } from '../../services/firebase'
+import { listenToPayments } from '../../services/firebase'
+import PrintReportModal from '../shared/PrintReportModal'
+import { buildPaymentReport, dayStartMs, dayEndMs } from '../../utils/reportBuilders'
+import { QUICK_SELECTS, toLocalISODate } from '../../utils/dateRange'
+import useDateRangeFilter from '../../hooks/useDateRangeFilter'
+import ReceiptModal from '../modals/ReceiptModal'
+import usePaymentRegistration from '../../hooks/usePaymentRegistration'
 
 const PAGE_SIZE = 4
-const VALIDITY_MONTHS = 5
 
 const PdfIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 2h9l5 5v13a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><path d="M14 2v5h5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
@@ -26,10 +31,11 @@ export default function PaymentPage(){
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('All')
   const [paymentTypeFilter, setPaymentTypeFilter] = useState('All')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [activeQuick, setActiveQuick] = useState(null)
+  const { dateFrom, dateTo, activeQuick, maxDate, changeFrom, changeTo, applyQuick } = useDateRangeFilter()
   const [page, setPage] = useState(1)
+  const [showPrintReport, setShowPrintReport] = useState(false)
+  const [receipt, setReceipt] = useState(null)
+  const { register } = usePaymentRegistration()
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
@@ -40,7 +46,7 @@ export default function PaymentPage(){
     const unsub = listenToPayments((payments) => {
       setTransactions(payments.map((p) => ({
         id: p.id,
-        date: p.date || (p.timestamp ? new Date(p.timestamp).toISOString().slice(0, 10) : ''),
+        date: p.date || toLocalISODate(p.timestamp),
         time: p.time || (p.timestamp ? new Date(p.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : ''),
         rfid: p.rfidId || 'N/A',
         name: p.name || 'Unknown',
@@ -48,6 +54,8 @@ export default function PaymentPage(){
         plate: p.plateNumber || '—',
         paymentType: p.paymentType || '—',
         amount: Number(p.amount) || 0,
+        receiptNo: p.receiptNo || '—',
+        receivedBy: p.receivedByName || '—',
         status: p.status || 'Paid',
       })))
     })
@@ -83,55 +91,9 @@ export default function PaymentPage(){
   const closeModal = () => dispatch({ type: 'CLOSE_MODAL' })
 
   const handleRegister = async (form) => {
-    const rfidId = form.rfid.trim()
-    const name = form.name.trim()
-    const department = form.department.trim() || 'BSIT'
-    const plateNumber = form.plate.trim().toUpperCase()
-
-    const validUntilDate = new Date(now)
-    validUntilDate.setMonth(validUntilDate.getMonth() + VALIDITY_MONTHS)
-
-    // A successful payment doubles as registration: it creates the rfidUsers
-    // record if this card is new, or refreshes it (and its 5-month validity) on renewal.
-    await upsertRfidUser({
-      rfidId,
-      name,
-      department,
-      plateNumber,
-      vehicleType: form.vehicle,
-      role: form.role,
-      email: form.email?.trim() || '',
-    })
-
-    await recordPayment({
-      rfidId,
-      name,
-      department,
-      plateNumber,
-      paymentType: form.paymentType,
-      amount: Number(form.amount) || 0,
-      status: 'Paid',
-      date: now.toISOString().slice(0, 10),
-      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
-      validUntil: validUntilDate.getTime(),
-    })
+    const result = await register(form)
     closeModal()
-  }
-
-  const applyQuickSelect = (kind) => {
-    setActiveQuick((cur) => (cur === kind ? null : kind))
-    if (activeQuick === kind) { setDateFrom(''); setDateTo(''); return }
-    const today = new Date()
-    const iso = (d) => d.toISOString().slice(0, 10)
-    if (kind === 'Today') {
-      setDateFrom(iso(today)); setDateTo(iso(today))
-    } else if (kind === 'This week') {
-      const start = new Date(today); start.setDate(today.getDate() - today.getDay())
-      setDateFrom(iso(start)); setDateTo(iso(today))
-    } else if (kind === 'This month') {
-      const start = new Date(today.getFullYear(), today.getMonth(), 1)
-      setDateFrom(iso(start)); setDateTo(iso(today))
-    }
+    setReceipt(result)
   }
 
   return (
@@ -195,6 +157,8 @@ export default function PaymentPage(){
                   <th>Plate Number</th>
                   <th>Payment Type</th>
                   <th>Amount</th>
+                  <th>Receipt No.</th>
+                  <th>Received By</th>
                 </tr>
               </thead>
               <tbody>
@@ -209,10 +173,12 @@ export default function PaymentPage(){
                     <td>{t.plate}</td>
                     <td><span className="tag-pill">{t.paymentType}</span></td>
                     <td>₱{t.amount.toFixed(2)}</td>
+                    <td>{t.receiptNo}</td>
+                    <td>{t.receivedBy}</td>
                   </tr>
                 ))}
                 {pageItems.length === 0 && (
-                  <tr><td colSpan={9} className="accounts-empty">No transactions match your search or filters.</td></tr>
+                  <tr><td colSpan={11} className="accounts-empty">No transactions match your search or filters.</td></tr>
                 )}
               </tbody>
             </table>
@@ -234,19 +200,19 @@ export default function PaymentPage(){
 
           <label className="filter-label">Date Range</label>
           <div className="date-range-row">
-            <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setActiveQuick(null) }} />
+            <input type="date" value={dateFrom} max={dateTo || maxDate} onChange={(e) => changeFrom(e.target.value)} />
             <span>&gt;</span>
-            <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setActiveQuick(null) }} />
+            <input type="date" value={dateTo} min={dateFrom || undefined} max={maxDate} onChange={(e) => changeTo(e.target.value)} />
           </div>
 
           <label className="filter-label">Quick Select:</label>
           <div className="quick-select-row">
-            {['Today', 'This week', 'This month'].map((q) => (
+            {QUICK_SELECTS.map((q) => (
               <button
                 key={q}
                 type="button"
                 className={`quick-select-btn ${activeQuick === q ? 'active' : ''}`}
-                onClick={() => applyQuickSelect(q)}
+                onClick={() => applyQuick(q)}
               >
                 {q}
               </button>
@@ -267,14 +233,24 @@ export default function PaymentPage(){
             <option value="Renewal">Renewal</option>
           </select>
 
-          <button type="button" className="export-btn" onClick={() => window.print()}>
-            <PdfIcon /> Export as PDF
+          <button type="button" className="export-btn" onClick={() => setShowPrintReport(true)}>
+            <PdfIcon /> Print / Save as PDF
           </button>
           <button type="button" className="export-btn open-reg-btn" onClick={() => openRegistration('Registration')}>
             <RegisterIcon /> Open Registration
           </button>
         </div>
       </div>
+
+      {showPrintReport && (
+        <PrintReportModal
+          title="Payment History Report"
+          {...buildPaymentReport(filtered, { from: dayStartMs(dateFrom), to: dayEndMs(dateTo) })}
+          onClose={() => setShowPrintReport(false)}
+        />
+      )}
+
+      {receipt && <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />}
 
       {state.activeModal?.type === 'registration' && (
         <RegistrationModal

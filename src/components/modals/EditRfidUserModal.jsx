@@ -3,6 +3,8 @@ import Modal from './Modal'
 import { updateRfidUser } from '../../services/firebase'
 import { isValidRfid, isValidPlate, isValidEmail, isValidPhone } from '../../utils/validators'
 import { VEHICLE_OWNER_ROLES, VEHICLE_TYPES } from '../../models/rfidUser'
+import { getErrorMessage } from '../../utils/errors'
+import { useToast } from '../../context/ToastContext'
 
 export default function EditRfidUserModal({ user, onClose, onSaved }){
   const [form, setForm] = useState({
@@ -10,12 +12,13 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
     rfidId: user.rfidId || '',
     plateNumber: user.plateNumber || '',
     vehicleType: user.vehicleType || 'Car',
+    vehicleColor: user.vehicleColor || '',
     department: user.department || '',
     role: user.role || 'Student',
     email: user.email || '',
     phone: user.phone || '',
   })
-  const [error, setError] = useState('')
+  const { showError } = useToast()
   const [saving, setSaving] = useState(false)
 
   const handleChange = (e) => {
@@ -27,34 +30,34 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
     e.preventDefault()
 
     if (!form.name.trim() || !form.rfidId.trim()) {
-      setError('Name and RFID are required.')
+      showError('Name and RFID are required.')
       return
     }
     if (!isValidRfid(form.rfidId)) {
-      setError('RFID looks invalid — expected 3-40 letters, numbers or hyphens.')
+      showError('RFID looks invalid — expected 3-40 letters, numbers or hyphens.')
       return
     }
     if (form.plateNumber.trim() && !isValidPlate(form.plateNumber)) {
-      setError('Plate Number format looks invalid (expected e.g. ABC-1234).')
+      showError('Plate Number format looks invalid (expected e.g. ABC-1234).')
       return
     }
     if (!isValidEmail(form.email)) {
-      setError('Email format looks invalid.')
+      showError('Email format looks invalid.')
       return
     }
     if (!isValidPhone(form.phone)) {
-      setError('Phone format looks invalid (expected a PH mobile number, e.g. 09171234567).')
+      showError('Phone format looks invalid (expected a PH mobile number, e.g. 09171234567).')
       return
     }
 
     setSaving(true)
-    setError('')
     try {
       await updateRfidUser(user.id, {
         name: form.name.trim(),
         rfidId: form.rfidId.trim(),
         plateNumber: form.plateNumber.trim(),
         vehicleType: form.vehicleType,
+        vehicleColor: form.vehicleColor.trim(),
         department: form.department.trim(),
         role: form.role,
         email: form.email.trim(),
@@ -63,7 +66,7 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
       onSaved?.()
       onClose()
     } catch (err) {
-      setError(err.message || 'Unable to save changes right now.')
+      showError(getErrorMessage(err, 'Unable to save changes right now.'))
     } finally {
       setSaving(false)
     }
@@ -95,6 +98,11 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
         </label>
 
         <label>
+          Vehicle Color
+          <input name="vehicleColor" value={form.vehicleColor} onChange={handleChange} placeholder="White" />
+        </label>
+
+        <label>
           Department
           <input name="department" value={form.department} onChange={handleChange} placeholder="BSIT" />
         </label>
@@ -115,8 +123,6 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
           Phone (optional — enables SMS gate alerts)
           <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="09171234567" />
         </label>
-
-        {error && <p className="form-error">{error}</p>}
 
         <div className="modal-actions">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>

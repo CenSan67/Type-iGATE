@@ -50,7 +50,7 @@ export default function RecentActivityTable(){
           <p>Real-time entry and exit logs</p>
         </div>
         <button className="primary-btn" type="button" onClick={() => setShowRegisterModal(true)}>
-          Register RFID
+          Register Visitor
         </button>
       </div>
       <table className="activity-table">

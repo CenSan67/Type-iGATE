@@ -3,7 +3,7 @@ import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, normalizePhone }
 // This is the vehicle-owner "role" (who the card belongs to), unrelated to the
 // admin login roles in src/constants/roles.js. Security guards register under 'Staff'.
 export const VEHICLE_OWNER_ROLES = ['Student', 'Faculty', 'Staff', 'Visitor']
-export const VEHICLE_TYPES = ['Car', 'Motorcycle', 'E-Bike', 'Truck']
+export const VEHICLE_TYPES = ['Car', 'Motorcycle', 'Tricycle', 'E-Bike', 'E-Scooter', 'Truck']
 export const ACCOUNT_STATUSES = ['Active', 'Inactive']
 
 /**
@@ -12,6 +12,7 @@ export const ACCOUNT_STATUSES = ['Active', 'Inactive']
  * @property {string} rfidId
  * @property {string} plateNumber
  * @property {string} vehicleType
+ * @property {string} [vehicleColor]
  * @property {string} department
  * @property {'Student'|'Faculty'|'Staff'|'Visitor'} role
  * @property {string} email
@@ -63,6 +64,7 @@ export function validateRfidUser(data) {
     rfidId: data.rfidId.trim(),
     plateNumber: (data.plateNumber || '').trim().toUpperCase(),
     vehicleType: data.vehicleType || 'Car',
+    vehicleColor: (data.vehicleColor || '').trim(),
     department: data.department || '',
     role: data.role || 'Student',
     email: (data.email || '').trim(),

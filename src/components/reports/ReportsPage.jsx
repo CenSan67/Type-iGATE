@@ -2,8 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 import { buildPageList } from '../../utils/pagination'
+import PrintReportModal from '../shared/PrintReportModal'
+import { buildGateLogReport, dayStartMs, dayEndMs } from '../../utils/reportBuilders'
+import { QUICK_SELECTS, toLocalISODate } from '../../utils/dateRange'
+import useDateRangeFilter from '../../hooks/useDateRangeFilter'
+import { VEHICLE_TYPES } from '../../models/rfidUser'
 
-const quickSelects = ['Today', 'This week', 'This month']
 const PAGE_SIZE = 10
 
 const SearchIcon = () => (
@@ -16,11 +20,12 @@ const PdfIcon = () => (
 export default function ReportsPage(){
   const [now, setNow] = useState(new Date())
   const [query, setQuery] = useState('')
-  const [quickSelect, setQuickSelect] = useState(null)
   const [status, setStatus] = useState('All')
   const [userType, setUserType] = useState('All')
   const [vehicleType, setVehicleType] = useState('All')
+  const { dateFrom, dateTo, activeQuick, maxDate, changeFrom, changeTo, applyQuick } = useDateRangeFilter()
   const [page, setPage] = useState(1)
+  const [showPrintReport, setShowPrintReport] = useState(false)
   const entries = useEnrichedGateLogs()
 
   useEffect(() => {
@@ -41,6 +46,7 @@ export default function ReportsPage(){
     userType: entry.role,
     vehicle: entry.vehicleType,
     direction: entry.direction,
+    entry,
   })), [entries])
 
   const filtered = useMemo(() => {
@@ -50,11 +56,14 @@ export default function ReportsPage(){
       const matchesStatus = status === 'All' || r.direction === status
       const matchesUserType = userType === 'All' || r.userType === userType
       const matchesVehicle = vehicleType === 'All' || r.vehicle === vehicleType
-      return matchesQuery && matchesStatus && matchesUserType && matchesVehicle
+      const entryDate = toLocalISODate(r.entry.timestamp)
+      const matchesFrom = !dateFrom || (entryDate && entryDate >= dateFrom)
+      const matchesTo = !dateTo || (entryDate && entryDate <= dateTo)
+      return matchesQuery && matchesStatus && matchesUserType && matchesVehicle && matchesFrom && matchesTo
     })
-  }, [records, query, status, userType, vehicleType])
+  }, [records, query, status, userType, vehicleType, dateFrom, dateTo])
 
-  useEffect(() => { setPage(1) }, [query, status, userType, vehicleType])
+  useEffect(() => { setPage(1) }, [query, status, userType, vehicleType, dateFrom, dateTo])
 
   // Previously the table rendered every row in `filtered` unpaginated (hundreds of
   // entries at once) while showing a decorative, non-functional 1-5 page control -
@@ -139,19 +148,19 @@ export default function ReportsPage(){
 
                 <label className="filter-label">Date Range</label>
                 <div className="date-range-row">
-                  <input type="date" defaultValue="2026-04-01" />
+                  <input type="date" value={dateFrom} max={dateTo || maxDate} onChange={(e) => changeFrom(e.target.value)} />
                   <span>to</span>
-                  <input type="date" defaultValue="2026-04-30" />
+                  <input type="date" value={dateTo} min={dateFrom || undefined} max={maxDate} onChange={(e) => changeTo(e.target.value)} />
                 </div>
 
                 <label className="filter-label">Quick Select:</label>
                 <div className="quick-select-row">
-                  {quickSelects.map((q) => (
+                  {QUICK_SELECTS.map((q) => (
                     <button
                       key={q}
                       type="button"
-                      className={`quick-select-btn ${quickSelect === q ? 'active' : ''}`}
-                      onClick={() => setQuickSelect(quickSelect === q ? null : q)}
+                      className={`quick-select-btn ${activeQuick === q ? 'active' : ''}`}
+                      onClick={() => applyQuick(q)}
                     >
                       {q}
                     </button>
@@ -176,12 +185,11 @@ export default function ReportsPage(){
                 <label className="filter-label">Vehicle Type</label>
                 <select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
                   <option value="All">All</option>
-                  <option value="Car">Car</option>
-                  <option value="Motorcycle">Motorcycle</option>
+                  {VEHICLE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
 
-                <button type="button" className="export-btn" onClick={() => window.print()}>
-                  <PdfIcon /> Export as PDF
+                <button type="button" className="export-btn" onClick={() => setShowPrintReport(true)}>
+                  <PdfIcon /> Print / Save as PDF
                 </button>
               </div>
 
@@ -206,6 +214,14 @@ export default function ReportsPage(){
           </div>
         </div>
       </div>
+
+      {showPrintReport && (
+        <PrintReportModal
+          title="Vehicle Access Report"
+          {...buildGateLogReport(filtered.map((r) => r.entry), { from: dayStartMs(dateFrom), to: dayEndMs(dateTo) })}
+          onClose={() => setShowPrintReport(false)}
+        />
+      )}
     </div>
   )
 }

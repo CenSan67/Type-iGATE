@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
 import { registerRfidUser } from '../../services/firebase'
+import { VEHICLE_TYPES } from '../../models/rfidUser'
 import useRfidScanner from '../../hooks/useRfidScanner'
 import { isValidRfid, isValidPlate, isValidEmail, isValidPhone } from '../../utils/validators'
+import { getErrorMessage } from '../../utils/errors'
+import { useToast } from '../../context/ToastContext'
 
 const initialForm = {
   name: '',
   rfidId: '',
   plateNumber: '',
   vehicleType: 'Car',
-  department: '',
-  role: 'Student',
+  role: 'Visitor',
   email: '',
   phone: '',
   hostName: '',
@@ -17,8 +19,12 @@ const initialForm = {
   visitDuration: '8h',
 }
 
-// Temporary visitor pass durations, offered only when role === 'Visitor'. Converted to
-// an absolute rfidUsers/{id}/expiresAt timestamp at submit time - see handleSubmit.
+// This Dashboard form is visitor-only: it issues a temporary pass (the visitor leaves a valid
+// ID at the guardhouse). Students/Faculty/Staff register through Payment instead, since that
+// flow collects the fee and records the document verification + privacy consent - a second
+// path here would let registrations skip both.
+// Pass durations are converted to an absolute rfidUsers/{id}/expiresAt timestamp at submit
+// time - see handleSubmit.
 const VISIT_DURATIONS = [
   { value: '4h', label: '4 hours', ms: 4 * 60 * 60 * 1000 },
   { value: '8h', label: '8 hours (single shift)', ms: 8 * 60 * 60 * 1000 },
@@ -30,11 +36,10 @@ const VISIT_DURATIONS = [
 export default function RegisterRfidModal({ onClose, onRegistered }) {
   const [form, setForm] = useState(initialForm)
   const [submitting, setSubmitting] = useState(false)
-  const [message, setMessage] = useState('')
+  const { showError } = useToast()
   const { scanning, startScan, stopScan } = useRfidScanner()
 
   const handleScan = () => {
-    setMessage('')
     startScan((rfidId) => setForm((f) => ({ ...f, rfidId })))
   }
 
@@ -47,23 +52,23 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
     event.preventDefault()
 
     if (!form.rfidId.trim()) {
-      setMessage('Please enter an RFID code.')
+      showError('Please enter an RFID code.')
       return
     }
     if (!isValidRfid(form.rfidId)) {
-      setMessage('RFID looks invalid — expected 3-40 letters, numbers or hyphens.')
+      showError('RFID looks invalid — expected 3-40 letters, numbers or hyphens.')
       return
     }
     if (form.plateNumber.trim() && !isValidPlate(form.plateNumber)) {
-      setMessage('Plate Number format looks invalid (expected e.g. ABC-1234).')
+      showError('Plate Number format looks invalid (expected e.g. ABC-1234).')
       return
     }
     if (!isValidEmail(form.email)) {
-      setMessage('Email format looks invalid.')
+      showError('Email format looks invalid.')
       return
     }
     if (!isValidPhone(form.phone)) {
-      setMessage('Phone format looks invalid (expected a PH mobile number, e.g. 09171234567).')
+      showError('Phone format looks invalid (expected a PH mobile number, e.g. 09171234567).')
       return
     }
 
@@ -72,7 +77,6 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
     const expiresAt = isVisitor ? Date.now() + (duration?.ms ?? VISIT_DURATIONS[1].ms) : null
 
     setSubmitting(true)
-    setMessage('')
 
     try {
       await registerRfidUser({
@@ -80,7 +84,7 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
         rfidId: form.rfidId.trim(),
         plateNumber: form.plateNumber.trim(),
         vehicleType: form.vehicleType,
-        department: form.department.trim(),
+        department: '',
         role: form.role,
         email: form.email.trim(),
         phone: form.phone.trim(),
@@ -92,7 +96,7 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
       onRegistered?.()
       onClose()
     } catch (error) {
-      setMessage(error.message || 'Unable to register RFID user right now.')
+      showError(getErrorMessage(error, 'Unable to register RFID user right now.'))
     } finally {
       setSubmitting(false)
     }
@@ -136,25 +140,7 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
           <label>
             Vehicle Type
             <select name="vehicleType" value={form.vehicleType} onChange={handleChange}>
-              <option value="Car">Car</option>
-              <option value="Motorcycle">Motorcycle</option>
-              <option value="E-Bike">E-Bike</option>
-              <option value="Truck">Truck</option>
-            </select>
-          </label>
-
-          <label>
-            Department
-            <input name="department" value={form.department} onChange={handleChange} placeholder="BSIT" />
-          </label>
-
-          <label>
-            Role
-            <select name="role" value={form.role} onChange={handleChange}>
-              <option value="Student">Student</option>
-              <option value="Faculty">Faculty</option>
-              <option value="Staff">Staff</option>
-              <option value="Visitor">Visitor</option>
+              {VEHICLE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </label>
 
@@ -188,8 +174,6 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
               </label>
             </>
           ) : null}
-
-          {message ? <p className="form-message">{message}</p> : null}
 
           <div className="modal-actions">
             <button type="button" className="secondary-btn" onClick={onClose}>Cancel</button>

@@ -114,7 +114,7 @@ html, body, #root {
 .dashboard-shell {
   display: flex;
   min-height: 100vh;
-  width: 100vw;
+  width: 100%; /* not 100vw: that includes the scrollbar's width and forces a horizontal scrollbar */
   background: #fff; /* Main layout canvas container background matches Figma white canvas */
 }
 
@@ -598,6 +598,8 @@ html, body, #root {
 
 .dashboard-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
   align-items: center;
   justify-content: space-between;
   background: var(--maroon); /* Set header color to match university branding panel */
@@ -771,7 +773,8 @@ html, body, #root {
 .activity-panel {
   background: #fff;
   border-radius: 16px;
-  overflow: hidden;
+  overflow-x: auto; /* wide tables scroll inside the card instead of being clipped */
+  overflow-y: hidden;
   border: 1px solid #ededed;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.04);
 }
@@ -782,6 +785,7 @@ html, body, #root {
   padding: 24px;
   border-bottom: 1px solid #efefef;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -811,6 +815,7 @@ html, body, #root {
   background: #f7ecec;
   padding: 16px 20px;
   text-align: left;
+  white-space: nowrap;
   border-bottom: 1px solid #ededed;
 }
 
@@ -826,6 +831,20 @@ html, body, #root {
   padding: 18px 20px;
   color: #444;
   border-bottom: 1px solid #f6f6f6;
+}
+
+.activity-table td .pending-actions-cell,
+.activity-table td .btn-primary,
+.activity-table td .btn-secondary,
+.activity-table td .btn-danger {
+  white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  .activity-header { padding: 18px; }
+  .activity-table { font-size: 13px; }
+  .activity-table th { padding: 12px; }
+  .activity-table td { padding: 12px; }
 }
 
 .activity-row:hover {
@@ -1024,6 +1043,22 @@ html, body, #root {
   line-height: 1.4;
 }
 
+.password-rules {
+  list-style: none;
+  margin: -6px 4px 4px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.password-rule {
+  color: #7a7a7a;
+}
+
+.password-rule.met {
+  color: #2e7d32;
+}
+
 .pending-steps {
   list-style: none;
   margin: 8px 0 0;
@@ -1067,6 +1102,8 @@ html, body, #root {
 
 .pending-step-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 
+.pending-start-over { width: 100%; margin-top: 14px; }
+
 .pending-note { margin: 10px 0 0; font-size: 13px; color: #555; text-align: center; }
 
 .pending-actions-cell { display: flex; gap: 8px; }
@@ -1074,23 +1111,12 @@ html, body, #root {
 
 /* Responsiveness adjustments */
 @media (max-width: 900px) {
-  .sidebar,
-  .dashboard-shell.has-topbar .sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
-    top: 0;
-  }
-  .sidebar.open {
-    width: 100%;
-  }
+  /* The sidebar stays the fixed left rail (it used to become a full-width relative block,
+     which in the row-direction .dashboard-body squeezed the page content off-screen).
+     When opened it overlays the content instead of pushing it, so nothing gets crushed. */
   .dashboard-content, .dashboard-shell.sidebar-open .dashboard-content {
-    margin-left: 0;
+    margin-left: 76px;
     padding: 16px;
-  }
-  .sidebar-items {
-    flex-direction: row;
-    margin-top: 60px;
   }
   .app-topbar {
     padding: 14px 18px;
@@ -1162,6 +1188,63 @@ html, body, #root {
   color: #c12d2d;
   font-size: 13px;
   margin: 0;
+}
+
+/* Subtle error popups (ToastContext) - muted, top-right, above modal backdrops (z-index 200). */
+.toast-stack {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(340px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #444;
+  font-size: 13px;
+  line-height: 1.4;
+  border: 1px solid #e6e6e6;
+  border-left: 3px solid #c98a8a;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  animation: toast-in 0.18s ease-out;
+}
+
+.toast-message {
+  flex: 1;
+}
+
+.toast-close {
+  border: 0;
+  background: transparent;
+  color: #999;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.toast-close:hover {
+  color: #555;
+}
+
+.toast-info {
+  border-left-color: #8fb996;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .form-hint {
@@ -1515,7 +1598,8 @@ html, body, #root {
 .reports-table-wrap {
   border: 1px solid #ededed;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .reports-filter-col { display: grid; gap: 16px; }
@@ -1609,7 +1693,8 @@ html, body, #root {
 .payment-table-wrap {
   border: 1px solid #ededed;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 /* ============================================================
@@ -2236,4 +2321,280 @@ html, body, #root {
 @media (max-width: 800px) {
   .profile-card { grid-template-columns: 1fr; }
   .profile-field-row { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   Print report preview (PrintReportModal) - on screen it's a modal; when printing,
+   #root (the whole app) is hidden and only the report sheet prints.
+   ============================================================ */
+.print-report-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+
+.print-report-card {
+  width: min(1000px, 100%);
+  background: #fff;
+  color: #222;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.print-report-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #f4f4f4;
+  border-bottom: 1px solid #e3e3e3;
+  font-weight: 600;
+  color: #555;
+}
+
+.print-report-toolbar-actions { display: flex; align-items: center; gap: 12px; }
+
+.print-report-print-btn { display: inline-flex; align-items: center; gap: 8px; }
+
+.print-report-close {
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  line-height: 1;
+  color: #c12d2d;
+  cursor: pointer;
+}
+
+.print-report-sheet {
+  position: relative;
+  padding: 28px 32px 24px;
+  background: #fff;
+  overflow: hidden;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-report-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 420px;
+  transform: translate(-50%, -50%);
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.print-report-letterhead {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #444;
+}
+
+.print-report-letterhead img { height: 64px; width: auto; }
+.print-report-letterhead h1 { margin: 0; font-size: 26px; font-weight: 600; color: #111; }
+.print-report-letterhead p { margin: 2px 0 0; font-size: 14px; color: #222; }
+
+.print-report-title { position: relative; margin: 20px 0 10px; font-size: 20px; font-weight: 600; color: #111; }
+
+.print-report-meta { position: relative; font-size: 14px; line-height: 1.7; color: #222; margin-bottom: 18px; }
+
+.print-report-table {
+  position: relative;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.print-report-table th {
+  background: #e6dde2;
+  color: #222;
+  font-weight: 600;
+  text-align: center;
+  padding: 10px 8px;
+}
+
+.print-report-table td {
+  text-align: center;
+  padding: 9px 8px;
+  border-bottom: 1px solid #ececec;
+}
+
+.print-report-table thead { display: table-header-group; }
+.print-report-table tr { break-inside: avoid; }
+
+.print-report-empty { padding: 24px 8px !important; color: #777; }
+
+.print-badge {
+  display: inline-block;
+  min-width: 64px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+}
+.print-badge.in { background: #2da82d; }
+.print-badge.out { background: #c12d2d; }
+
+.print-report-summary {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin-top: 22px;
+  padding: 14px 20px;
+  border: 1px solid #333;
+  font-size: 14px;
+  break-inside: avoid;
+}
+
+.print-report-footer { position: relative; margin: 22px 0 0; text-align: center; font-size: 14px; color: #444; }
+
+@page { size: A4 landscape; margin: 12mm; }
+
+@media print {
+  body.print-report-open #root { display: none !important; }
+
+  body.print-report-open { background: #fff; }
+
+  .print-report-overlay {
+    position: static;
+    background: #fff;
+    padding: 0;
+    overflow: visible;
+    display: block;
+  }
+
+  .print-report-card { width: 100%; border-radius: 0; box-shadow: none; overflow: visible; }
+  .print-report-toolbar { display: none; }
+  .print-report-sheet { padding: 0; overflow: visible; }
+
+  /* fixed = repeats on every printed page */
+  .print-report-watermark { position: fixed; }
+}
+
+/* ============================================================
+   Registration & payment modal (RegistrationModal) + receipts
+   ============================================================ */
+.modal-card.modal-wide { width: min(1080px, 100%); }
+
+.registration-layout {
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 24px;
+}
+
+.registration-main { display: grid; gap: 12px; min-width: 0; }
+
+.registration-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.registration-fields .span-2 { grid-column: 1 / -1; }
+
+.registration-section {
+  margin: 8px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+  color: var(--maroon);
+  font-size: 15px;
+}
+
+.registration-note { margin: 0; font-size: 12px; color: #777; }
+
+.registration-search {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.registration-checks { display: grid; gap: 8px; }
+
+.check-row {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #444;
+}
+
+.check-row input[type="checkbox"] { width: auto; margin-top: 3px; flex-shrink: 0; }
+
+.consent-row {
+  padding: 12px 14px;
+  background: #faf6f6;
+  border: 1px solid #eadada;
+  border-radius: 10px;
+}
+
+.registration-form input[readonly] { background: #f5f5f5; color: #555; }
+
+.registration-side { position: sticky; top: 0; }
+
+.receipt-panel {
+  border: 1px solid #e6e6e6;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.receipt-panel-header {
+  background: var(--maroon);
+  color: #fff;
+  text-align: center;
+  font-weight: 700;
+  padding: 14px;
+}
+
+.receipt-summary { padding: 14px 16px 16px; color: #222; }
+
+.receipt-title { margin: 0 0 8px; text-align: center; font-size: 22px; }
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  font-size: 13px;
+  border-bottom: 1px dashed #999;
+}
+
+.receipt-row strong { text-align: right; word-break: break-word; }
+
+.receipt-total { border-bottom: none; font-size: 15px; }
+
+.receipt-sheet {
+  page: receipt;
+  width: min(420px, 100%);
+  margin: 0 auto;
+  padding: 24px;
+  background: #fff;
+  color: #222;
+}
+
+.receipt-sheet .print-report-letterhead h1 { font-size: 20px; }
+.receipt-sheet .print-report-letterhead p { font-size: 12px; }
+.receipt-sheet .print-report-letterhead img { height: 48px; }
+
+@page receipt { size: A5 portrait; margin: 10mm; }
+
+@media (max-width: 900px) {
+  .registration-layout { grid-template-columns: 1fr; }
+  .registration-side { position: static; }
+  .registration-fields { grid-template-columns: 1fr; }
+  .registration-search { grid-template-columns: 1fr auto; }
+  .registration-search select { grid-column: 1 / -1; }
 }
