@@ -1,7 +1,11 @@
 import React, { useState } from 'react'
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
 import Modal from './Modal'
+import PasswordRules from '../shared/PasswordRules'
 import { auth } from '../../services/firebase'
+import { isValidPassword } from '../../utils/validators'
+import { getErrorMessage } from '../../utils/errors'
+import { useToast } from '../../context/ToastContext'
 
 // Firebase treats password changes as a sensitive operation: it requires a recent
 // sign-in, so we reauthenticate with the current password before calling
@@ -9,14 +13,11 @@ import { auth } from '../../services/firebase'
 const AUTH_ERROR_MESSAGES = {
   'auth/wrong-password': 'Current password is incorrect.',
   'auth/invalid-credential': 'Current password is incorrect.',
-  'auth/too-many-requests': 'Too many attempts. Please try again later.',
-  'auth/weak-password': 'New password must be at least 6 characters.',
-  'auth/requires-recent-login': 'Please log out and back in, then try again.',
 }
 
 export default function ChangePasswordModal({ onClose }){
   const [form, setForm] = useState({ current: '', next: '', confirm: '' })
-  const [error, setError] = useState('')
+  const { showError } = useToast()
   const [success, setSuccess] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -25,32 +26,31 @@ export default function ChangePasswordModal({ onClose }){
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.current || !form.next || !form.confirm) {
-      setError('Please fill in all fields.')
+      showError('Please fill in all fields.')
       return
     }
-    if (form.next.length < 6) {
-      setError('New password must be at least 6 characters.')
+    if (!isValidPassword(form.next)) {
+      showError('New password does not meet all the requirements below.')
       return
     }
     if (form.next !== form.confirm) {
-      setError('New password and confirmation do not match.')
+      showError('New password and confirmation do not match.')
       return
     }
 
     const user = auth.currentUser
     if (!user) {
-      setError('You must be signed in with a real account to change your password.')
+      showError('You must be signed in with a real account to change your password.')
       return
     }
 
-    setError('')
     setSubmitting(true)
     try {
       await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, form.current))
       await updatePassword(user, form.next)
       setSuccess(true)
     } catch (err) {
-      setError(AUTH_ERROR_MESSAGES[err.code] || err.message || 'Unable to update password right now.')
+      showError(getErrorMessage(err, 'Unable to update password right now.', AUTH_ERROR_MESSAGES))
     } finally {
       setSubmitting(false)
     }
@@ -75,12 +75,11 @@ export default function ChangePasswordModal({ onClose }){
             New Password
             <input type="password" value={form.next} onChange={update('next')} />
           </label>
+          <PasswordRules password={form.next} />
           <label>
             Confirm New Password
             <input type="password" value={form.confirm} onChange={update('confirm')} />
           </label>
-
-          {error && <p className="form-error">{error}</p>}
 
           <div className="modal-actions">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={submitting}>Cancel</button>

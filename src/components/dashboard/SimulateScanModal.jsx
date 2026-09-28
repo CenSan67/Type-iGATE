@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import Modal from '../modals/Modal'
 import { listenToRfidUsers, logGateEntry } from '../../services/firebase'
+import { getErrorMessage } from '../../utils/errors'
+import { useToast } from '../../context/ToastContext'
 
 // Dev/testing aid only: lets staff push a fake gateLogs entry through the exact same
 // write path (logGateEntry -> validateGateLog) the ESP32 scanner uses, so the live
@@ -10,7 +12,7 @@ export default function SimulateScanModal({ onClose }){
   const [rfidId, setRfidId] = useState('')
   const [direction, setDirection] = useState('IN')
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const { showError } = useToast()
 
   useEffect(() => {
     const unsub = listenToRfidUsers(setUsers)
@@ -20,16 +22,15 @@ export default function SimulateScanModal({ onClose }){
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!rfidId.trim()) {
-      setError('Pick a registered RFID or type one to simulate.')
+      showError('Pick a registered RFID or type one to simulate.')
       return
     }
     setSubmitting(true)
-    setError('')
     try {
       await logGateEntry({ cardId: rfidId.trim(), direction, source: 'simulated' })
       onClose()
     } catch (err) {
-      setError(err.message || 'Unable to simulate that scan right now.')
+      showError(getErrorMessage(err, 'Unable to simulate that scan right now.'))
     } finally {
       setSubmitting(false)
     }
@@ -62,8 +63,6 @@ export default function SimulateScanModal({ onClose }){
             <option value="OUT">OUT</option>
           </select>
         </label>
-
-        {error && <p className="form-error">{error}</p>}
 
         <div className="modal-actions">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>

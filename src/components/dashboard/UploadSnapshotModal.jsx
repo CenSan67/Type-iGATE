@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react'
 import Modal from '../modals/Modal'
 import { uploadVehicleSnapshot } from '../../services/firebase'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
+import { getErrorMessage } from '../../utils/errors'
+import { useToast } from '../../context/ToastContext'
 
 const RECENT_COUNT = 20
 
@@ -19,7 +21,7 @@ export default function UploadSnapshotModal({ onClose, onUploaded }){
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [uploading, setUploading] = useState(false)
-  const [error, setError] = useState('')
+  const { showError } = useToast()
 
   const selectedEntry = recent.find((e) => e.id === gateLogId) || null
 
@@ -32,22 +34,21 @@ export default function UploadSnapshotModal({ onClose, onUploaded }){
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!gateLogId) {
-      setError('Pick which scan this photo belongs to.')
+      showError('Pick which scan this photo belongs to.')
       return
     }
     if (!file) {
-      setError('Choose an image file to upload.')
+      showError('Choose an image file to upload.')
       return
     }
 
     setUploading(true)
-    setError('')
     try {
       await uploadVehicleSnapshot(file, { gateLogId, rfidUserId: selectedEntry?.rfidUserId })
       onUploaded?.()
       onClose()
     } catch (err) {
-      setError(err.message || 'Unable to upload that image right now.')
+      showError(getErrorMessage(err, 'Unable to upload that image right now.'))
     } finally {
       setUploading(false)
     }
@@ -78,8 +79,6 @@ export default function UploadSnapshotModal({ onClose, onUploaded }){
         {previewUrl && (
           <img src={previewUrl} alt="Preview" style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 8 }} />
         )}
-
-        {error && <p className="form-error">{error}</p>}
 
         <div className="modal-actions">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>

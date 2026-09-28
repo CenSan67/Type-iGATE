@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { refreshEmailVerified, resendVerificationEmail } from '../services/auth'
 import { markProfileEmailVerified } from '../services/firebase'
+import { getErrorMessage } from '../utils/errors'
+import { useToast } from '../context/ToastContext'
 
 const RESEND_ERRORS = {
   'auth/too-many-requests': 'Too many requests - wait a few minutes before resending.',
@@ -13,6 +15,7 @@ const RESEND_ERRORS = {
 export default function useEmailVerification(user, profile) {
   const [checking, setChecking] = useState(false)
   const [message, setMessage] = useState('')
+  const { showError } = useToast()
   const verified = Boolean(profile?.emailVerified)
 
   const check = useCallback(async ({ silent = false } = {}) => {
@@ -27,11 +30,11 @@ export default function useEmailVerification(user, profile) {
         setMessage("We couldn't confirm it yet - click the link in the email we sent, then try again.")
       }
     } catch (err) {
-      if (!silent) setMessage(err.message || 'Unable to check right now.')
+      if (!silent) showError(getErrorMessage(err, 'Unable to check right now.'))
     } finally {
       setChecking(false)
     }
-  }, [user?.uid])
+  }, [user?.uid, showError])
 
   useEffect(() => {
     if (verified || !user?.uid) return
@@ -47,7 +50,7 @@ export default function useEmailVerification(user, profile) {
       await resendVerificationEmail()
       setMessage(`Verification email sent to ${user?.email}. Check your inbox (and spam).`)
     } catch (err) {
-      setMessage(RESEND_ERRORS[err?.code] || err.message || 'Unable to send the email right now.')
+      showError(getErrorMessage(err, 'Unable to send the email right now.', RESEND_ERRORS))
     }
   }
 

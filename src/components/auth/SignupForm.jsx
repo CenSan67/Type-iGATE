@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signUp } from '../../services/auth'
-import { isValidEmail, isValidPhone } from '../../utils/validators'
+import { isValidEmail, isValidPhone, formatPhoneInput, isValidPassword } from '../../utils/validators'
+import { getErrorMessage } from '../../utils/errors'
+import { useToast } from '../../context/ToastContext'
+import PasswordRules from '../shared/PasswordRules'
 import { ROLES, DEFAULT_SIGNUP_ROLE } from '../../constants/roles'
 import logo from '../../assets/bsu_logo-removebg-preview.png'
-
-const MIN_PASSWORD_LENGTH = 6 // Firebase Auth's own minimum
 
 const icons = {
   person: <><circle cx="12" cy="8" r="4" fill="currentColor" /><path d="M4 20c0-3.3 2.7-6 6-6h4c3.3 0 6 2.7 6 6v1H4v-1z" fill="currentColor" /></>,
@@ -26,21 +27,11 @@ function Field({ icon, children }){
   )
 }
 
-function friendlyError(err){
-  switch (err?.code) {
-    case 'auth/email-already-in-use': return 'An account with that email already exists.'
-    case 'auth/invalid-email': return 'Enter a valid email address.'
-    case 'auth/weak-password': return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
-    case 'auth/network-request-failed': return 'Network error - check your connection and try again.'
-    default: return err?.message || 'Unable to create the account right now.'
-  }
-}
-
 export default function SignupForm(){
   const navigate = useNavigate()
   const [form, setForm] = useState({ fullName: '', email: '', phone: '', requestedRole: DEFAULT_SIGNUP_ROLE, password: '', confirmPassword: '' })
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState(null)
+  const { showError } = useToast()
   const [submitting, setSubmitting] = useState(false)
 
   const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
@@ -50,7 +41,7 @@ export default function SignupForm(){
     if (!form.email.trim() || !isValidEmail(form.email)) return 'Enter a valid email address.'
     if (!isValidPhone(form.phone)) return 'Enter a valid PH mobile number (e.g. 09XXXXXXXXX).'
     if (!ROLES.includes(form.requestedRole)) return 'Choose the role you are applying for.'
-    if (form.password.length < MIN_PASSWORD_LENGTH) return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
+    if (!isValidPassword(form.password)) return 'Password does not meet all the requirements below.'
     if (form.password !== form.confirmPassword) return 'Passwords do not match.'
     return null
   }
@@ -58,15 +49,14 @@ export default function SignupForm(){
   const handleSubmit = async (e) => {
     e.preventDefault()
     const problem = validate()
-    if (problem) { setError(problem); return }
+    if (problem) { showError(problem); return }
 
-    setError(null)
     setSubmitting(true)
     try {
       await signUp({ email: form.email.trim(), password: form.password, fullName: form.fullName.trim(), phone: form.phone, requestedRole: form.requestedRole })
       navigate('/pending')
     } catch (err) {
-      setError(friendlyError(err))
+      showError(getErrorMessage(err, 'Unable to create the account right now.'))
     } finally {
       setSubmitting(false)
     }
@@ -87,7 +77,16 @@ export default function SignupForm(){
             <input className="input-field" type="email" placeholder="Email address" value={form.email} onChange={update('email')} autoComplete="email" />
           </Field>
           <Field icon="phone">
-            <input className="input-field" placeholder="Mobile number (optional)" value={form.phone} onChange={update('phone')} autoComplete="tel" />
+            <input
+              className="input-field"
+              type="tel"
+              inputMode="numeric"
+              maxLength={13}
+              placeholder="Mobile number, e.g. 09171234567 (optional)"
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: formatPhoneInput(e.target.value) }))}
+              autoComplete="tel-national"
+            />
           </Field>
           <Field icon="badge">
             <select className="input-field" value={form.requestedRole} onChange={update('requestedRole')} aria-label="Role you are applying for">
@@ -101,11 +100,10 @@ export default function SignupForm(){
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M8.5 12a3.5 3.5 0 107 0 3.5 3.5 0 00-7 0z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>
             </button>
           </Field>
+          <PasswordRules password={form.password} />
           <Field icon="lock">
             <input className="input-field" type={showPassword ? 'text' : 'password'} placeholder="Confirm password" value={form.confirmPassword} onChange={update('confirmPassword')} autoComplete="new-password" />
           </Field>
-
-          {error && <div className="form-error" style={{ marginTop: 6 }}>{error}</div>}
 
           <button type="submit" className="btn-login" disabled={submitting}>{submitting ? 'CREATING ACCOUNT…' : 'SIGN UP'}</button>
         </form>

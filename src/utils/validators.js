@@ -41,6 +41,32 @@ export function normalizePhone(value) {
   return ''
 }
 
+// Password policy for new accounts. Client-side only — Firebase Auth itself enforces just
+// its own 6-character minimum, so this is what makes the stricter rules actually apply.
+export const MIN_PASSWORD_LENGTH = 8
+
+export const PASSWORD_RULES = [
+  { id: 'length', label: `At least ${MIN_PASSWORD_LENGTH} characters`, test: (p) => p.length >= MIN_PASSWORD_LENGTH },
+  { id: 'upper', label: 'An uppercase letter (A-Z)', test: (p) => /[A-Z]/.test(p) },
+  { id: 'lower', label: 'A lowercase letter (a-z)', test: (p) => /[a-z]/.test(p) },
+  { id: 'number', label: 'A number (0-9)', test: (p) => /\d/.test(p) },
+  { id: 'special', label: 'A special character (e.g. ! @ # $ %)', test: (p) => /[^A-Za-z0-9\s]/.test(p) },
+]
+
+export function isValidPassword(value) {
+  const password = (value || '').toString()
+  return PASSWORD_RULES.every((rule) => rule.test(password))
+}
+
+// For live input masking: keeps digits only, converts a pasted +639XXXXXXXXX / 639XXXXXXXXX
+// to the local 09XXXXXXXXX form, and caps at 11 digits so the field can't hold anything
+// normalizePhone() would reject for length.
+export function formatPhoneInput(value) {
+  let digits = (value || '').toString().replace(/\D/g, '')
+  if (digits.startsWith('639')) digits = `0${digits.slice(2)}`
+  return digits.slice(0, 11)
+}
+
 // Phone is optional on rfidUsers (SMS alerts just won't fire for that owner), so an
 // empty value is valid; only a non-empty value that doesn't normalize to a PH mobile
 // number is rejected.

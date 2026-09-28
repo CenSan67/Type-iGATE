@@ -4,6 +4,8 @@ import ConfirmModal from '../modals/ConfirmModal'
 import { listenToGateStatus, setGateStatus } from '../../services/firebase'
 import { useAuth } from '../../context/AuthContext'
 import { ROLES } from '../../constants/roles'
+import { getErrorMessage } from '../../utils/errors'
+import { useToast } from '../../context/ToastContext'
 
 // Visual indicator + manual override for the physical barrier gate (Phase 6).
 // Lives on the Dashboard rather than System Settings because Security Guards need
@@ -13,7 +15,7 @@ export default function GateStatusCard(){
   const [status, setStatus] = useState(null)
   const [pendingState, setPendingState] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const { showError } = useToast()
 
   useEffect(() => {
     const unsub = listenToGateStatus(setStatus)
@@ -25,16 +27,15 @@ export default function GateStatusCard(){
   const badgeClass = status?.state === 'OPEN' ? 'badge-positive' : status?.state === 'CLOSED' ? 'badge-negative' : 'badge-neutral'
   const badgeLabel = status?.state || 'UNKNOWN'
 
-  const closeConfirm = () => { if (!submitting) { setPendingState(null); setError('') } }
+  const closeConfirm = () => { if (!submitting) { setPendingState(null) } }
 
   const handleConfirm = async () => {
     setSubmitting(true)
-    setError('')
     try {
       await setGateStatus(pendingState, { uid: user?.uid, email: user?.email })
       setPendingState(null)
     } catch (err) {
-      setError(err.message || 'Unable to update the barrier gate right now.')
+      showError(getErrorMessage(err, 'Unable to update the barrier gate right now.'))
     } finally {
       setSubmitting(false)
     }
@@ -72,7 +73,7 @@ export default function GateStatusCard(){
       {pendingState && (
         <ConfirmModal
           title={`${pendingState === 'OPEN' ? 'Open' : 'Close'} the barrier gate?`}
-          message={`This sends an emergency ${pendingState} command straight to the physical gate hardware, overriding its current state. Confirm to proceed.${error ? ` (${error})` : ''}`}
+          message={`This sends an emergency ${pendingState} command straight to the physical gate hardware, overriding its current state. Confirm to proceed.`}
           confirmLabel={submitting ? 'Sending…' : (pendingState === 'OPEN' ? 'Open Gate' : 'Close Gate')}
           danger={pendingState === 'OPEN'}
           onConfirm={handleConfirm}

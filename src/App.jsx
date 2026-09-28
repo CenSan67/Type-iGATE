@@ -14,6 +14,7 @@ import SettingsWrapper from './components/settings/SettingsWrapper'
 import ProfileWrapper from './components/profile/ProfileWrapper'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AppStateProvider } from './context/AppStateContext'
+import { ToastProvider } from './context/ToastContext'
 import { initializeFirebaseCollections } from './services/firebase'
 import { ADMIN_ROLES } from './constants/roles'
 
@@ -56,7 +57,9 @@ export default function App() {
   return (
     <AuthProvider>
       <AppStateProvider>
-        <AppRoutes />
+        <ToastProvider>
+          <AppRoutes />
+        </ToastProvider>
       </AppStateProvider>
     </AuthProvider>
   )

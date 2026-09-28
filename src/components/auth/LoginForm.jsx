@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signIn } from '../../services/auth'
+import { getErrorMessage } from '../../utils/errors'
 import logo from '../../assets/bsu_logo-removebg-preview.png'
 
 export default function LoginForm(){
@@ -17,7 +18,7 @@ export default function LoginForm(){
       await signIn(email,password)
       navigate('/dashboard')
     }catch(err){
-      setError(err.message)
+      setError(getErrorMessage(err, 'Unable to sign in right now. Please try again.'))
     }
   }
 
@@ -46,7 +47,7 @@ export default function LoginForm(){
             </button>
           </div>
 
-          {error && <div style={{color:'red',marginTop:6}}>{error}</div>}
+          {error && <div className="form-error" style={{marginTop:6}}>{error}</div>}
 
           <button type="submit" className="btn-login">LOGIN</button>
         </form>
