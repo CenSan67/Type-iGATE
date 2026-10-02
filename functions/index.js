@@ -13,10 +13,13 @@
 //      external HTTP call, which the free Spark plan blocks entirely)
 
 const { onValueCreated } = require('firebase-functions/v2/database')
+const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const { defineSecret, defineString } = require('firebase-functions/params')
 const logger = require('firebase-functions/logger')
 const { initializeApp } = require('firebase-admin/app')
 const { getDatabase } = require('firebase-admin/database')
+const { getAuth } = require('firebase-admin/auth')
+const { getStorage } = require('firebase-admin/storage')
 
 initializeApp()
 
@@ -143,3 +146,225 @@ exports.sendGateScanSms = onValueCreated(
     }
   }
 )
+
+// ---------------------------------------------------------------------------------------
+// Vehicle snapshot pipeline - lets the ESP32-CAM (CameraWebServer, a separate board from
+// the RFID reader - see CameraWebServer/) upload the photo it captures at the moment of a
+// validated gate scan, without embedding a full Firebase/GCP service-account credential in
+// firmware. The device only ever holds DEVICE_SHARED_SECRET, a short app-level key - set it
+// yourself with `firebase functions:secrets:set DEVICE_SHARED_SECRET` (never paste the value
+// into chat/AI tooling, same rule as SEMAPHORE_API_KEY above), then paste the identical value
+// into CameraWebServer.ino's DEVICE_SHARED_SECRET constant.
+//
+// Flow (see CameraWebServer.ino's captureAndUploadSnapshot() for the device side):
+//   1. GET issueSnapshotUploadUrl -> a short-lived V4-signed Cloud Storage PUT URL, plus the
+//      object's eventual public URL. The signed URL itself bypasses storage.rules (it's a
+//      raw GCS IAM grant, not a Firebase Storage SDK request) - no rules change was needed.
+//   2. The device PUTs the JPEG straight to that signed URL - no Firebase credential needed
+//      for the upload itself.
+//   3. GET finalizeSnapshot -> flips that one object public (same privacy posture the
+//      existing human-upload path already has: src/services/firebase.js's
+//      uploadVehicleSnapshot()'s getDownloadURL() is *also* a public-if-you-have-the-link
+//      URL by Firebase Storage's own token design - this isn't a new exposure, just the
+//      hardware path's equivalent of it).
+//   4. The device PATCHes gateLogs/{logId}/imageUrl itself, over the RTDB REST API with the
+//      same legacy database secret sketch_scanner.ino already uses for every other write it
+//      makes - these two functions never touch the Realtime Database at all.
+const DEVICE_SHARED_SECRET = defineSecret('DEVICE_SHARED_SECRET')
+const SNAPSHOT_UPLOAD_URL_TTL_MS = 5 * 60 * 1000 // plenty for the capture+upload round trip; short enough a leaked URL is useless soon after
+
+// Restricts both functions to exactly the vehicle-snapshots/ folder with a conservative
+// filename charset, so a compromised/misconfigured device secret can't be used to write to
+// or publish anything else in the bucket.
+const SNAPSHOT_PATH_PATTERN = /^vehicle-snapshots\/[A-Za-z0-9_-]{1,100}\.jpg$/
+
+function checkDeviceSecret(req, res) {
+  if (req.query.secret !== DEVICE_SHARED_SECRET.value()) {
+    res.status(401).json({ error: 'invalid secret' })
+    return false
+  }
+  if (typeof req.query.path !== 'string' || !SNAPSHOT_PATH_PATTERN.test(req.query.path)) {
+    res.status(400).json({ error: 'invalid path' })
+    return false
+  }
+  return true
+}
+
+exports.issueSnapshotUploadUrl = onRequest(
+  { region: 'us-central1', secrets: [DEVICE_SHARED_SECRET] },
+  async (req, res) => {
+    if (!checkDeviceSecret(req, res)) return
+
+    try {
+      const bucket = getStorage().bucket()
+      const file = bucket.file(req.query.path)
+      const [uploadUrl] = await file.getSignedUrl({
+        version: 'v4',
+        action: 'write',
+        expires: Date.now() + SNAPSHOT_UPLOAD_URL_TTL_MS,
+        contentType: 'image/jpeg',
+      })
+
+      res.status(200).json({ uploadUrl, imageUrl: `https://storage.googleapis.com/${bucket.name}/${req.query.path}` })
+    } catch (err) {
+      logger.error('issueSnapshotUploadUrl failed', err)
+      res.status(500).json({ error: 'internal' })
+    }
+  }
+)
+
+exports.finalizeSnapshot = onRequest(
+  { region: 'us-central1', secrets: [DEVICE_SHARED_SECRET] },
+  async (req, res) => {
+    if (!checkDeviceSecret(req, res)) return
+
+    try {
+      await getStorage().bucket().file(req.query.path).makePublic()
+      res.status(200).json({ ok: true })
+    } catch (err) {
+      logger.error('finalizeSnapshot failed', err)
+      res.status(500).json({ error: 'internal' })
+    }
+  }
+)
+
+// ---------------------------------------------------------------------------------------
+// Account lockout (5 failed sign-ins -> temporary lock, admin unlock or auto-expiry).
+//
+// This has to live server-side: database.rules.json requires auth != null on every path
+// (see the RBAC audit note in CLAUDE.md), so a client can't write a failed-attempt counter
+// before it has successfully signed in - there is nowhere in RTDB an unauthenticated
+// browser is allowed to write. These callables use the Admin SDK, which bypasses that the
+// same way sendGateScanSms's writes to smsLogs above do, and disable the Firebase Auth
+// login itself (not just the app-level `status` field) so a locked account can't complete
+// sign-in at all, not merely get bounced by RequireAuth after the fact.
+//
+// A lock also auto-expires (LOCK_DURATION_MS) so an account is never permanently stuck
+// just because no admin happens to be available - see checkLoginLock. This matters most
+// for the sole-Super-Admin case: if the only Super Admin locks themselves out, there is no
+// one else in-app who can unlock them, so the lock must eventually clear on its own. (If
+// they've also forgotten their password, that's a separate problem - see resetPassword in
+// src/services/auth.js - and the last-resort fallback is the same one already documented
+// for provisioning the first Super Admin: fix it directly in the Firebase console.)
+const MAX_FAILED_ATTEMPTS = 5
+const LOCK_DURATION_MS = 30 * 60 * 1000 // 30 minutes
+
+// Deliberately generic on any "account doesn't exist" case (unknown email, no profile) so
+// these callables don't become an email-enumeration oracle for an unauthenticated caller.
+async function getProfileByEmail(db, email) {
+  let userRecord
+  try {
+    userRecord = await getAuth().getUserByEmail(email)
+  } catch {
+    return null
+  }
+  const snapshot = await db.ref(`adminProfiles/${userRecord.uid}`).get()
+  if (!snapshot.exists()) return null
+  return { uid: userRecord.uid, profile: snapshot.val() }
+}
+
+async function autoUnlockIfExpired(db, uid, profile) {
+  if (profile.status !== 'Locked') return profile
+  if (typeof profile.lockExpiresAt === 'number' && Date.now() < profile.lockExpiresAt) return profile
+  const restoredStatus = profile.preLockStatus || 'Active'
+  await getAuth().updateUser(uid, { disabled: false })
+  await db.ref(`adminProfiles/${uid}`).update({
+    status: restoredStatus,
+    failedLoginAttempts: 0,
+    lockedAt: null,
+    lockExpiresAt: null,
+    preLockStatus: null,
+  })
+  return { ...profile, status: restoredStatus, failedLoginAttempts: 0 }
+}
+
+// Called before every sign-in attempt so a locked account never even reaches
+// signInWithEmailAndPassword, and so an expired lock clears itself on the next attempt.
+exports.checkLoginLock = onCall({ region: 'us-central1' }, async (request) => {
+  const email = (request.data?.email || '').trim()
+  if (!email) return { locked: false }
+
+  const db = getDatabase()
+  const found = await getProfileByEmail(db, email)
+  if (!found) return { locked: false }
+
+  const profile = await autoUnlockIfExpired(db, found.uid, found.profile)
+  if (profile.status !== 'Locked') return { locked: false }
+  return { locked: true, retryAt: profile.lockExpiresAt }
+})
+
+// Called after a failed signInWithEmailAndPassword. Bumps the failed-attempt counter and
+// locks the account (disabling the Firebase Auth login) once it reaches MAX_FAILED_ATTEMPTS.
+exports.recordFailedLogin = onCall({ region: 'us-central1' }, async (request) => {
+  const email = (request.data?.email || '').trim()
+  if (!email) return { locked: false }
+
+  const db = getDatabase()
+  const found = await getProfileByEmail(db, email)
+  if (!found) return { locked: false }
+
+  const { uid } = found
+  const profile = await autoUnlockIfExpired(db, uid, found.profile)
+  if (profile.status === 'Locked') return { locked: true, retryAt: profile.lockExpiresAt }
+
+  const attempts = (profile.failedLoginAttempts || 0) + 1
+
+  if (attempts >= MAX_FAILED_ATTEMPTS) {
+    const lockExpiresAt = Date.now() + LOCK_DURATION_MS
+    await getAuth().updateUser(uid, { disabled: true })
+    await db.ref(`adminProfiles/${uid}`).update({
+      failedLoginAttempts: attempts,
+      status: 'Locked',
+      preLockStatus: profile.status,
+      lockedAt: Date.now(),
+      lockExpiresAt,
+    })
+    logger.info(`adminProfiles/${uid}: locked after ${attempts} failed sign-in attempts`)
+    return { locked: true, retryAt: lockExpiresAt }
+  }
+
+  await db.ref(`adminProfiles/${uid}`).update({ failedLoginAttempts: attempts })
+  return { locked: false, attemptsRemaining: MAX_FAILED_ATTEMPTS - attempts }
+})
+
+// Called right after a successful sign-in to zero out the counter so occasional typos
+// don't accumulate toward a lock over separate sessions.
+exports.resetLoginAttempts = onCall({ region: 'us-central1' }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.')
+  const db = getDatabase()
+  await db.ref(`adminProfiles/${request.auth.uid}/failedLoginAttempts`).set(0)
+  return { ok: true }
+})
+
+// Admin/Super Admin action from Account Management's Locked Accounts panel. Authorization
+// is enforced here (not by database.rules.json, since the Admin SDK bypasses rules) by
+// re-reading the caller's own profile the same way the rules would have checked it.
+exports.unlockAccount = onCall({ region: 'us-central1' }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.')
+  const targetUid = request.data?.uid
+  if (!targetUid) throw new HttpsError('invalid-argument', 'Missing uid.')
+
+  const db = getDatabase()
+  const callerSnap = await db.ref(`adminProfiles/${request.auth.uid}`).get()
+  const caller = callerSnap.val()
+  if (!caller || caller.status !== 'Active' || !['Super Admin', 'Administrator'].includes(caller.role)) {
+    throw new HttpsError('permission-denied', 'Only an active Administrator or Super Admin can unlock an account.')
+  }
+
+  const targetSnap = await db.ref(`adminProfiles/${targetUid}`).get()
+  const target = targetSnap.val()
+  if (!target || target.status !== 'Locked') {
+    throw new HttpsError('failed-precondition', 'That account is not locked.')
+  }
+
+  await getAuth().updateUser(targetUid, { disabled: false })
+  await db.ref(`adminProfiles/${targetUid}`).update({
+    status: target.preLockStatus || 'Active',
+    failedLoginAttempts: 0,
+    lockedAt: null,
+    lockExpiresAt: null,
+    preLockStatus: null,
+  })
+  logger.info(`adminProfiles/${targetUid}: unlocked by ${request.auth.uid}`)
+  return { ok: true }
+})
