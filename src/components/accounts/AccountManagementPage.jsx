@@ -6,11 +6,18 @@ import ConfirmModal from '../modals/ConfirmModal'
 import { useAuth } from '../../context/AuthContext'
 import { ROLES } from '../../constants/roles'
 import PendingApprovalsPanel from './PendingApprovalsPanel'
+import LockedAccountsPanel from './LockedAccountsPanel'
 import VipGuestsPanel from './VipGuestsPanel'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
 
 const filters = ['All', 'Paid', 'Unpaid', 'Active', 'Expired']
+// A visitor gets a brand-new rfidUsers record every single visit (temporary pass, new card
+// each time), so they build up fast and used to flood this table shoulder-to-shoulder with
+// permanent Student/Faculty/Staff registrations - "Registered" is the default scope so the
+// list a Super Admin/Administrator actually manages day-to-day stays readable; "Visitors" is
+// still one click away for cleanup/lookup.
+const ACCOUNT_SCOPES = ['Registered', 'Visitors', 'All']
 
 const CheckIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -36,6 +43,7 @@ export default function AccountManagementPage(){
   const isSuperAdmin = role === 'Super Admin'
   const [now, setNow] = useState(new Date())
   const [activeFilter, setActiveFilter] = useState('All')
+  const [scope, setScope] = useState('Registered')
   const [query, setQuery] = useState('')
   const [users, setUsers] = useState([])
   const [payments, setPayments] = useState([])
@@ -129,22 +137,38 @@ export default function AccountManagementPage(){
     }
   }), [users, payments, now])
 
-  const summary = useMemo(() => ({
-    total: accounts.length,
-    paid: accounts.filter((a) => a.payment === 'Paid').length,
-    unpaid: accounts.filter((a) => a.payment === 'Unpaid').length,
-    active: accounts.filter((a) => a.status === 'Active').length,
-    expired: accounts.filter((a) => a.status === 'Expired').length,
+  // Registered = Student/Faculty/Staff (permanent). Visitors = temporary passes (role
+  // 'Visitor', one record per visit). "All" is the old unscoped behavior.
+  const scopeCounts = useMemo(() => ({
+    Registered: accounts.filter((a) => a.role !== 'Visitor').length,
+    Visitors: accounts.filter((a) => a.role === 'Visitor').length,
+    All: accounts.length,
   }), [accounts])
 
+  const scopedAccounts = useMemo(() => {
+    if (scope === 'Registered') return accounts.filter((a) => a.role !== 'Visitor')
+    if (scope === 'Visitors') return accounts.filter((a) => a.role === 'Visitor')
+    return accounts
+  }, [accounts, scope])
+
+  // Scoped to whatever's currently on screen, so the stat cards match the table below them
+  // instead of always reflecting the full (Registered + Visitors) set.
+  const summary = useMemo(() => ({
+    total: scopedAccounts.length,
+    paid: scopedAccounts.filter((a) => a.payment === 'Paid').length,
+    unpaid: scopedAccounts.filter((a) => a.payment === 'Unpaid').length,
+    active: scopedAccounts.filter((a) => a.status === 'Active').length,
+    expired: scopedAccounts.filter((a) => a.status === 'Expired').length,
+  }), [scopedAccounts])
+
   const filteredAccounts = useMemo(() => {
-    return accounts.filter((a) => {
+    return scopedAccounts.filter((a) => {
       const matchesFilter = activeFilter === 'All' || a.payment === activeFilter || a.status === activeFilter
       const q = query.trim().toLowerCase()
       const matchesQuery = !q || [a.name, a.rfid, a.role, a.vehicle].some((field) => (field || '').toLowerCase().includes(q))
       return matchesFilter && matchesQuery
     })
-  }, [accounts, activeFilter, query])
+  }, [scopedAccounts, activeFilter, query])
 
   const runAction = async () => {
     if (!pendingAction) return
@@ -222,7 +246,24 @@ export default function AccountManagementPage(){
         <div className="activity-panel">
           <div className="activity-header">
             <h3>Account Management</h3>
-            <p>Manage registrations, payments and access status</p>
+            <p>
+              {scope === 'Registered' && 'Permanent Student/Faculty/Staff registrations - visitor passes are kept separate below'}
+              {scope === 'Visitors' && 'Temporary visitor passes - one record per visit'}
+              {scope === 'All' && 'Every registration and visitor pass, unfiltered'}
+            </p>
+          </div>
+
+          <div className="filter-group scope-toggle">
+            {ACCOUNT_SCOPES.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`filter-btn ${scope === s ? 'active' : ''}`}
+                onClick={() => setScope(s)}
+              >
+                {s} ({scopeCounts[s]})
+              </button>
+            ))}
           </div>
 
           <div className="accounts-toolbar">
@@ -335,6 +376,8 @@ export default function AccountManagementPage(){
 
         <PendingApprovalsPanel />
 
+        <LockedAccountsPanel />
+
         <VipGuestsPanel />
 
         {isSuperAdmin && (
@@ -364,7 +407,7 @@ export default function AccountManagementPage(){
                     <td>{profile.email || '—'}</td>
                     <td><span className="tag-pill">{profile.role}</span></td>
                     <td>
-                      <span className={`status-badge ${profile.status === 'Active' ? 'badge-positive' : 'badge-neutral'}`}>{profile.status || 'Active'}</span>
+                      <span className={`status-badge ${profile.status === 'Active' ? 'badge-positive' : profile.status === 'Locked' ? 'badge-negative' : 'badge-neutral'}`}>{profile.status || 'Active'}</span>
                     </td>
                     <td>
                       <select
@@ -381,7 +424,9 @@ export default function AccountManagementPage(){
                       </select>
                     </td>
                     <td>
-                      {profile.status === 'Inactive' ? (
+                      {profile.status === 'Locked' ? (
+                        <span className="form-hint">Use the Locked Accounts panel above to unlock</span>
+                      ) : profile.status === 'Inactive' ? (
                         <div className="pending-actions-cell">
                           <button type="button" className="btn-primary" onClick={() => setPendingStatusChange({ profile, nextStatus: 'Active' })}>Reactivate</button>
                           <button type="button" className="btn-secondary" disabled={profile.id === user?.uid} onClick={() => setPendingRemoval(profile)}>Remove</button>
