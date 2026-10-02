@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
-import { registerRfidUser } from '../../services/firebase'
+import { registerRfidUser, logGateEntry } from '../../services/firebase'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
 import useRfidScanner from '../../hooks/useRfidScanner'
-import { isValidRfid, isValidPlate, isValidEmail, isValidPhone } from '../../utils/validators'
+import useRfidUsers from '../../hooks/useRfidUsers'
+import DummyFillButton from '../shared/DummyFillButton'
+import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, formatPhoneInput, generateDummyRfid } from '../../utils/validators'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
 
@@ -36,16 +38,45 @@ const VISIT_DURATIONS = [
 export default function RegisterRfidModal({ onClose, onRegistered }) {
   const [form, setForm] = useState(initialForm)
   const [submitting, setSubmitting] = useState(false)
-  const { showError } = useToast()
+  const { showError, showInfo } = useToast()
   const { scanning, startScan, stopScan } = useRfidScanner()
+  const allUsers = useRfidUsers()
 
   const handleScan = () => {
     startScan((rfidId) => setForm((f) => ({ ...f, rfidId })))
   }
 
+  // Testing convenience - fills a fresh dummy card ID without needing hardware.
+  const handleDummyFill = () => setForm((f) => ({ ...f, rfidId: generateDummyRfid() }))
+
   const handleChange = (event) => {
     const { name, value } = event.target
     setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  // A visitor who's been on campus before (same full name) gets everything but the RFID
+  // auto-filled from their most recent past record - they get issued a new physical card
+  // every visit, so the old rfidId is never reused.
+  const handleNameBlur = () => {
+    const typed = form.name.trim().toLowerCase()
+    if (!typed) return
+
+    const match = allUsers
+      .filter((u) => u.role === 'Visitor' && (u.name || '').trim().toLowerCase() === typed)
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0]
+
+    if (!match) return
+
+    setForm((f) => ({
+      ...f,
+      plateNumber: match.plateNumber || f.plateNumber,
+      vehicleType: match.vehicleType || f.vehicleType,
+      email: match.email || f.email,
+      phone: match.phone || f.phone,
+      hostName: match.hostName || f.hostName,
+      purpose: match.purpose || f.purpose,
+    }))
+    showInfo(`Auto-filled from ${match.name}'s previous visitor record.`)
   }
 
   const handleSubmit = async (event) => {
@@ -93,6 +124,16 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
         purpose: isVisitor ? form.purpose.trim() : '',
       })
 
+      // The pass is issued at the gate, so the visitor is entering campus right now - log
+      // that IN immediately so this registration shows up in Recent Activity/Reports/Search
+      // History without waiting for a separate scan. Non-fatal: the pass itself is already
+      // issued even if this log write fails.
+      try {
+        await logGateEntry({ cardId: form.rfidId.trim(), direction: 'IN', source: 'visitor-registration' })
+      } catch (scanError) {
+        showError(getErrorMessage(scanError, "Visitor pass issued, but today's gate entry could not be logged."))
+      }
+
       onRegistered?.()
       onClose()
     } catch (error) {
@@ -115,7 +156,7 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
         <form className="register-form" onSubmit={handleSubmit}>
           <label>
             Full Name
-            <input name="name" value={form.name} onChange={handleChange} required />
+            <input name="name" value={form.name} onChange={handleChange} onBlur={handleNameBlur} required />
           </label>
 
           <label>
@@ -129,6 +170,7 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
               >
                 {scanning ? 'Waiting for card…' : 'Scan RFID'}
               </button>
+              <DummyFillButton onClick={handleDummyFill} />
             </div>
           </label>
 
@@ -151,7 +193,15 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
 
           <label>
             Phone (optional — enables SMS gate alerts)
-            <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="09171234567" />
+            <input
+              type="tel"
+              inputMode="numeric"
+              maxLength={13}
+              name="phone"
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: formatPhoneInput(e.target.value) }))}
+              placeholder="09171234567"
+            />
           </label>
 
           {isVisitor ? (

@@ -17,9 +17,10 @@ import { AppStateProvider } from './context/AppStateContext'
 import { ToastProvider } from './context/ToastContext'
 import { initializeFirebaseCollections } from './services/firebase'
 import { ADMIN_ROLES } from './constants/roles'
+import useGateExitNotifications from './hooks/useGateExitNotifications'
 
 function AppRoutes() {
-  const { user, role, loading } = useAuth()
+  const { user, role, status, loading } = useAuth()
 
   // Phase 9: settings/app and users/system are now Super Admin/Administrator-only
   // writes (database.rules.json) - this bootstrap seed would otherwise throw a
@@ -28,6 +29,12 @@ function AppRoutes() {
   useEffect(() => {
     if (!loading && user && ADMIN_ROLES.includes(role)) initializeFirebaseCollections()
   }, [user, role, loading])
+
+  // Any staff role, not just admins - exits matter to whoever's on gate duty, regardless
+  // of which page they're currently on. Gated on status 'Active' (not just a signed-in user):
+  // a Pending/Inactive account sitting on /pending has no database.rules.json access to
+  // gateLogs/rfidUsers at all, so subscribing for it would just be a permission-denied loop.
+  useGateExitNotifications(!loading && status === 'Active')
 
   return (
     <Routes>
@@ -41,10 +48,13 @@ function AppRoutes() {
         <Route path="/reports" element={<ReportsWrapper />} />
         <Route path="/payment" element={<PaymentWrapper />} />
         <Route path="/profile" element={<ProfileWrapper />} />
+        {/* Phase 12: reachable by every staff role (Security Guard included) - it's
+            where the barrier gate override now lives, plus My Profile/Change Password/
+            Logout for roles that have no other route to reach those. */}
+        <Route path="/settings" element={<SettingsWrapper />} />
 
         <Route element={<RequireRole allowedRoles={ADMIN_ROLES} />}>
           <Route path="/account-management" element={<AccountManagementWrapper />} />
-          <Route path="/settings" element={<SettingsWrapper />} />
         </Route>
       </Route>
 

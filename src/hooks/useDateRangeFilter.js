@@ -5,10 +5,13 @@ import { getQuickRange, toLocalISODate } from '../utils/dateRange'
 // Keeps the range coherent: picking a From date after To moves To up to match, and To can
 // never be set earlier than From, and neither can be a future date (no data exists yet -
 // `maxDate` is today, for the inputs' max attribute). Quick selects fill both dates; clicking the active one clears.
-export default function useDateRangeFilter() {
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [activeQuick, setActiveQuick] = useState(null)
+// `defaultQuick` (e.g. 'Today') seeds the initial range/active-quick state - omit it to keep
+// the old default of an unfiltered (empty) range, which Payment/Search History still rely on.
+export default function useDateRangeFilter({ defaultQuick = null } = {}) {
+  const initial = defaultQuick ? getQuickRange(defaultQuick) : { from: '', to: '' }
+  const [dateFrom, setDateFrom] = useState(initial.from)
+  const [dateTo, setDateTo] = useState(initial.to)
+  const [activeQuick, setActiveQuick] = useState(defaultQuick)
   const maxDate = toLocalISODate(new Date())
   const notFuture = (value) => (value > maxDate ? maxDate : value)
 

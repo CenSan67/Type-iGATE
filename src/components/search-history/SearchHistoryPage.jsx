@@ -72,30 +72,49 @@ export default function SearchHistoryPage(){
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
-  const person = useMemo(() => {
+  // A person (especially a repeat visitor) can have more than one rfidUsers record under the
+  // same name - a new physical card is issued every visit, each as its own record/rfidId. A
+  // name/plate/RFID search that only kept the first match silently dropped every other visit's
+  // gate activity, which looked like "the search can't find their IN/OUT" even though the logs
+  // were there all along, just under a sibling record.
+  const matches = useMemo(() => {
     const q = submittedQuery.trim().toLowerCase()
-    if (!q) return null
-    return users.find((u) => {
+    if (!q) return []
+    return users.filter((u) => {
       if (searchType === 'Plate No.') return (u.plateNumber || '').toLowerCase().includes(q)
       if (searchType === 'RFID-ID') return (u.rfidId || '').toLowerCase().includes(q)
       return (u.name || '').toLowerCase().includes(q)
-    }) || null
+    })
   }, [users, submittedQuery, searchType])
 
+  // The most recent matching record drives the summary header (current plate/role/etc.).
+  const person = useMemo(
+    () => matches.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0] || null,
+    [matches],
+  )
+
+  // Every distinct past record (one per card/visit ever issued to this name) - "vehicles used".
+  const vehiclesUsed = useMemo(
+    () => matches.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+    [matches],
+  )
+
   const logs = useMemo(() => {
-    if (!person?.rfidId) return []
-    const rfid = person.rfidId.toString().toLowerCase()
+    const rfidSet = new Set(matches.map((u) => (u.rfidId || '').toString().toLowerCase()).filter(Boolean))
+    if (rfidSet.size === 0) return []
     return entries
-      .filter((entry) => (entry.rfidId || '').toString().toLowerCase() === rfid)
+      .filter((entry) => rfidSet.has((entry.rfidId || '').toString().toLowerCase()))
+      .slice()
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       .map((entry) => ({
         time: entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—',
         date: entry.timestamp ? new Date(entry.timestamp).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—',
-        role: person.role || '—',
+        role: entry.role || person?.role || '—',
         direction: entry.direction,
       }))
-  }, [entries, person])
+  }, [entries, matches, person])
 
-  const hasMatch = Boolean(person)
+  const hasMatch = matches.length > 0
 
   // --- All Entry & Exit Logs: filter -> sort -> paginate ---
   const filteredLogs = useMemo(() => {
@@ -250,6 +269,32 @@ export default function SearchHistoryPage(){
                   <button type="button" disabled>›</button>
                 </div>
               </div>
+
+              <h4 className="vehicles-used-title">Vehicles Used</h4>
+              <table className="activity-table">
+                <thead>
+                  <tr>
+                    <th>RFID-ID</th>
+                    <th>Plate Number</th>
+                    <th>Vehicle Type</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Registered</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vehiclesUsed.map((u) => (
+                    <tr key={u.id} className="activity-row">
+                      <td>{u.rfidId}</td>
+                      <td>{u.plateNumber || '—'}</td>
+                      <td>{u.vehicleType || '—'}</td>
+                      <td>{u.role || '—'}</td>
+                      <td><span className={`status-badge ${u.status === 'Inactive' ? 'badge-neutral' : 'badge-positive'}`}>{u.status || 'Active'}</span></td>
+                      <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             <div className="search-side-column">

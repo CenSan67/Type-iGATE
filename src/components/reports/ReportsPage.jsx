@@ -23,7 +23,7 @@ export default function ReportsPage(){
   const [status, setStatus] = useState('All')
   const [userType, setUserType] = useState('All')
   const [vehicleType, setVehicleType] = useState('All')
-  const { dateFrom, dateTo, activeQuick, maxDate, changeFrom, changeTo, applyQuick } = useDateRangeFilter()
+  const { dateFrom, dateTo, activeQuick, maxDate, changeFrom, changeTo, applyQuick } = useDateRangeFilter({ defaultQuick: 'Today' })
   const [page, setPage] = useState(1)
   const [showPrintReport, setShowPrintReport] = useState(false)
   const entries = useEnrichedGateLogs()

@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import Modal from './Modal'
 import { updateRfidUser } from '../../services/firebase'
-import { isValidRfid, isValidPlate, isValidEmail, isValidPhone } from '../../utils/validators'
+import useRfidScanner from '../../hooks/useRfidScanner'
+import DummyFillButton from '../shared/DummyFillButton'
+import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, generateDummyRfid } from '../../utils/validators'
 import { VEHICLE_OWNER_ROLES, VEHICLE_TYPES } from '../../models/rfidUser'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
@@ -20,11 +22,21 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
   })
   const { showError } = useToast()
   const [saving, setSaving] = useState(false)
+  const { scanning, startScan, stopScan } = useRfidScanner()
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setForm((f) => ({ ...f, [name]: value }))
   }
+
+  // Lost-card reissue: tap the replacement card instead of typing its ID by hand - this is
+  // the same rfidId reassignment database.rules.json already allows an admin to make on an
+  // existing record (Phase 9's RBAC audit), just exposed here as a scan instead of free text.
+  const handleScan = () => {
+    startScan((rfidId) => setForm((f) => ({ ...f, rfidId })))
+  }
+
+  const handleDummyFill = () => setForm((f) => ({ ...f, rfidId: generateDummyRfid() }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -82,7 +94,18 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
 
         <label>
           RFID ID
-          <input name="rfidId" value={form.rfidId} onChange={handleChange} required />
+          <div className="rfid-scan-row">
+            <input name="rfidId" value={form.rfidId} onChange={handleChange} required />
+            <button
+              type="button"
+              className={`scan-btn ${scanning ? 'scanning' : ''}`}
+              onClick={scanning ? stopScan : handleScan}
+            >
+              {scanning ? 'Waiting for card…' : 'Scan New Card'}
+            </button>
+            <DummyFillButton onClick={handleDummyFill} />
+          </div>
+          <span className="registration-note">Lost their card? Scan the replacement here to reassign this record to it.</span>
         </label>
 
         <label>

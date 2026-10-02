@@ -9,6 +9,7 @@ import { QUICK_SELECTS, toLocalISODate } from '../../utils/dateRange'
 import useDateRangeFilter from '../../hooks/useDateRangeFilter'
 import ReceiptModal from '../modals/ReceiptModal'
 import usePaymentRegistration from '../../hooks/usePaymentRegistration'
+import { VEHICLE_TYPES } from '../../models/rfidUser'
 
 const PAGE_SIZE = 4
 
@@ -31,6 +32,9 @@ export default function PaymentPage(){
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('All')
   const [paymentTypeFilter, setPaymentTypeFilter] = useState('All')
+  const [departmentFilter, setDepartmentFilter] = useState('All')
+  const [vehicleTypeFilter, setVehicleTypeFilter] = useState('All')
+  const [validityFilter, setValidityFilter] = useState('All')
   const { dateFrom, dateTo, activeQuick, maxDate, changeFrom, changeTo, applyQuick } = useDateRangeFilter()
   const [page, setPage] = useState(1)
   const [showPrintReport, setShowPrintReport] = useState(false)
@@ -52,11 +56,13 @@ export default function PaymentPage(){
         name: p.name || 'Unknown',
         department: p.department || '—',
         plate: p.plateNumber || '—',
+        vehicleType: p.vehicleType || '—',
         paymentType: p.paymentType || '—',
         amount: Number(p.amount) || 0,
         receiptNo: p.receiptNo || '—',
         receivedBy: p.receivedByName || '—',
         status: p.status || 'Paid',
+        validUntil: typeof p.validUntil === 'number' ? p.validUntil : null,
       })))
     })
     return () => unsub && unsub()
@@ -65,19 +71,32 @@ export default function PaymentPage(){
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
   const dateString = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
+  // A registration/renewal's own validity window (payments/{id}.validUntil, set from
+  // REGISTRATION_VALIDITY_MONTHS at the time it was paid) - distinct from `status`
+  // (Paid/Pending, whether the transaction itself cleared).
+  const getValidity = (validUntil) => (validUntil ? (now.getTime() > validUntil ? 'Expired' : 'Active') : null)
+
+  const departments = useMemo(
+    () => ['All', ...new Set(transactions.map((t) => t.department).filter((d) => d && d !== '—'))],
+    [transactions],
+  )
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return transactions.filter((t) => {
       const matchesQuery = !q || [t.rfid, t.plate, t.name].some((f) => f.toLowerCase().includes(q))
       const matchesStatus = status === 'All' || t.status === status
       const matchesType = paymentTypeFilter === 'All' || t.paymentType === paymentTypeFilter
+      const matchesDepartment = departmentFilter === 'All' || t.department === departmentFilter
+      const matchesVehicle = vehicleTypeFilter === 'All' || t.vehicleType === vehicleTypeFilter
+      const matchesValidity = validityFilter === 'All' || getValidity(t.validUntil) === validityFilter
       const matchesFrom = !dateFrom || t.date >= dateFrom
       const matchesTo = !dateTo || t.date <= dateTo
-      return matchesQuery && matchesStatus && matchesType && matchesFrom && matchesTo
+      return matchesQuery && matchesStatus && matchesType && matchesDepartment && matchesVehicle && matchesValidity && matchesFrom && matchesTo
     })
-  }, [transactions, query, status, paymentTypeFilter, dateFrom, dateTo])
+  }, [transactions, query, status, paymentTypeFilter, departmentFilter, vehicleTypeFilter, validityFilter, dateFrom, dateTo, now])
 
-  useEffect(() => { setPage(1) }, [query, status, paymentTypeFilter, dateFrom, dateTo])
+  useEffect(() => { setPage(1) }, [query, status, paymentTypeFilter, departmentFilter, vehicleTypeFilter, validityFilter, dateFrom, dateTo])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -155,30 +174,39 @@ export default function PaymentPage(){
                   <th>Name</th>
                   <th>Department</th>
                   <th>Plate Number</th>
+                  <th>Vehicle</th>
                   <th>Payment Type</th>
                   <th>Amount</th>
                   <th>Receipt No.</th>
                   <th>Received By</th>
+                  <th>Validity</th>
+                  <th>Expires</th>
                 </tr>
               </thead>
               <tbody>
-                {pageItems.map((t) => (
-                  <tr key={t.id} className="activity-row">
-                    <td>{t.id}</td>
-                    <td>{formatDate(t.date)}</td>
-                    <td>{t.time}</td>
-                    <td>{t.rfid}</td>
-                    <td>{t.name}</td>
-                    <td>{t.department}</td>
-                    <td>{t.plate}</td>
-                    <td><span className="tag-pill">{t.paymentType}</span></td>
-                    <td>₱{t.amount.toFixed(2)}</td>
-                    <td>{t.receiptNo}</td>
-                    <td>{t.receivedBy}</td>
-                  </tr>
-                ))}
+                {pageItems.map((t) => {
+                  const validity = getValidity(t.validUntil)
+                  return (
+                    <tr key={t.id} className="activity-row">
+                      <td>{t.id}</td>
+                      <td>{formatDate(t.date)}</td>
+                      <td>{t.time}</td>
+                      <td>{t.rfid}</td>
+                      <td>{t.name}</td>
+                      <td>{t.department}</td>
+                      <td>{t.plate}</td>
+                      <td>{t.vehicleType}</td>
+                      <td><span className="tag-pill">{t.paymentType}</span></td>
+                      <td>₱{t.amount.toFixed(2)}</td>
+                      <td>{t.receiptNo}</td>
+                      <td>{t.receivedBy}</td>
+                      <td>{validity ? <span className={`status-badge ${validity === 'Expired' ? 'badge-neutral' : 'badge-positive'}`}>{validity}</span> : '—'}</td>
+                      <td>{t.validUntil ? new Date(t.validUntil).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
+                    </tr>
+                  )
+                })}
                 {pageItems.length === 0 && (
-                  <tr><td colSpan={11} className="accounts-empty">No transactions match your search or filters.</td></tr>
+                  <tr><td colSpan={14} className="accounts-empty">No transactions match your search or filters.</td></tr>
                 )}
               </tbody>
             </table>
@@ -231,6 +259,24 @@ export default function PaymentPage(){
             <option value="All">All</option>
             <option value="Registration">Registration</option>
             <option value="Renewal">Renewal</option>
+          </select>
+
+          <label className="filter-label">Department</label>
+          <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)}>
+            {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+
+          <label className="filter-label">Vehicle Type</label>
+          <select value={vehicleTypeFilter} onChange={(e) => setVehicleTypeFilter(e.target.value)}>
+            <option value="All">All</option>
+            {VEHICLE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+
+          <label className="filter-label">Validity</label>
+          <select value={validityFilter} onChange={(e) => setValidityFilter(e.target.value)}>
+            <option value="All">All</option>
+            <option value="Active">Active</option>
+            <option value="Expired">Expired</option>
           </select>
 
           <button type="button" className="export-btn" onClick={() => setShowPrintReport(true)}>

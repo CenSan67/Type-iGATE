@@ -533,49 +533,6 @@ html, body, #root {
   opacity: 1;
 }
 
-/* Barrier Gate quick-access (all roles, incl. Security Guard - full control lives on
-   System Settings, which Guards can't reach). Separated from the page nav items with
-   a divider since it opens a modal rather than navigating. */
-.sidebar-gate-item {
-  margin-top: 8px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.sidebar-gate-dot {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  border: 1.5px solid var(--maroon);
-  background: #9a9a9a;
-}
-
-.sidebar-gate-dot.is-open { background: #2da82d; }
-.sidebar-gate-dot.is-closed { background: #c12d2d; }
-
-.sidebar-gate-item .sidebar-icon {
-  position: relative;
-}
-
-/* Stripped-down GateStatusCard when it's reused inside the sidebar's quick-access
-   modal (Modal.jsx already provides the card chrome - avoids a card nested in a card).
-   The h3 is hidden too since Modal's own header already shows "Barrier Gate" - keeps
-   the status badge and subtitle, drops just the duplicate title text. */
-.modal-body .gate-control-card {
-  border: none;
-  box-shadow: none;
-  border-radius: 0;
-  padding: 0;
-  margin-bottom: 0;
-}
-
-.modal-body .gate-control-card .gate-status-header-row h3 {
-  display: none;
-}
-
 /* Dynamic content shifting wrapper */
 .dashboard-content {
   flex: 1;
@@ -919,6 +876,71 @@ html, body, #root {
   font-weight: 600;
 }
 
+.activity-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Small round +/- buttons beside "Register Visitor" that open SimulateUserScanModal -
+   lets a guard simulate an already-registered (non-visitor) vehicle's entry/exit. */
+.icon-btn-round {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn-entry { background: #e3f3e6; color: #2e7d32; }
+.icon-btn-entry:hover { background: #cfe9d3; }
+.icon-btn-exit { background: #fbe4e4; color: #c12d2d; }
+.icon-btn-exit:hover { background: #f5cfcf; }
+
+.simulate-user-search {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  margin: 10px 0;
+}
+
+.simulate-user-list {
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.simulate-user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+}
+
+.simulate-user-info {
+  display: grid;
+  gap: 2px;
+}
+
+.simulate-user-info span {
+  color: #777;
+  font-size: 12px;
+}
+
 .primary-btn {
   background: var(--maroon);
   color: #fff;
@@ -1190,6 +1212,27 @@ html, body, #root {
   margin: 0;
 }
 
+.form-success {
+  color: #2e7d32;
+  font-size: 13px;
+  margin: 0;
+}
+
+/* "Forgot password?" and "Back to login" - a button styled to match the .help-row link. */
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #1d74c1;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
 /* Subtle error popups (ToastContext) - muted, top-right, above modal backdrops (z-index 200). */
 .toast-stack {
   position: fixed;
@@ -1291,6 +1334,25 @@ html, body, #root {
 }
 
 .scan-btn:hover { background: var(--maroon-dark); }
+
+/* Deliberately muted/small relative to .scan-btn - a testing convenience, not a feature
+   staff are meant to reach for during real registrations. */
+.dev-fill-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  background: #f5f5f5;
+  color: #aaa;
+  cursor: pointer;
+  padding: 0;
+}
+
+.dev-fill-btn:hover { background: #ebebeb; color: #777; }
 
 .scan-btn.scanning {
   background: var(--gold);
@@ -1768,6 +1830,10 @@ html, body, #root {
   gap: 8px;
 }
 
+.scope-toggle {
+  padding: 0 24px 16px;
+}
+
 .filter-btn {
   border: 1px solid #e2e2e2;
   background: #fff;
@@ -1939,6 +2005,8 @@ html, body, #root {
 
 .info-card h4 { margin: 0 0 14px; color: var(--maroon); }
 
+.vehicles-used-title { margin: 18px 0 10px; color: var(--maroon); font-size: 16px; }
+
 .info-person {
   display: flex;
   align-items: center;
@@ -2033,6 +2101,27 @@ html, body, #root {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
+}
+
+.gate-unit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gate-unit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 13px;
+  color: #444;
+}
+
+.gate-meta {
+  margin: 0;
+  color: #888;
+  font-size: 12px;
 }
 
 .gate-toggle-btn {
