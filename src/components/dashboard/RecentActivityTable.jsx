@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useRemarks } from '../../hooks/useRemarks'
 import RemarkModal from '../modals/RemarkModal'
 import RegisterRfidModal from '../modals/RegisterRfidModal'
+import SimulateUserScanModal from '../modals/SimulateUserScanModal'
 import ImagePreviewModal from '../modals/ImagePreviewModal'
 import { RemarkAddButton, RemarkTick } from '../shared/RemarkBadge'
 import { listenToNewGateLogs } from '../../services/firebase'
@@ -17,6 +18,7 @@ export default function RecentActivityTable(){
   const { remarks, saveRemark } = useRemarks()
   const [activeRow, setActiveRow] = useState(null)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [simulateDirection, setSimulateDirection] = useState(null)
   const [justArrivedId, setJustArrivedId] = useState(null)
   const [previewImage, setPreviewImage] = useState(null)
   const entries = useEnrichedGateLogs()
@@ -49,9 +51,29 @@ export default function RecentActivityTable(){
           <h3>Recent Vehicle Activity</h3>
           <p>Real-time entry and exit logs</p>
         </div>
-        <button className="primary-btn" type="button" onClick={() => setShowRegisterModal(true)}>
-          Register Visitor
-        </button>
+        <div className="activity-header-actions">
+          <button
+            type="button"
+            className="icon-btn-round icon-btn-entry"
+            title="Simulate entry for a registered user"
+            aria-label="Simulate entry for a registered user"
+            onClick={() => setSimulateDirection('IN')}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="icon-btn-round icon-btn-exit"
+            title="Simulate exit for a registered user"
+            aria-label="Simulate exit for a registered user"
+            onClick={() => setSimulateDirection('OUT')}
+          >
+            &minus;
+          </button>
+          <button className="primary-btn" type="button" onClick={() => setShowRegisterModal(true)}>
+            Register Visitor
+          </button>
+        </div>
       </div>
       <table className="activity-table">
         <thead>
@@ -120,6 +142,13 @@ export default function RecentActivityTable(){
           onRegistered={() => setShowRegisterModal(false)}
         />
       ) : null}
+
+      {simulateDirection && (
+        <SimulateUserScanModal
+          direction={simulateDirection}
+          onClose={() => setSimulateDirection(null)}
+        />
+      )}
     </div>
   )
 }
