@@ -13,6 +13,14 @@ export function isValidRfid(value) {
   return RFID_PATTERN.test((value || '').trim())
 }
 
+// Testing convenience only (the small dummy-fill button next to "Scan RFID" on the
+// registration forms) - lets staff exercise the registration flow without physical
+// hardware. Prefixed and timestamp-suffixed so it's obviously fake in Account
+// Management/search results and never collides with a real card on repeated clicks.
+export function generateDummyRfid() {
+  return `TEST-${Date.now().toString().slice(-8)}`
+}
+
 export function isValidPlate(value) {
   return PLATE_PATTERN.test((value || '').trim().toUpperCase())
 }

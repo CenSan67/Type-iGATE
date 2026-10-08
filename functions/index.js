@@ -12,7 +12,7 @@
 //   3. firebase deploy --only functions   (requires the Blaze plan - Semaphore is an
 //      external HTTP call, which the free Spark plan blocks entirely)
 
-const { onValueCreated } = require('firebase-functions/v2/database')
+const { onValueCreated, onValueUpdated } = require('firebase-functions/v2/database')
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const { defineSecret, defineString } = require('firebase-functions/params')
 const logger = require('firebase-functions/logger')
@@ -62,7 +62,10 @@ function buildMessage({ plateNumber, direction, timestamp }) {
   const date = new Date(timestamp)
   const dateString = date.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', timeZone: 'Asia/Manila' })
   const timeString = date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' })
-  return `Notice: Your vehicle ${plateNumber || 'registered under your account'} ${verb} the campus gate at ${timeString} on ${dateString}.`
+  // Matches the sample message submitted with the Semaphore sender-name application
+  // (iGATEBULSU) - keep this wording in sync with that submission, since Semaphore checks
+  // live traffic against it. Stays under one 160-char SMS segment even with a long plate.
+  return `Notice: Your vehicle ${plateNumber || 'registered under your account'} ${verb} BulSU Bustos Campus gate at ${timeString} on ${dateString}. If this wasn't you, contact the gate office.`
 }
 
 async function sendSemaphoreSms({ apiKey, senderName, phone, message }) {
@@ -148,6 +151,76 @@ exports.sendGateScanSms = onValueCreated(
 )
 
 // ---------------------------------------------------------------------------------------
+// Entry/exit snapshot reuse - the camera is only ever triggered on IN scans now
+// (sketch_scanner.ino and src/services/camera.js#triggerCameraCapture both no-op for OUT),
+// since the vehicle photographed on the way out is the same one that was already
+// photographed on the way in - no need to make the camera (and its TLS upload path) run
+// twice per visit. These two functions do the reuse server-side, off gateLogs writes, so it
+// works the same way no matter which path logged the scan (hardware, Simulate, any future
+// one) and for every role (Student/Faculty/Staff/Visitor alike), since the match below is
+// purely by card, the same as findOwnerByCard() above.
+//
+// lastEntryImages/{normalizedRfidId} is an internal node only these two functions touch -
+// database.rules.json blocks it from clients entirely (nothing in the UI needs to read it;
+// the UI only ever reads gateLogs/{id}/imageUrl, which this backfills).
+
+// Mirrors a freshly-arrived IN snapshot into lastEntryImages/{cardId} the moment the camera
+// PATCHes imageUrl onto its own gateLogs entry. This has to be a separate onValueUpdated
+// trigger (not folded into the onValueCreated handler below) because that PATCH lands several
+// seconds after the entry is first created - onValueCreated's event only ever sees the entry
+// as it looked the instant it was written, before the camera's capture+upload finishes.
+exports.mirrorEntrySnapshot = onValueUpdated(
+  { ref: '/gateLogs/{logId}', region: 'us-central1' },
+  async (event) => {
+    const before = event.data.before.val() || {}
+    const after = event.data.after.val() || {}
+    if (before.imageUrl || !after.imageUrl) return // only care about imageUrl newly appearing
+    if ((after.direction || 'IN').toString().toUpperCase() !== 'IN') return
+
+    const db = getDatabase()
+    const owner = await findOwnerByCard(db, after)
+    const cardKey = normalizeId(owner?.rfidId)
+    if (!cardKey) return
+
+    await db.ref(`lastEntryImages/${cardKey}`).set({
+      imageUrl: after.imageUrl,
+      logId: event.params.logId,
+      timestamp: after.timestamp || Date.now(),
+    })
+  }
+)
+
+// Backfills an OUT scan's imageUrl from that same card's most recently mirrored IN snapshot.
+// Runs on every new gateLogs entry - the same trigger shape sendGateScanSms already uses - so
+// it covers every write path with no firmware/app-side special-casing per role needed. If the
+// vehicle exits before its IN photo finished uploading (a real but rare race, given a vehicle
+// has to physically travel from the entry point to the exit point in between), there's simply
+// nothing to backfill yet and the OUT entry is left with no imageUrl - the UI shows "no image
+// available" for it, which is accurate.
+exports.backfillExitSnapshot = onValueCreated(
+  { ref: '/gateLogs/{logId}', region: 'us-central1' },
+  async (event) => {
+    const logId = event.params.logId
+    const entry = event.data.val() || {}
+    if ((entry.direction || 'IN').toString().toUpperCase() !== 'OUT') return
+    if (entry.imageUrl) return // already has one somehow - never overwrite
+
+    const db = getDatabase()
+    const owner = await findOwnerByCard(db, entry)
+    const cardKey = normalizeId(owner?.rfidId)
+    if (!cardKey) return
+
+    const snap = await db.ref(`lastEntryImages/${cardKey}`).get()
+    const imageUrl = snap.val()?.imageUrl
+    if (!imageUrl) {
+      logger.info(`gateLogs/${logId}: no prior IN snapshot on file for this card yet, leaving imageUrl unset`)
+      return
+    }
+    await db.ref(`gateLogs/${logId}/imageUrl`).set(imageUrl)
+  }
+)
+
+// ---------------------------------------------------------------------------------------
 // Vehicle snapshot pipeline - lets the ESP32-CAM (CameraWebServer, a separate board from
 // the RFID reader - see CameraWebServer/) upload the photo it captures at the moment of a
 // validated gate scan, without embedding a full Firebase/GCP service-account credential in
@@ -191,7 +264,8 @@ function checkDeviceSecret(req, res) {
 }
 
 exports.issueSnapshotUploadUrl = onRequest(
-  { region: 'us-central1', secrets: [DEVICE_SHARED_SECRET] },
+  // invoker: 'public' lets the ESP32-CAM call it without Google sign-in; DEVICE_SHARED_SECRET is the real gate.
+  { region: 'us-central1', secrets: [DEVICE_SHARED_SECRET], invoker: 'public' },
   async (req, res) => {
     if (!checkDeviceSecret(req, res)) return
 
@@ -214,7 +288,8 @@ exports.issueSnapshotUploadUrl = onRequest(
 )
 
 exports.finalizeSnapshot = onRequest(
-  { region: 'us-central1', secrets: [DEVICE_SHARED_SECRET] },
+  // invoker: 'public' lets the ESP32-CAM call it without Google sign-in; DEVICE_SHARED_SECRET is the real gate.
+  { region: 'us-central1', secrets: [DEVICE_SHARED_SECRET], invoker: 'public' },
   async (req, res) => {
     if (!checkDeviceSecret(req, res)) return
 

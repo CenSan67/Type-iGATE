@@ -27,7 +27,7 @@ export default function GuestClearancePanel(){
   const runCheckOut = async () => {
     if (!pendingCheckOut) return
     try {
-      await checkOutGuest(pendingCheckOut.id)
+      await checkOutGuest(pendingCheckOut.id, (msg) => showError(msg))
     } catch (err) {
       showError(getErrorMessage(err, 'Unable to check this guest out right now.'))
     }

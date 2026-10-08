@@ -14,20 +14,21 @@ import SettingsWrapper from './components/settings/SettingsWrapper'
 import ProfileWrapper from './components/profile/ProfileWrapper'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AppStateProvider } from './context/AppStateContext'
-import { ToastProvider } from './context/ToastContext'
+import { ToastProvider, useToast } from './context/ToastContext'
 import { initializeFirebaseCollections } from './services/firebase'
 import { ADMIN_ROLES } from './constants/roles'
 import useGateExitNotifications from './hooks/useGateExitNotifications'
 
 function AppRoutes() {
   const { user, role, status, loading } = useAuth()
+  const { showError } = useToast()
 
   // Phase 9: settings/app and users/system are now Super Admin/Administrator-only
   // writes (database.rules.json) - this bootstrap seed would otherwise throw a
   // permission-denied on every Security Guard login. Only admins need to run it
   // anyway, since it's an idempotent seed, not something every login must repeat.
   useEffect(() => {
-    if (!loading && user && ADMIN_ROLES.includes(role)) initializeFirebaseCollections()
+    if (!loading && user && ADMIN_ROLES.includes(role)) initializeFirebaseCollections((msg) => showError(msg))
   }, [user, role, loading])
 
   // Any staff role, not just admins - exits matter to whoever's on gate duty, regardless

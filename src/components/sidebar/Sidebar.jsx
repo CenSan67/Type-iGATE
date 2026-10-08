@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import dashboardIcon from '../../assets/Rectangle 10.png'
 import accountIcon from '../../assets/Rectangle 12.png'
@@ -9,42 +9,26 @@ import reportIcon from '../../assets/Rectangle 14.png'
 import settingsIcon from '../../assets/Rectangle 15.png'
 import paymentIcon from '../../assets/image 20.png'
 import { useAuth } from '../../context/AuthContext'
-import { ADMIN_ROLES, ROLES } from '../../constants/roles'
-import { listenToGateStatus } from '../../services/firebase'
-import Modal from '../modals/Modal'
-import GateStatusCard from '../dashboard/GateStatusCard'
+import { ADMIN_ROLES } from '../../constants/roles'
 
+// Phase 12: System Settings is reachable by every staff role now (Security Guard
+// included) - the barrier gate override moved there, off its own sidebar quick-access
+// item, since a Guard has a real entry point to the page now instead of needing a
+// workaround. Account Management stays admin-only.
 const navItems = [
   { label: 'Dashboard', icon: dashboardIcon, path: '/dashboard' },
   { label: 'Account Management', icon: accountIcon, path: '/account-management', roles: ADMIN_ROLES },
   { label: 'Search History', icon: searchIcon, path: '/search-history' },
   { label: 'Reports', icon: reportIcon, path: '/reports' },
   { label: 'Payment', icon: paymentIcon, path: '/payment' },
-  { label: 'System Settings', icon: settingsIcon, path: '/settings', roles: ADMIN_ROLES },
+  { label: 'System Settings', icon: settingsIcon, path: '/settings' },
 ]
 
-const LockIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" fill="currentColor" /><path d="M8 11V8a4 4 0 118 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-)
-
-// Full control lives on System Settings (admin-only), but a Security Guard can't
-// reach that page - this compact quick-access button/modal, reusing the same
-// GateStatusCard used there, is how a Guard still triggers the emergency override
-// from wherever they are, without duplicating any of that logic.
 export default function Sidebar({ open, onToggle, onOpen }){
   const navigate = useNavigate()
   const location = useLocation()
   const { role } = useAuth()
-  const [showGateModal, setShowGateModal] = useState(false)
-  const [gateStatus, setGateStatus] = useState(null)
   const visibleItems = navItems.filter((item) => !item.roles || item.roles.includes(role))
-
-  useEffect(() => {
-    const unsub = listenToGateStatus(setGateStatus)
-    return () => unsub && unsub()
-  }, [])
-
-  const gateStateClass = gateStatus?.state === 'OPEN' ? 'is-open' : gateStatus?.state === 'CLOSED' ? 'is-closed' : 'is-unknown'
 
   return (
     <aside className={`sidebar ${open ? 'open' : 'collapsed'}`} onClick={() => !open && onOpen()}>
@@ -84,32 +68,7 @@ export default function Sidebar({ open, onToggle, onOpen }){
           </button>
           )
         })}
-
-        {ROLES.includes(role) && (
-          <button
-            type="button"
-            title="Barrier Gate"
-            className="sidebar-item sidebar-gate-item"
-            onClick={(e) => {
-              e.stopPropagation()
-              if (!open) onOpen()
-              setShowGateModal(true)
-            }}
-          >
-            <span className="sidebar-icon">
-              <LockIcon />
-              <span className={`sidebar-gate-dot ${gateStateClass}`} />
-            </span>
-            <span className="sidebar-label">Barrier Gate</span>
-          </button>
-        )}
       </div>
-
-      {showGateModal && (
-        <Modal title="Barrier Gate" onClose={() => setShowGateModal(false)}>
-          <GateStatusCard />
-        </Modal>
-      )}
     </aside>
   )
 }

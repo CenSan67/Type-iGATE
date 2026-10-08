@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Modal from './Modal'
 import ReceiptSummary from '../shared/ReceiptSummary'
+import DummyFillButton from '../shared/DummyFillButton'
 import useRfidScanner from '../../hooks/useRfidScanner'
 import useRfidUsers from '../../hooks/useRfidUsers'
 import { useAuth } from '../../context/AuthContext'
-import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, formatPhoneInput } from '../../utils/validators'
+import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, formatPhoneInput, generateDummyRfid } from '../../utils/validators'
 import { getErrorMessage } from '../../utils/errors'
 import { toLocalISODate } from '../../utils/dateRange'
 import { useToast } from '../../context/ToastContext'
@@ -129,6 +130,11 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
     })
   }
 
+  // Testing convenience - fills a fresh dummy card ID without needing hardware or the
+  // scan listener. Not wired into the existing-user lookup, since it's always meant to
+  // simulate a brand-new card.
+  const handleDummyFill = () => setForm((f) => ({ ...f, rfid: generateDummyRfid() }))
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.rfid.trim() || !form.name.trim() || (!plateOptional && !form.plate.trim())) {
@@ -236,6 +242,7 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
                 >
                   {scanning ? 'Waiting for card…' : 'Scan RFID'}
                 </button>
+                <DummyFillButton onClick={handleDummyFill} />
               </div>
             </label>
             <label className="span-2">
@@ -301,7 +308,12 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
             <div className="registration-fields">
               <label>
                 Driver's License Expiry Date
-                <input type="date" value={form.licenseExpiry} onChange={update('licenseExpiry')} />
+                <input
+                  type="date"
+                  value={form.licenseExpiry}
+                  onChange={update('licenseExpiry')}
+                  min={toLocalISODate(new Date())}
+                />
               </label>
             </div>
           )}

@@ -1,0 +1,15 @@
+services:
+  igate:
+    build: .
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mounts the project source in, so editing a file on the host is reflected immediately
+      # (Vite's hot reload) without rebuilding the image - useful if whoever runs this also
+      # wants to keep developing, not just view the app.
+      - .:/app
+      # Anonymous volume for node_modules specifically: without this, the bind mount above
+      # would hide the image's own Linux-built node_modules behind the host's folder (which,
+      # on a fresh clone, has no node_modules at all - the app would fail to start). This
+      # keeps the container's node_modules in place regardless of what's on the host.
+      - /app/node_modules

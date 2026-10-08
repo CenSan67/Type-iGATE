@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import useExpectedGuests from '../../hooks/useExpectedGuests'
 import useVisitorPasses from '../../hooks/useVisitorPasses'
 import ConfirmModal from '../modals/ConfirmModal'
-import { setRfidUserStatus } from '../../services/firebase'
+import { setRfidUserStatus, logGateEntry } from '../../services/firebase'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
 
@@ -21,6 +21,14 @@ export default function VisitorPassesPanel(){
     if (!pendingReturn) return
     try {
       await setRfidUserStatus(pendingReturn.id, 'Inactive')
+      // Best-effort - the pass is already returned even if this OUT scan fails to log.
+      // functions/index.js#backfillExitSnapshot picks this up automatically and reuses
+      // this same visitor's IN photo, the same as any other OUT scan.
+      try {
+        await logGateEntry({ cardId: pendingReturn.rfidId, direction: 'OUT', source: 'visitor-return' })
+      } catch (scanError) {
+        showError(`Pass returned, but the exit could not be recorded: ${getErrorMessage(scanError, 'please log it manually.')}`)
+      }
     } catch (err) {
       showError(getErrorMessage(err, 'Unable to return this pass right now.'))
     }

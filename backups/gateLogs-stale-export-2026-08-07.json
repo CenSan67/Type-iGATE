@@ -1,0 +1,3103 @@
+[
+  {
+    "id": "-OxilQU5p4AomXRNdGKy",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "timestamp": 97433
+  },
+  {
+    "id": "-OxilU4Wcn5JqLf7X4df",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "timestamp": 112224
+  },
+  {
+    "id": "-OxilVwL-uflPTNWiLV7",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "timestamp": 119887
+  },
+  {
+    "id": "-OxilapYeCHHc9KxJb8t",
+    "cardHex": "a82120",
+    "cardId": 11018528,
+    "timestamp": 4395
+  },
+  {
+    "id": "-OxilbKaGrvY5AFVbyDG",
+    "cardHex": "4288280",
+    "cardId": 69763712,
+    "timestamp": 5709
+  },
+  {
+    "id": "-OxilbgZd29DY7oMXyl5",
+    "cardHex": "1000014",
+    "cardId": 16777236,
+    "timestamp": 7757
+  },
+  {
+    "id": "-OxilcwfbQtzbHsJwcTp",
+    "cardHex": "4480028",
+    "cardId": 71827496,
+    "timestamp": 13160
+  },
+  {
+    "id": "-OxildbcpNNU-rvzozrD",
+    "cardHex": "14540240",
+    "cardId": 341049920,
+    "timestamp": 14310
+  },
+  {
+    "id": "-OxildtFHGCKQ124VFDQ",
+    "cardHex": "1010240",
+    "cardId": 16843328,
+    "timestamp": 16968
+  },
+  {
+    "id": "-OxileEIkjhWOTqufwsL",
+    "cardHex": "0",
+    "cardId": 0,
+    "timestamp": 18195
+  },
+  {
+    "id": "-OxileXQjdhQkXRrmnEF",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "timestamp": 19467
+  },
+  {
+    "id": "-Oxilez9XxFInosh_swY",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "timestamp": 21327
+  },
+  {
+    "id": "-OxilgXiPMhJcJXTxfNY",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "timestamp": 27539
+  },
+  {
+    "id": "-Oxilgn4csx9knL-MBld",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "timestamp": 28897
+  },
+  {
+    "id": "-Oxilh7qRNRvpI5xN3LE",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "timestamp": 30123
+  },
+  {
+    "id": "-Oxiliw46z2Xqt8sVh5L",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "timestamp": 37534
+  },
+  {
+    "id": "-Oxilkg1wRd3XkufE6rl",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "timestamp": 44548
+  },
+  {
+    "id": "-Oxit7sEs6blzSCEotkU",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 16306
+  },
+  {
+    "id": "-Oxit8Gs76Xuu6bR96BL",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 17910
+  },
+  {
+    "id": "-OxitB0nGLKBwzrt49uP",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 29319
+  },
+  {
+    "id": "-OxitBH-ZrJZ1oE-cZ3h",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 30613
+  },
+  {
+    "id": "-OxitBcUiFHs8-ZhtGuV",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 31896
+  },
+  {
+    "id": "-OxitBvRHM2MrlVSP1xB",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 33230
+  },
+  {
+    "id": "-OxitCGl7B31oiFlC6Yw",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 34615
+  },
+  {
+    "id": "-OxitC_9BtRbjqh-X9XY",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 35897
+  },
+  {
+    "id": "-OxitCvZi4uf5DKNxPRy",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 37117
+  },
+  {
+    "id": "-OxitEseHLw0sQT1fDU3",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 45075
+  },
+  {
+    "id": "-OxitFAiokT7zqwcZVC9",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 46543
+  },
+  {
+    "id": "-OxitFf0oKYbJ6WMR2CI",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 48280
+  },
+  {
+    "id": "-OxitFyp71sv7Xya_Ecv",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 49821
+  },
+  {
+    "id": "-OxitGQIC2R7T5nr8Pyy",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 51523
+  },
+  {
+    "id": "-OxitGfsMAKJDvwm6Ewd",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 52732
+  },
+  {
+    "id": "-OxitH185J1SAMtf1c6S",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 54138
+  },
+  {
+    "id": "-OxitHKW-DdE-oZkQq9_",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 55353
+  },
+  {
+    "id": "-OxitHibwef9znBeFvde",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 56858
+  },
+  {
+    "id": "-OxitlsLGaQyiSx9GPTQ",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 184422
+  },
+  {
+    "id": "-OxitmDgC_mKLMf91Bd0",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 185811
+  },
+  {
+    "id": "-Oxitmf9JOp5PSre-XAB",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 187675
+  },
+  {
+    "id": "-OxitmyOoEDuYPkPOcKS",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 188908
+  },
+  {
+    "id": "-OxitnQZ_7s90598S_Vc",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 190399
+  },
+  {
+    "id": "-Oxitnllu_gT4uovH0gJ",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 192160
+  },
+  {
+    "id": "-OxitofguYY7bQYZ1T-b",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 195625
+  },
+  {
+    "id": "-Oxitp4FPZIfXmFdzTqU",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 197280
+  },
+  {
+    "id": "-OxitpcE3FTo7SjUaeVK",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 199361
+  },
+  {
+    "id": "-Oxitq1Fh9iJMGDhYhOB",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 201173
+  },
+  {
+    "id": "-OxitqX1b5jH71j21nWF",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 203201
+  },
+  {
+    "id": "-OxitqvJJdEFG0rOFj-s",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 204859
+  },
+  {
+    "id": "-OxitrGzVExikMmZ3w4L",
+    "cardHex": "18e23",
+    "cardId": 101923,
+    "direction": "IN",
+    "timestamp": 206494
+  },
+  {
+    "id": "-OxitrcKrN3xtdnBwEOV",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 207931
+  },
+  {
+    "id": "-Oxits0po6kiIbCU2eYU",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 209662
+  },
+  {
+    "id": "-OxitsQUQtzd_bNUDLa-",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 211002
+  },
+  {
+    "id": "-Oxitsv9vHzRtKq4s9_0",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 213058
+  },
+  {
+    "id": "-OxittDhvm4AfQkfIada",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 214519
+  },
+  {
+    "id": "-OxittfP-mwQmzEKE_qe",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 216263
+  },
+  {
+    "id": "-Oxitu0t2B3k-SIlK-19",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 217761
+  },
+  {
+    "id": "-OxiuB7WHt1oRCHY00o5",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 291800
+  },
+  {
+    "id": "-OxiuBTlPyhhHjCSQzp9",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 293334
+  },
+  {
+    "id": "-Oxiux_PHdACLwiIpS4s",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 4403
+  },
+  {
+    "id": "-Oxiuy11lG82GrsF-DNm",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 5883
+  },
+  {
+    "id": "-OxiuylYaJZzJAGEBXkK",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 9127
+  },
+  {
+    "id": "-OxiuzAAW1DgJhV1n8XT",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 10799
+  },
+  {
+    "id": "-Oxiuzi_PWhIkQYzLXGb",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 12964
+  },
+  {
+    "id": "-Oxiv-41dJY6TReXNtBc",
+    "cardHex": "aa8a491",
+    "cardId": 178824337,
+    "direction": "OUT",
+    "timestamp": 14617
+  },
+  {
+    "id": "-Oxiv-KJxr8gDo3WTFxg",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 15962
+  },
+  {
+    "id": "-Oxiv-pPQWQ1ZcTo5ikH",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 17817
+  },
+  {
+    "id": "-Oxiv07S4RjrEdzN5fjY",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 19198
+  },
+  {
+    "id": "-Oxiv0TxWKxHamvaN9dT",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 20542
+  },
+  {
+    "id": "-Oxiv0orEImqUPsMbgKq",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 21854
+  },
+  {
+    "id": "-Oxiv17lyUAiyTx3g606",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 23265
+  },
+  {
+    "id": "-Oxiv1U-LKzlAgHHNGA-",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 24517
+  },
+  {
+    "id": "-OxivDECb5I8yixYYrY8",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 72504
+  },
+  {
+    "id": "-OxivD_7IhsAYEY5Xh3i",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 74084
+  },
+  {
+    "id": "-OxivoWlA4tZLnypN1Vc",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 6060
+  },
+  {
+    "id": "-Oxivq7IWryQltaqrVps",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 12636
+  },
+  {
+    "id": "-OxivslpZvWHY79ueSut",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 23473
+  },
+  {
+    "id": "-OxiwFALj7E_316EABCC",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 119508
+  },
+  {
+    "id": "-OxiwFWSJQgNthxBcoLD",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 120918
+  },
+  {
+    "id": "-OxiwHR0M75KT6-S9s0c",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 128962
+  },
+  {
+    "id": "-OxiwHpFuw2FxM3qdmuc",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 130133
+  },
+  {
+    "id": "-OxiwIZxv5gxzyLfVFxi",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 133335
+  },
+  {
+    "id": "-OxiwIsOUS7MbZjgaubc",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 134684
+  },
+  {
+    "id": "-OxiwJK6oiYArYPfmBhW",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 136437
+  },
+  {
+    "id": "-OxiwJie98QUrnaHZ0Mn",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 137917
+  },
+  {
+    "id": "-OxiwKK-306n7HG27BXW",
+    "cardHex": "6",
+    "cardId": 6,
+    "direction": "IN",
+    "timestamp": 140535
+  },
+  {
+    "id": "-OxiwKc3NuR3fCAEvilR",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 141854
+  },
+  {
+    "id": "-OxiwL0rSnH6xFyXkTFE",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 143371
+  },
+  {
+    "id": "-OxiwLKB9Y0jM89RAp4f",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 144720
+  },
+  {
+    "id": "-OxiwLiNbGkv47FXUoiX",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 146214
+  },
+  {
+    "id": "-OxiwM0u-Nb83KhHAVYv",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 147577
+  },
+  {
+    "id": "-OxiwMTgm9V65J4GIKzj",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 149418
+  },
+  {
+    "id": "-OxiwMimCQ9_EuBD-_Ch",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 150660
+  },
+  {
+    "id": "-OxiwNAWj-_ywnPFPGvD",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 152162
+  },
+  {
+    "id": "-OxiwNXBFtrj7gQl02K4",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 153762
+  },
+  {
+    "id": "-OxiwNvRHWReqQ77UFgs",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 155363
+  },
+  {
+    "id": "-OxiwSA04t_Nsa0Z7zf6",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 172679
+  },
+  {
+    "id": "-OxiwSTBmke73CedCbnP",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 173977
+  },
+  {
+    "id": "-OxiwSvOFbBNIE0Ab7Gk",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 175886
+  },
+  {
+    "id": "-OxiwTDk_-XUH6dlvCgl",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 177238
+  },
+  {
+    "id": "-OxiwTiVG5KYtt0vQyu4",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 179132
+  },
+  {
+    "id": "-OxiwU0oGgEgOgvvY-Hc",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 180350
+  },
+  {
+    "id": "-OxiwXKHVgVvXuVWVAl2",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 193941
+  },
+  {
+    "id": "-Oxiw_419KTOfQclZvpE",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 204719
+  },
+  {
+    "id": "-Oxix0DofBGzA1gZhhJc",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 11834
+  },
+  {
+    "id": "-Oxix0bvX1DZDc8yy8iF",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 14196
+  },
+  {
+    "id": "-Oxix1Qomz9KTUZTkcSw",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 17561
+  },
+  {
+    "id": "-Oxix4sIY__BHyheb6hp",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 31676
+  },
+  {
+    "id": "-Oxix5A5eapS-jcKcoHu",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 33083
+  },
+  {
+    "id": "-Oxix5ZqsaQpQFcihkxn",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 34779
+  },
+  {
+    "id": "-OxixH4eUa5LLHIrlpJY",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 80313
+  },
+  {
+    "id": "-OxixIfMm_NzuzEMgUAK",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 88234
+  },
+  {
+    "id": "-OxixIywK9qObPVhyoi1",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 89770
+  },
+  {
+    "id": "-OxixJJtvO_98DYCNA4_",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 90995
+  },
+  {
+    "id": "-OxixRv3IhpeSzDMNpqu",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 126312
+  },
+  {
+    "id": "-OxixWGe8G8sqrI3YrZG",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 143992
+  },
+  {
+    "id": "-OxixcAY0h5oN0bM-lMW",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 172473
+  },
+  {
+    "id": "-OxixcUHBQDWZAVBWi6-",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 173737
+  },
+  {
+    "id": "-OxixcocQBuQqiE7mfHW",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 174970
+  },
+  {
+    "id": "-OxixdAK_w_tyhQXGFtV",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 176401
+  },
+  {
+    "id": "-OxixdTIS8K1KOgkYYjD",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 177717
+  },
+  {
+    "id": "-OxixdoiGzoOMmtnZmYu",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 179065
+  },
+  {
+    "id": "-Oxixe7IwtzFWvRywzeB",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 180445
+  },
+  {
+    "id": "-OxixejStsCPBTTUIdiN",
+    "cardHex": "6388",
+    "cardId": 25480,
+    "direction": "IN",
+    "timestamp": 182727
+  },
+  {
+    "id": "-Oxixf4GGZt49e8Jh5kd",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 184186
+  },
+  {
+    "id": "-OxixhvO8Ob4VRTIoxy5",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 195869
+  },
+  {
+    "id": "-OxixiWZXRizvXZNYIeu",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 197350
+  },
+  {
+    "id": "-OxixlQ68RkrYz0Q4tbL",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 210214
+  },
+  {
+    "id": "-OxixljGyB7eMJ_GYSUo",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 211452
+  },
+  {
+    "id": "-Oxixm4Lf0GSw6-UqnGJ",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 213051
+  },
+  {
+    "id": "-OxixmQCLov59r2XsAEu",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 214291
+  },
+  {
+    "id": "-OxixmjLxH0H8rMzMcLL",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 215756
+  },
+  {
+    "id": "-Oxixn3vRNOSZkDOjhnw",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 216950
+  },
+  {
+    "id": "-OxixnQ7bCjLlcWmIow2",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 218474
+  },
+  {
+    "id": "-Oxixnj32zXNWupKQr6_",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 219651
+  },
+  {
+    "id": "-OxixoAAQZiCK2VPaI11",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 221481
+  },
+  {
+    "id": "-OxixoWYDnTLxC9h57Zb",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 222893
+  },
+  {
+    "id": "-OxixpJjwhUFUdCJBFJn",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 226220
+  },
+  {
+    "id": "-OxixpiLZuK2J--UDttz",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 227604
+  },
+  {
+    "id": "-Oxixq6wPB_3cMuAlHhv",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 229438
+  },
+  {
+    "id": "-Oxixw83aDRerp5FqO5b",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 254113
+  },
+  {
+    "id": "-Oxiy0XPkV3nMOBfir19",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 276283
+  },
+  {
+    "id": "-OxiyLWYD4RE1QWBJVin",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 362133
+  },
+  {
+    "id": "-OxiyficguQqvlzh1MSj",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 448914
+  },
+  {
+    "id": "-Oxiz6MtXJBB9WT3zVGy",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 562213
+  },
+  {
+    "id": "-OxizP3hdveixkqlISuU",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 638868
+  },
+  {
+    "id": "-OxizVs6UTe8i2DCBChU",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 666611
+  },
+  {
+    "id": "-OxizvWryKWiQhINy9nY",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 775518
+  },
+  {
+    "id": "-OxizxZvFbp4jTd4J_JZ",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 784122
+  },
+  {
+    "id": "-OxizzAPNgzVE_ZrSM7a",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 790757
+  },
+  {
+    "id": "-Oxj--t6qDGwk-MENb4z",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 797441
+  },
+  {
+    "id": "-Oxj-1oqcCWZ7uqgILwk",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 805814
+  },
+  {
+    "id": "-Oxj-3cSpkYGk6Ln6BGM",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 812879
+  },
+  {
+    "id": "-Oxj-3yaI5m3mJdHh-9g",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 814572
+  },
+  {
+    "id": "-Oxj-4KHDfvjmmJ4olWc",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 815858
+  },
+  {
+    "id": "-Oxj-4fKpRNUt3YDTqHN",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 817441
+  },
+  {
+    "id": "-Oxj-50fTVpUB8hpqpQG",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 818954
+  },
+  {
+    "id": "-Oxj-DDUtmdHAgZXsdzR",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 852472
+  },
+  {
+    "id": "-Oxj-EQcWObpfi2ZC7fu",
+    "cardHex": "18e2",
+    "cardId": 6370,
+    "direction": "IN",
+    "timestamp": 857361
+  },
+  {
+    "id": "-Oxj-EpAGyu8Vht4y0JL",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 858811
+  },
+  {
+    "id": "-Oxj-FKiArtrFPojJnHv",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 860981
+  },
+  {
+    "id": "-Oxj-FfumMAQh0egMbWP",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 862499
+  },
+  {
+    "id": "-Oxj-G3wloRXLGPPi8qc",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 864096
+  },
+  {
+    "id": "-Oxj-GKTNLzXWOgtSkUh",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 865401
+  },
+  {
+    "id": "-Oxj-GlcTmIUEkvJUH-4",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 866933
+  },
+  {
+    "id": "-Oxj-H4GKTN7k2Rfo49z",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 868268
+  },
+  {
+    "id": "-Oxj-HQkJm4JmS-xoT0F",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 869666
+  },
+  {
+    "id": "-Oxj-Hp3Ku-kF5beRIJ7",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 871094
+  },
+  {
+    "id": "-Oxj-IGoYTDVrcZ0IFL2",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 873193
+  },
+  {
+    "id": "-Oxj-I_CM-mGUOlzp4Os",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 874422
+  },
+  {
+    "id": "-Oxj-JDOas_o0Fr47JYe",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 877110
+  },
+  {
+    "id": "-Oxj-JW_Bjk3m9o8hjsJ",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 878354
+  },
+  {
+    "id": "-Oxj-JwDzHb8DPuvXdGs",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 879855
+  },
+  {
+    "id": "-Oxj-KKS7-ORXZwHJ_RF",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 881338
+  },
+  {
+    "id": "-Oxj-Ki_nytZMIVES2a_",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 883100
+  },
+  {
+    "id": "-Oxj-L1T35zSV79RuGW_",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 884494
+  },
+  {
+    "id": "-Oxj-LcMngM1N0OE66CI",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 886769
+  },
+  {
+    "id": "-Oxj-M132pjHkpBBUhHe",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 888303
+  },
+  {
+    "id": "-Oxj-MfY-SeVaQlnzAx_",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 890480
+  },
+  {
+    "id": "-Oxj-N6nxH6zaFEksz4f",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 892803
+  },
+  {
+    "id": "-Oxj-NWzxxe81T71elPH",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 894444
+  },
+  {
+    "id": "-Oxj-NvCzR6yDQDLcfQM",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 896306
+  },
+  {
+    "id": "-Oxj-OHRW9nkzWQUcoxE",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 897905
+  },
+  {
+    "id": "-Oxj-RlhzuJEPmgQRthH",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 912024
+  },
+  {
+    "id": "-Oxj-S7foumCL1pU66iS",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 913494
+  },
+  {
+    "id": "-Oxj-SQsG3vZHSYxVNwD",
+    "cardHex": "631c4698",
+    "cardId": 1662797464,
+    "direction": "IN",
+    "timestamp": 914929
+  },
+  {
+    "id": "-Oxj-SminN1izA-XEozM",
+    "cardHex": "a58e234c",
+    "cardId": 2777555788,
+    "direction": "IN",
+    "timestamp": 916158
+  },
+  {
+    "id": "-Oxj-T872h9UTOiq-AwY",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 917586
+  },
+  {
+    "id": "-Oxj-TTtsPdoI-_WTmcF",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 919022
+  },
+  {
+    "id": "-Oxj1ZcaDOz1xlQbXKcJ",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784274373159
+  },
+  {
+    "id": "-Oxj1aH9fK_6bjJUpooy",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784274379914
+  },
+  {
+    "id": "-Oxj1gvlIgH48-Qse8lx",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784274407153
+  },
+  {
+    "id": "-Oxj1hH90pRMm8hn22jW",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784274408586
+  },
+  {
+    "id": "-Oxj1jivdDPyMbkDShex",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784274418619
+  },
+  {
+    "id": "-Oxj1k4PUfRNCrTXClkQ",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784274420058
+  },
+  {
+    "id": "-Oxj1veJuKsJPjT8Zvwm",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784274467477
+  },
+  {
+    "id": "-Oxj2FvmogoU2eoP8nk9",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784274554611
+  },
+  {
+    "id": "-Oxj2GHCk_Ek54_FDt6f",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784274556045
+  },
+  {
+    "id": "-Oxj2GcgUzowfDeVAez6",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784274557485
+  },
+  {
+    "id": "-Oxj4TcocGLQyfnXHOZe",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275135028
+  },
+  {
+    "id": "-Oxj4VE65MJ0H_6AHST_",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784275141575
+  },
+  {
+    "id": "-Oxj4azENhb0U59Rca8H",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275169231
+  },
+  {
+    "id": "-Oxj4bKZRzf_HGhVLouH",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784275170660
+  },
+  {
+    "id": "-Oxj4cUMsKJvrm_vWhjv",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784275175383
+  },
+  {
+    "id": "-Oxj4d69jyvddFWgPnpG",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784275177930
+  },
+  {
+    "id": "-Oxj6mUG69sE6l9J9TOv",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275740625
+  },
+  {
+    "id": "-Oxj6mpclvrEG1LcOGRs",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784275742056
+  },
+  {
+    "id": "-Oxj6nUEElR3GCZUA82i",
+    "cardHex": "12a9",
+    "cardId": 4777,
+    "direction": "IN",
+    "timestamp": 1784275744719
+  },
+  {
+    "id": "-Oxj6o4iGycY08limA6L",
+    "cardHex": "949492a9",
+    "cardId": 2492764841,
+    "direction": "IN",
+    "timestamp": 1784275747182
+  },
+  {
+    "id": "-Oxj6oR0yBxfzxR5Zp05",
+    "cardHex": "52929555",
+    "cardId": 1385338197,
+    "direction": "IN",
+    "timestamp": 1784275748609
+  },
+  {
+    "id": "-Oxj6qXQLg4FPPgqD3RI",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784275757211
+  },
+  {
+    "id": "-Oxj6qswKzdkciyl9HGt",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784275758653
+  },
+  {
+    "id": "-Oxj6rECBjifSqIFz2_E",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275760077
+  },
+  {
+    "id": "-Oxj6xR0qhCAc8fQF3Q5",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275785473
+  },
+  {
+    "id": "-Oxj70eW6HQYRq29SFe_",
+    "cardHex": "6",
+    "cardId": 6,
+    "direction": "IN",
+    "timestamp": 1784275802785
+  },
+  {
+    "id": "-Oxj70xe-6wPOCjxOWNL",
+    "cardHex": "e234c",
+    "cardId": 926540,
+    "direction": "IN",
+    "timestamp": 1784275804010
+  },
+  {
+    "id": "-Oxj73MBKYKISoDdKIvB",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275813836
+  },
+  {
+    "id": "-Oxj76J21pvEYkkVlyRc",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784275825923
+  },
+  {
+    "id": "-Oxj76eU7DNCix5UGGJ4",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784275827360
+  },
+  {
+    "id": "-Oxj7732WRmKbty9iZRE",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275828995
+  },
+  {
+    "id": "-Oxj77PSD2hNp4N8NQhG",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784275830430
+  },
+  {
+    "id": "-Oxj77o2lTBKwskxUsCK",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784275832067
+  },
+  {
+    "id": "-Oxj789QQLl2Ed4IhJqM",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784275833499
+  },
+  {
+    "id": "-Oxj78ZAAUftPUF6tNTz",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275835147
+  },
+  {
+    "id": "-Oxj78u_EP0ANV5PkfkD",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784275836581
+  },
+  {
+    "id": "-Oxj79MO8nxzpeg_GJMd",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784275838425
+  },
+  {
+    "id": "-Oxj79haA2bcLwmAJyYF",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784275839846
+  },
+  {
+    "id": "-Oxj7ACn46Y0Px8Cg4WX",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275841907
+  },
+  {
+    "id": "-Oxj7AYMqLimPg2MyFbY",
+    "cardHex": "8e234c55",
+    "cardId": 2384677973,
+    "direction": "IN",
+    "timestamp": 1784275843287
+  },
+  {
+    "id": "-Oxj7BxeBgbIfJ84IwS5",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784275849066
+  },
+  {
+    "id": "-Oxj7CJ6G9qnzE4EPQSY",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784275850503
+  },
+  {
+    "id": "-Oxj7D02Y3XYbxbfmsQV",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275853379
+  },
+  {
+    "id": "-Oxj7FFr7Q3x7Yu3Zp25",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784275862583
+  },
+  {
+    "id": "-Oxj7GFpqfvQxqPjPXH9",
+    "cardHex": "6388",
+    "cardId": 25480,
+    "direction": "IN",
+    "timestamp": 1784275866677
+  },
+  {
+    "id": "-Oxj7GbABBGm7TdeV94A",
+    "cardHex": "4000",
+    "cardId": 16384,
+    "direction": "IN",
+    "timestamp": 1784275868108
+  },
+  {
+    "id": "-Oxj7GxeNxKv-h6hkMpu",
+    "cardHex": "28a21110",
+    "cardId": 681709840,
+    "direction": "IN",
+    "timestamp": 1784275869546
+  },
+  {
+    "id": "-Oxj7HJBFLGrDD2WrTDy",
+    "cardHex": "10201444",
+    "cardId": 270537796,
+    "direction": "IN",
+    "timestamp": 1784275870988
+  },
+  {
+    "id": "-Oxj7HePl5K7d9n6huYx",
+    "cardHex": "28100004",
+    "cardId": 672137220,
+    "direction": "IN",
+    "timestamp": 1784275872410
+  },
+  {
+    "id": "-Oxj7I-qsjLaXpHJwHHz",
+    "cardHex": "50210a0a",
+    "cardId": 1344342538,
+    "direction": "IN",
+    "timestamp": 1784275873846
+  },
+  {
+    "id": "-Oxj7JCySUJXggZ9aCO6",
+    "cardHex": "45040908",
+    "cardId": 1157892360,
+    "direction": "IN",
+    "timestamp": 1784275878782
+  },
+  {
+    "id": "-Oxj7JbI3xfEOJY_TpSf",
+    "cardHex": "2280104",
+    "cardId": 36176132,
+    "direction": "IN",
+    "timestamp": 1784275880403
+  },
+  {
+    "id": "-Oxj7KpfMhO4K3NCXN0R",
+    "cardHex": "20a0080",
+    "cardId": 34209920,
+    "direction": "IN",
+    "timestamp": 1784275885419
+  },
+  {
+    "id": "-Oxj7LB217HF360qsdsQ",
+    "cardHex": "40240200",
+    "cardId": 1076101632,
+    "direction": "IN",
+    "timestamp": 1784275886851
+  },
+  {
+    "id": "-Oxj7LXWt8a8bSpgFEvN",
+    "cardHex": "8151000",
+    "cardId": 135598080,
+    "direction": "IN",
+    "timestamp": 1784275888290
+  },
+  {
+    "id": "-Oxj7Lss0w7lKWnNw0A1",
+    "cardHex": "1020000",
+    "cardId": 16908288,
+    "direction": "IN",
+    "timestamp": 1784275889721
+  },
+  {
+    "id": "-Oxj7MEEE6So-i-IDae6",
+    "cardHex": "2a1000a",
+    "cardId": 44105738,
+    "direction": "IN",
+    "timestamp": 1784275891152
+  },
+  {
+    "id": "-Oxj7M_mc95lzjLJqqDh",
+    "cardHex": "50a84124",
+    "cardId": 1353204004,
+    "direction": "IN",
+    "timestamp": 1784275892594
+  },
+  {
+    "id": "-Oxj7Mw4lP0v6Liw2jcy",
+    "cardHex": "50a00288",
+    "cardId": 1352663688,
+    "direction": "IN",
+    "timestamp": 1784275894021
+  },
+  {
+    "id": "-Oxj7NHPCe2RHhcfTYsP",
+    "cardHex": "40a0240",
+    "cardId": 67764800,
+    "direction": "IN",
+    "timestamp": 1784275895450
+  },
+  {
+    "id": "-Oxj7Ncq2R8S-B7V7ADi",
+    "cardHex": "201022",
+    "cardId": 2101282,
+    "direction": "IN",
+    "timestamp": 1784275896887
+  },
+  {
+    "id": "-Oxj7OHSRfdRIZOAwjAb",
+    "cardHex": "140500",
+    "cardId": 1312000,
+    "direction": "IN",
+    "timestamp": 1784275899550
+  },
+  {
+    "id": "-Oxj7P_l30SArcrmGMSj",
+    "cardHex": "810001",
+    "cardId": 8454145,
+    "direction": "IN",
+    "timestamp": 1784275904882
+  },
+  {
+    "id": "-Oxj7PsKwAfWumg5u9e7",
+    "cardHex": "4008228a",
+    "cardId": 1074274954,
+    "direction": "IN",
+    "timestamp": 1784275906069
+  },
+  {
+    "id": "-Oxj7QBCiytHSE2qQK-8",
+    "cardHex": "200100",
+    "cardId": 2097408,
+    "direction": "IN",
+    "timestamp": 1784275907341
+  },
+  {
+    "id": "-Oxj7QXS7194TgayjpOX",
+    "cardHex": "81040022",
+    "cardId": 2164523042,
+    "direction": "IN",
+    "timestamp": 1784275908765
+  },
+  {
+    "id": "-Oxj7QswerMnKm_VHxsZ",
+    "cardHex": "94000080",
+    "cardId": 2483028096,
+    "direction": "IN",
+    "timestamp": 1784275910204
+  },
+  {
+    "id": "-Oxj7RHgHLJLG1zcFkJ5",
+    "cardHex": "8281114",
+    "cardId": 136843540,
+    "direction": "IN",
+    "timestamp": 1784275911852
+  },
+  {
+    "id": "-Oxj7RcrKSkeuB-qrwps",
+    "cardHex": "4001108",
+    "cardId": 67113224,
+    "direction": "IN",
+    "timestamp": 1784275913271
+  },
+  {
+    "id": "-Oxj7S-Moy4aFvB9akmk",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784275914775
+  },
+  {
+    "id": "-Oxj7SMxOq9oTMWXw2dV",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275916285
+  },
+  {
+    "id": "-Oxj7SgCpD_xpl2-57FP",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784275917581
+  },
+  {
+    "id": "-Oxj7TBIvhIe-JQYiXQ2",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784275919636
+  },
+  {
+    "id": "-Oxj7TXRykhBu63Y3Ycz",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784275921052
+  },
+  {
+    "id": "-Oxj7Tt2_sqh5zrK-eL-",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275922499
+  },
+  {
+    "id": "-Oxj7V__P_wbs7nYxCAJ",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784275929445
+  },
+  {
+    "id": "-Oxj7VxhJ8rVD5dkJWkN",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784275930989
+  },
+  {
+    "id": "-Oxj7Wt999OyJqJqJfpH",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275934794
+  },
+  {
+    "id": "-Oxj7gJ4eMvpe9SxsHwM",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784275977477
+  },
+  {
+    "id": "-Oxj7jd-nabmmOOevqS3",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784275991104
+  },
+  {
+    "id": "-Oxj7sAJRouKLSXsHdPW",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276026068
+  },
+  {
+    "id": "-Oxj8E6txrNCAxkTZQu-",
+    "cardHex": "0",
+    "cardId": 0,
+    "direction": "IN",
+    "timestamp": 1784276120057
+  },
+  {
+    "id": "-Oxj8Em-96eQu6rJCF6X",
+    "cardHex": "ffffffff",
+    "cardId": 4294967295,
+    "direction": "IN",
+    "timestamp": 1784276122752
+  },
+  {
+    "id": "-Oxj8lBYatZzcQFr-AUV",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784276259620
+  },
+  {
+    "id": "-Oxj9bThUISgB1BMle4k",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276481966
+  },
+  {
+    "id": "-Oxj9dMijBwm7FfoUBKb",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276489710
+  },
+  {
+    "id": "-Oxj9giiFL5cVvFMmkc8",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276503470
+  },
+  {
+    "id": "-Oxj9hTnbvLDJakyhknl",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784276506547
+  },
+  {
+    "id": "-Oxj9iDkn-lT0H9gjKuy",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276509617
+  },
+  {
+    "id": "-Oxj9kTmYXyKWr2oj0ra",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276518834
+  },
+  {
+    "id": "-Oxj9n2mCXsTkO0PHuu_",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276529394
+  },
+  {
+    "id": "-Oxj9p1YLtvJn5OEFUR-",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276537508
+  },
+  {
+    "id": "-Oxj9ufbmjRMnVfSGM_E",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784276560615
+  },
+  {
+    "id": "-Oxj9wU2o4JRD3kc3669",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276568003
+  },
+  {
+    "id": "-Oxj9z1Fi1OC3xwV3tTu",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276578448
+  },
+  {
+    "id": "-OxjA0Own5qx-zGR9ssf",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276588156
+  },
+  {
+    "id": "-OxjA6Sls_vRYUiP77Cu",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276612977
+  },
+  {
+    "id": "-OxjA71CsV315cJtQSTp",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784276615309
+  },
+  {
+    "id": "-OxjA8aDJbhaQ8a8pski",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276621710
+  },
+  {
+    "id": "-OxjAAeiTIBLy9XT1V8w",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276630190
+  },
+  {
+    "id": "-OxjABvW6AMhhfSp3ln2",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784276635362
+  },
+  {
+    "id": "-OxjAG3_CMCxNmu23CYt",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276652325
+  },
+  {
+    "id": "-OxjAGh0qcu_NEQU_8dL",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784276654913
+  },
+  {
+    "id": "-OxjAHnzfpjxTpGAx0CQ",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276659455
+  },
+  {
+    "id": "-OxjAJWMwLHIkrcK4nUQ",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784276666455
+  },
+  {
+    "id": "-OxjAOYyxeA3ml3sefQ_",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784276687102
+  },
+  {
+    "id": "-OxjAasmF7JyzEguhjxi",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276741682
+  },
+  {
+    "id": "-OxjAbZT7AHfdtM8o9DS",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784276744479
+  },
+  {
+    "id": "-OxjAcI1M4Z-KbIwtqN3",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276747459
+  },
+  {
+    "id": "-OxjAcklebW4Bwe3uy0k",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784276749361
+  },
+  {
+    "id": "-OxjAd9zt5pZYUIx_Z2h",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276751039
+  },
+  {
+    "id": "-OxjAd_FQPkwvIzmZOO0",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784276752720
+  },
+  {
+    "id": "-OxjAe44LxC_2g9B3AxK",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276754757
+  },
+  {
+    "id": "-OxjAfTAw6sWTC34FoA6",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784276760460
+  },
+  {
+    "id": "-OxjAgEeVfwfLDxQ8wZA",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276763626
+  },
+  {
+    "id": "-OxjAhRF70p7Hv8H3QBb",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "OUT",
+    "timestamp": 1784276768528
+  },
+  {
+    "id": "-OxjAqgVIuN9Fi2jsDFx",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784276806432
+  },
+  {
+    "id": "-OxjArBV3GV5FLsdoFJv",
+    "cardHex": "338e1b4c",
+    "cardId": 864951116,
+    "direction": "IN",
+    "timestamp": 1784276808481
+  },
+  {
+    "id": "-OxjAtdZtNx07C7jrZx8",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784276818532
+  },
+  {
+    "id": "-OxjAvVhaniOOmhdd35A",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784276826157
+  },
+  {
+    "id": "-OxjAw-Wq0Lb9RiHm2Fh",
+    "cardHex": "338e1b4c",
+    "cardId": 864951116,
+    "direction": "OUT",
+    "timestamp": 1784276828193
+  },
+  {
+    "id": "-OxjAyFn56jx6Z6upYyJ",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276837427
+  },
+  {
+    "id": "-OxjAz1JasdrKYoIoxEg",
+    "cardHex": "338e1b4c",
+    "cardId": 864951116,
+    "direction": "IN",
+    "timestamp": 1784276840597
+  },
+  {
+    "id": "-OxjB-Jkg0ciZbYiaoH9",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276845872
+  },
+  {
+    "id": "-OxjB1pFCfmLNmjIsL_k",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276856144
+  },
+  {
+    "id": "-OxjB3tnjPc3_hjbiBDH",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276864627
+  },
+  {
+    "id": "-OxjBGSjUoIWxzuHAgSR",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276916080
+  },
+  {
+    "id": "-OxjBH87dcLuAsccoMcs",
+    "cardHex": "338e1b4c",
+    "cardId": 864951116,
+    "direction": "OUT",
+    "timestamp": 1784276918856
+  },
+  {
+    "id": "-OxjBHaD3t4MB774iuO4",
+    "cardHex": "318e234c",
+    "cardId": 831398732,
+    "direction": "IN",
+    "timestamp": 1784276920719
+  },
+  {
+    "id": "-OxjBIA44BUh6gWytIxd",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784276923078
+  },
+  {
+    "id": "-OxjBOcHfEfEhdCcPGcV",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784276949522
+  },
+  {
+    "id": "-OxjBtMZIH7lMqrAxybF",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784277079524
+  },
+  {
+    "id": "-OxjBw2-dFWImEayv36c",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784277090497
+  },
+  {
+    "id": "-OxjByMFeo4Oe1jnE34d",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784277099984
+  },
+  {
+    "id": "-OxjC-GMQo6WpsGuAFTz",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784277107799
+  },
+  {
+    "id": "-OxjC1_XAhNzCguerIkt",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784277117282
+  },
+  {
+    "id": "-OxjC4ACeyDdopPxyRvg",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277127886
+  },
+  {
+    "id": "-OxjC6CwgX2hsBPVGoVQ",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277136253
+  },
+  {
+    "id": "-OxjCECdmkbMhixdj2Hf",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277169001
+  },
+  {
+    "id": "-OxjCFTshPAcfoDu31Wd",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784277174200
+  },
+  {
+    "id": "-OxjDFp2zSI2Jzt-_nHu",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277437764
+  },
+  {
+    "id": "-OxjDIup52TSQP3XdFd1",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277450421
+  },
+  {
+    "id": "-OxjDLuU6Gmji7siSk7n",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277462687
+  },
+  {
+    "id": "-OxjDSfb_yZnbUS-eoLe",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277490407
+  },
+  {
+    "id": "-OxjDpL03Khqns1mThnv",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277587329
+  },
+  {
+    "id": "-OxjELeu1rX_Zf7KbbDN",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277723834
+  },
+  {
+    "id": "-OxjENCrXOw2kSi7GlQd",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784277730167
+  },
+  {
+    "id": "-OxjEQblsD9IZblAlxSu",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784277744113
+  },
+  {
+    "id": "-OxjESysDm2kNbkVF7fG",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277753784
+  },
+  {
+    "id": "-OxjEYKkuC1jvRRRxsCv",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277775728
+  },
+  {
+    "id": "-OxjEayF44R-AAt5EUHE",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277790608
+  },
+  {
+    "id": "-OxjEk-cTUyJykEW9Ahl",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277827625
+  },
+  {
+    "id": "-OxjEmlwX3U8qlS2D600",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277838972
+  },
+  {
+    "id": "-OxjEpuXUOdAiiYlrU1k",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277851810
+  },
+  {
+    "id": "-OxjEs21_TMPaOcaV29p",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277860546
+  },
+  {
+    "id": "-OxjEuMEQ9ep4wIFlp7C",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277870031
+  },
+  {
+    "id": "-OxjEwoCa66JsbGyAvg-",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277880078
+  },
+  {
+    "id": "-OxjEz7WgZpCurHVVEhE",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277889569
+  },
+  {
+    "id": "-OxjF2wdZsKjqIu7MqrZ",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277909289
+  },
+  {
+    "id": "-OxjF51AsDsBfDcTODAV",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277917835
+  },
+  {
+    "id": "-OxjF61OhUH4hverPsO_",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784277921945
+  },
+  {
+    "id": "-OxjF6tN_QJPbHwLY16s",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277925464
+  },
+  {
+    "id": "-OxjF7kWOo5iz-juFcy4",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784277928993
+  },
+  {
+    "id": "-OxjF9IScAK6H3vFI3pm",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277935325
+  },
+  {
+    "id": "-OxjFBL7jBa8XHEs4Pj1",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277943688
+  },
+  {
+    "id": "-OxjFDCIv_3bUinFqeGC",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277951316
+  },
+  {
+    "id": "-OxjFFQh0Hgjsy-n9701",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277960429
+  },
+  {
+    "id": "-OxjFKKmr9SatcD9bz4a",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784277980530
+  },
+  {
+    "id": "-OxjFNTEKVmfAdVkVvdE",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784277993360
+  },
+  {
+    "id": "-OxjFQ5llTtggyUQ9_Ct",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278004146
+  },
+  {
+    "id": "-OxjFSHAW-dvFEznP77v",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278013067
+  },
+  {
+    "id": "-OxjFYa8Q7HC_YTIeDdq",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278038921
+  },
+  {
+    "id": "-OxjFbSHmQ1tv-9tna0q",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278054738
+  },
+  {
+    "id": "-OxjFg_abX_axSOnz88f",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278075750
+  },
+  {
+    "id": "-OxjFj7RZgv6h7EXAWf7",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278086173
+  },
+  {
+    "id": "-OxjFnngO-b5qxTJXF6n",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278105325
+  },
+  {
+    "id": "-OxjFvnBxUxqW3G7d7u4",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278138060
+  },
+  {
+    "id": "-OxjFy9MafpQI21CdKlW",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278147735
+  },
+  {
+    "id": "-OxjFzeM6uD-pRCTZDlG",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278153879
+  },
+  {
+    "id": "-OxjG-pm8pTKAtQFkq4P",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278158707
+  },
+  {
+    "id": "-OxjG1HrnRo-HGAA5uqO",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278164664
+  },
+  {
+    "id": "-OxjG2NZLmb0CMReQrQo",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278169124
+  },
+  {
+    "id": "-OxjG6TW1Z_37lyuXAXd",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278185889
+  },
+  {
+    "id": "-OxjG8gXOvHrUOX6SVZK",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278194978
+  },
+  {
+    "id": "-OxjGCm3RAFYS6nP9ma5",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278211716
+  },
+  {
+    "id": "-OxjGEaImLeLk3Oc-zCy",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278219155
+  },
+  {
+    "id": "-OxjGGuac8wMv9TsIw7x",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278228646
+  },
+  {
+    "id": "-OxjGHj1iQLpJ-VmVhk6",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278232002
+  },
+  {
+    "id": "-OxjGJSI4g5HZle5Hbqi",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278239059
+  },
+  {
+    "id": "-OxjGKa7Q39z46X1-lxK",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278243720
+  },
+  {
+    "id": "-OxjGLoUrAN1Qf4DYKU7",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278248735
+  },
+  {
+    "id": "-OxjGOM95f9ZqT9M76wB",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278259147
+  },
+  {
+    "id": "-OxjGPGIMFvcX-cBkRSI",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278262867
+  },
+  {
+    "id": "-OxjGQGFblZmqFU6FJhY",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278266960
+  },
+  {
+    "id": "-OxjGT4VGc_nj_53rdpj",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278278496
+  },
+  {
+    "id": "-OxjGTi5668Im_WgDpnS",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278281094
+  },
+  {
+    "id": "-OxjGUFxUJqJA0MPluiD",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278283325
+  },
+  {
+    "id": "-OxjGVD8REH5O2oxXjRL",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278287241
+  },
+  {
+    "id": "-OxjGabqa8oALGPFyog4",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278313462
+  },
+  {
+    "id": "-OxjGdCTPIO2DrJwsrym",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278324063
+  },
+  {
+    "id": "-OxjGeyu-OUO14TIRbCr",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278331322
+  },
+  {
+    "id": "-OxjGg3gzwSkDK2gjGND",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278335788
+  },
+  {
+    "id": "-OxjGgvkEsLwZISYCJrC",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278339312
+  },
+  {
+    "id": "-OxjGin5zvdIr1w3hIEw",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278346950
+  },
+  {
+    "id": "-OxjGk99FcCtA20ZwYbs",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278352523
+  },
+  {
+    "id": "-OxjGmjuE6heb-SptPrc",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278363130
+  },
+  {
+    "id": "-OxjGo6-KtcT5M7_kdvg",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278368704
+  },
+  {
+    "id": "-OxjGppRPxYbKjlhK3Q7",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278375772
+  },
+  {
+    "id": "-OxjGqvCPKIbO6jQOoL-",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278380238
+  },
+  {
+    "id": "-OxjGtmHFx-PJLO58ood",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278391954
+  },
+  {
+    "id": "-OxjGvxpe1J4UgebQ5vV",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278400886
+  },
+  {
+    "id": "-OxjGx8QMKYGRBYn8viz",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278405723
+  },
+  {
+    "id": "-OxjGyB9T5DhxuFhOfXz",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278409994
+  },
+  {
+    "id": "-OxjGyrmG1tSIVvhIiGl",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278412786
+  },
+  {
+    "id": "-OxjGzxYT1o8uifXCjP2",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278417251
+  },
+  {
+    "id": "-OxjHOjm-oS3WFj1AIKt",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278522866
+  },
+  {
+    "id": "-OxjHQNTKOvdqADnYR4j",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278529566
+  },
+  {
+    "id": "-OxjHQyAaw8zj9Fv8FBv",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278531979
+  },
+  {
+    "id": "-OxjHRmUJ3D95YDBDt6I",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278535328
+  },
+  {
+    "id": "-OxjHTHO2LZyL4Zm045L",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278541465
+  },
+  {
+    "id": "-OxjHTpF9WXfn8exEw9a",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278543697
+  },
+  {
+    "id": "-OxjHUdXPmpSCyPEy23K",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278547042
+  },
+  {
+    "id": "-OxjHWHBAlO8gOdbJ3w0",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278553740
+  },
+  {
+    "id": "-OxjHYVbkGb1FwlVR3S1",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278562855
+  },
+  {
+    "id": "-OxjHaB7U3lBr5db4jjk",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278573832
+  },
+  {
+    "id": "-OxjHc5H42Ukeyd2LTiG",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278581650
+  },
+  {
+    "id": "-OxjHf806sMP2rl0OOKH",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278594113
+  },
+  {
+    "id": "-OxjHgMKqA_hz0h0BQFm",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278599125
+  },
+  {
+    "id": "-OxjHhuIbnh_lRzW3IuA",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278605459
+  },
+  {
+    "id": "-OxjHkJBxtwXk26z6Pnr",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278615309
+  },
+  {
+    "id": "-OxjHnDCDwz0fY5S_Ah-",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278627213
+  },
+  {
+    "id": "-OxjHpA9oFjCtMXefs6z",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278635210
+  },
+  {
+    "id": "-OxjHr49AvlXGLsh381a",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784278643018
+  },
+  {
+    "id": "-OxjHuOOzeMoiJpGZYQX",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "IN",
+    "timestamp": 1784278656601
+  },
+  {
+    "id": "-OxjHwbkP4r-a1a_OpGJ",
+    "cardHex": "38e1b4c",
+    "cardId": 59644748,
+    "direction": "OUT",
+    "timestamp": 1784278665712
+  },
+  {
+    "id": "-OxjIIj5S231YemdkbNN",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784278760391
+  },
+  {
+    "id": "-OxjKvBEwlkJZJfWiksc",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784279446288
+  },
+  {
+    "id": "-OxjKxBE9yeTwl_MMDWX",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784279454479
+  },
+  {
+    "id": "-OxjL1Aob_0RTg-F1nRM",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784279474932
+  },
+  {
+    "id": "-OxjL94UvxWW14wENOmO",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784279507295
+  },
+  {
+    "id": "-OxjLBA9p0MRUraKyR4p",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784279515851
+  },
+  {
+    "id": "-OxjLDkmVh2F6afs6zai",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784279526451
+  },
+  {
+    "id": "-OxjLFUJ8Vk7XbMUGFWi",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784279533524
+  },
+  {
+    "id": "-OxjLHRFKZkiWsGBgIYP",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784279541520
+  },
+  {
+    "id": "-OxjLb8Va28aPYsSXQ9n",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784279626337
+  },
+  {
+    "id": "-OxjM6ZfbFyOSGSpIvt9",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784279759148
+  },
+  {
+    "id": "-OxjMpvvfwOZKdBgoVf1",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784279949052
+  },
+  {
+    "id": "-OxjN2T-Uh34li_kviVn",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784280004481
+  },
+  {
+    "id": "-OxjOSl0AjUmwYfHQuof",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784280374337
+  },
+  {
+    "id": "-OxjP84bkMlLiMy_a11a",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784280551784
+  },
+  {
+    "id": "-OxjPAOnMrs_enzRVWYn",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784280561267
+  },
+  {
+    "id": "-OxjPELeu5dfXrI81bRz",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "OUT",
+    "timestamp": 1784280577451
+  },
+  {
+    "id": "-OxjQR2OkkiBkbeMvDcX",
+    "cardHex": "18e234c",
+    "cardId": 26092364,
+    "direction": "IN",
+    "timestamp": 1784280891610
+  },
+  {
+    "id": "-OyqBEdUp1Ax3FeMLNIc",
+    "cardId": 41016499,
+    "timestamp": 1785468091150
+  },
+  {
+    "id": "-OyqBGGG-R6nb93yQckQ",
+    "cardId": 66280166,
+    "timestamp": 1785468097617
+  },
+  {
+    "id": "-OyqBHXnNkc7rQtarVHk",
+    "cardId": 41016499,
+    "timestamp": 1785468102835
+  },
+  {
+    "id": "-OyqBJ4N-bG5mkxeYoE5",
+    "cardId": 66280166,
+    "timestamp": 1785468109144
+  },
+  {
+    "id": "-OyqBKcQZx8KXhjigL-C",
+    "cardId": 41016499,
+    "timestamp": 1785468115483
+  },
+  {
+    "id": "-OyqBLqqOHTVX2nQM6kA",
+    "cardId": 66280166,
+    "timestamp": 1785468120502
+  },
+  {
+    "id": "-OzHrNK5VgBt33DCNnU6",
+    "cardId": "TEST 1234",
+    "direction": "IN",
+    "notes": "",
+    "source": "simulated",
+    "timestamp": 1785949162248
+  }
+]

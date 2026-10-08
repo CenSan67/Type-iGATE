@@ -19,12 +19,15 @@ export function validateAppSettings(data) {
   }
 }
 
-// Phase 6: physical barrier gate state, written by the dashboard's manual override
-// and (once built) polled/read by the ESP32 relay controller the same way the
-// existing RFID scanner already reads/writes gateLogs - see the hardware note in
-// CLAUDE.md. Lives at settings/app/gateStatus and is written directly to that leaf
-// (see setGateStatus in services/firebase.js), never through validateAppSettings,
+// Phase 12: two independent physical barriers (Entrance and Exit), each with its own
+// manual override on System Settings - reachable by any staff role now, not just admins,
+// since a Security Guard is exactly who needs to raise/lower a barrier from the gatehouse.
+// State lives at settings/app/gateStatus/{gateId} (see setGateStatus/listenToGateStatus in
+// services/firebase.js), written directly to that leaf, never through validateAppSettings,
 // so a status change never has to touch/overwrite appName/campus/etc.
+export const GATE_IDS = ['entrance', 'exit']
+export const GATE_LABELS = { entrance: 'Entrance Gate', exit: 'Exit Gate' }
+
 export const GATE_STATUS_STATES = ['OPEN', 'CLOSED']
 
 /**

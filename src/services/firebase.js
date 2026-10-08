@@ -12,6 +12,7 @@ import { validateAppSettings, validateGateStatus, GATE_IDS } from '../models/app
 import { validateSystemUser } from '../models/systemUser'
 import { validateExpectedGuest } from '../models/expectedGuest'
 import { ROLES } from '../constants/roles'
+import { getErrorMessage } from '../utils/errors'
 
 // TODO: replace with your Firebase project values
 const firebaseConfig = {
@@ -34,7 +35,7 @@ export const functions = getFunctions(app, 'us-central1')
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
-export async function initializeFirebaseCollections() {
+export async function initializeFirebaseCollections(onError) {
   try {
     await Promise.all([
       // update(), not set(): this runs on every admin session mount (see App.jsx), and a
@@ -56,6 +57,7 @@ export async function initializeFirebaseCollections() {
     ])
   } catch (error) {
     console.error('Failed to initialize Firebase collections', error)
+    onError?.(`App setup check failed: ${getErrorMessage(error, 'please contact an administrator if this keeps happening.')}`)
   }
 }
 
@@ -479,7 +481,13 @@ export async function cancelExpectedGuest(id) {
 // check-in fields below - see database.rules.json). Issues the guest a temporary visitor-
 // shaped rfidUsers pass, the same one a walk-in visitor gets, valid until the guest's window
 // closes, then marks them Arrived. No payment is recorded - VIP guests don't pay this fee.
-export async function checkInGuest(id, { rfidId, plateNumber, vehicleType }, actor) {
+//
+// Also logs the IN gate scan (the guest is entering campus right now, same reasoning as
+// RegisterRfidModal's walk-in visitor flow) and returns its logId so the caller can trigger
+// the camera - kept in the caller (CheckInGuestModal) rather than here to avoid importing
+// services/camera.js into this file, which imports rtdb from here (circular import).
+// Non-fatal: the pass itself is already issued even if this log write fails.
+export async function checkInGuest(id, { rfidId, plateNumber, vehicleType }, actor, onWarning) {
   const snap = await get(ref(rtdb, `expectedGuests/${id}`))
   if (!snap.exists()) throw new Error('Guest entry not found.')
   const guest = snap.val()
@@ -507,12 +515,23 @@ export async function checkInGuest(id, { rfidId, plateNumber, vehicleType }, act
     arrivedAt: Date.now(),
     checkedInBy: actor?.name || '',
   }))
+
+  let logId = null
+  try {
+    logId = await logGateEntry({ cardId: rfidId, direction: 'IN', source: 'vip-checkin' })
+  } catch (scanError) {
+    console.warn('VIP guest checked in, but the gate entry could not be logged:', scanError)
+    onWarning?.(`Guest checked in, but today's gate entry could not be recorded: ${getErrorMessage(scanError, 'please log it manually.')}`)
+  }
+  return logId
 }
 
 // Any staff role. Returns the temporary pass issued at check-in (best-effort - an admin who
 // deleted rfidUsers records in between just means there's nothing left to deactivate) and
-// marks the guest Departed.
-export async function checkOutGuest(id) {
+// marks the guest Departed. Also logs the OUT gate scan for the same card - functions/
+// index.js#backfillExitSnapshot picks this up automatically and reuses the guest's IN photo,
+// the same as any other OUT scan. Non-fatal: the guest is already checked out either way.
+export async function checkOutGuest(id, onWarning) {
   const snap = await get(ref(rtdb, `expectedGuests/${id}`))
   if (!snap.exists()) throw new Error('Guest entry not found.')
   const guest = snap.val()
@@ -523,6 +542,13 @@ export async function checkOutGuest(id) {
       ? Object.entries(usersSnap.val() || {}).find(([, v]) => (v.rfidId || '').toString().toLowerCase() === guest.rfidId.toString().toLowerCase())
       : null
     if (match) await set(ref(rtdb, `rfidUsers/${match[0]}/status`), 'Inactive')
+
+    try {
+      await logGateEntry({ cardId: guest.rfidId, direction: 'OUT', source: 'vip-checkout' })
+    } catch (scanError) {
+      console.warn('VIP guest checked out, but the gate exit could not be logged:', scanError)
+      onWarning?.(`Guest checked out, but the gate exit could not be recorded: ${getErrorMessage(scanError, 'please log it manually.')}`)
+    }
   }
 
   await set(ref(rtdb, `expectedGuests/${id}`), validateExpectedGuest({ ...guest, status: 'Departed', departedAt: Date.now() }))

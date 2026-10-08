@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import Modal from './Modal'
 import useRfidUsers from '../../hooks/useRfidUsers'
 import { logGateEntry } from '../../services/firebase'
+import { triggerCameraCapture } from '../../services/camera'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
 
@@ -29,7 +30,13 @@ export default function SimulateUserScanModal({ direction, onClose }){
   const handlePick = async (user) => {
     setSubmittingId(user.id)
     try {
-      await logGateEntry({ cardId: user.rfidId, direction, source: 'simulated' })
+      const logId = await logGateEntry({ cardId: user.rfidId, direction, source: 'simulated' })
+      // Fire-and-forget - the camera's own capture+upload pipeline takes several seconds,
+      // and may simply be unreachable (off, or on a different network) - never block this
+      // modal on it. Check the dashboard thumbnail or gateLogs/{id}/imageUrl afterward.
+      // triggerCameraCapture no-ops unless direction is 'IN' - OUT reuses the IN photo
+      // server-side instead (see functions/index.js#backfillExitSnapshot).
+      triggerCameraCapture(logId, direction, (msg) => showError(msg))
       showInfo(`Simulated ${label.toLowerCase()} for ${user.name || user.rfidId}.`)
       onClose()
     } catch (err) {

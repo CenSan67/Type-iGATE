@@ -20,6 +20,10 @@ const CODE_MESSAGES = {
   'auth/requires-recent-login': 'Please log out and back in, then try again.',
   'PERMISSION_DENIED': "You don't have permission to do that.",
   'permission-denied': "You don't have permission to do that.",
+  'functions/permission-denied': "You don't have permission to do that.",
+  'functions/failed-precondition': 'That action no longer applies - the page may be out of date.',
+  'functions/unauthenticated': 'Please sign in again and retry.',
+  'functions/unavailable': 'Unable to reach the server right now. Please try again.',
 }
 
 // Anything that still smells like a vendor/internal message after the code lookup is

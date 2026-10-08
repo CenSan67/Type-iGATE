@@ -19,6 +19,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+
 ## What this is
 
 iGate - a vehicle gate access & tracking system for Bulacan State University (Bustos Campus). React SPA (Vite) with Firebase (Auth + Realtime Database) as the backend. Staff log in and manage gate access logs, vehicle/account registration, payments, reports, and RFID-based entry/exit records.

@@ -107,14 +107,23 @@ export default function SearchHistoryPage(){
       .slice()
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       .map((entry) => ({
+        id: entry.id,
         time: entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—',
         date: entry.timestamp ? new Date(entry.timestamp).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—',
         role: entry.role || person?.role || '—',
         direction: entry.direction,
+        imageUrl: entry.imageUrl,
       }))
   }, [entries, matches, person])
 
   const hasMatch = matches.length > 0
+
+  // Which row's snapshot is showing in the camera-card panel - defaults to the newest log
+  // (below) and resets to that default whenever a new person is looked up, rather than
+  // sticking on a row that belongs to whoever was searched before.
+  const [selectedLogId, setSelectedLogId] = useState(null)
+  useEffect(() => { setSelectedLogId(null) }, [person?.id])
+  const selectedLog = logs.find((l) => l.id === selectedLogId) || logs[0] || null
 
   // --- All Entry & Exit Logs: filter -> sort -> paginate ---
   const filteredLogs = useMemo(() => {
@@ -250,8 +259,13 @@ export default function SearchHistoryPage(){
                 <tbody>
                   {logs.length === 0 ? (
                     <tr><td colSpan={4} className="empty-state">No gate activity recorded for this RFID yet.</td></tr>
-                  ) : logs.map((log, i) => (
-                    <tr key={i} className="activity-row">
+                  ) : logs.map((log) => (
+                    <tr
+                      key={log.id}
+                      className={`activity-row selectable-row ${log.id === selectedLog?.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedLogId(log.id)}
+                      title="View this scan's snapshot"
+                    >
                       <td>{log.time}</td>
                       <td>{log.date}</td>
                       <td>{log.role}</td>
@@ -300,8 +314,19 @@ export default function SearchHistoryPage(){
             <div className="search-side-column">
               <div className="camera-card">
                 <div className="camera-feed">
-                  <CameraIcon />
-                  <div className="camera-caption"><span className="rec-dot" /> CAM-IN | {logs[0]?.time || '—'}</div>
+                  {selectedLog?.imageUrl ? (
+                    <img src={selectedLog.imageUrl} alt="Vehicle snapshot" className="camera-feed-img" />
+                  ) : (
+                    <div className="camera-feed-empty">
+                      <CameraIcon />
+                      <span>No image available</span>
+                    </div>
+                  )}
+                  {selectedLog && (
+                    <div className="camera-caption">
+                      <span className="rec-dot" /> {selectedLog.direction === 'OUT' ? 'CAM-OUT' : 'CAM-IN'} | {selectedLog.time}
+                    </div>
+                  )}
                 </div>
               </div>
 

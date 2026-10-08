@@ -808,6 +808,14 @@ html, body, #root {
   background-color: #fafafa;
 }
 
+.selectable-row {
+  cursor: pointer;
+}
+
+.activity-row.selected {
+  background-color: #fdf1e0;
+}
+
 .activity-row.just-scanned {
   animation: just-scanned-flash 2s ease-out 2;
 }
@@ -1971,6 +1979,22 @@ html, body, #root {
   align-items: center;
   justify-content: center;
   color: rgba(255,255,255,0.4);
+}
+
+.camera-feed-img {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.camera-feed-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
 }
 
 .camera-caption {

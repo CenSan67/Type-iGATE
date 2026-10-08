@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { registerRfidUser, logGateEntry } from '../../services/firebase'
+import { triggerCameraCapture } from '../../services/camera'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
 import useRfidScanner from '../../hooks/useRfidScanner'
 import useRfidUsers from '../../hooks/useRfidUsers'
@@ -129,7 +130,8 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
       // History without waiting for a separate scan. Non-fatal: the pass itself is already
       // issued even if this log write fails.
       try {
-        await logGateEntry({ cardId: form.rfidId.trim(), direction: 'IN', source: 'visitor-registration' })
+        const logId = await logGateEntry({ cardId: form.rfidId.trim(), direction: 'IN', source: 'visitor-registration' })
+        triggerCameraCapture(logId, 'IN', (msg) => showError(msg))
       } catch (scanError) {
         showError(getErrorMessage(scanError, "Visitor pass issued, but today's gate entry could not be logged."))
       }

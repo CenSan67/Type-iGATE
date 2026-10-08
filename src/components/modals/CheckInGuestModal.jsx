@@ -3,6 +3,7 @@ import Modal from './Modal'
 import useRfidScanner from '../../hooks/useRfidScanner'
 import { useAuth } from '../../context/AuthContext'
 import { checkInGuest } from '../../services/firebase'
+import { triggerCameraCapture } from '../../services/camera'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
 import { isValidRfid, isValidPlate } from '../../utils/validators'
 import { getErrorMessage } from '../../utils/errors'
@@ -38,7 +39,13 @@ export default function CheckInGuestModal({ guest, onClose, onCheckedIn }){
 
     setSubmitting(true)
     try {
-      await checkInGuest(guest.id, { rfidId: rfidId.trim(), plateNumber: plateNumber.trim(), vehicleType }, { name: staffName })
+      const logId = await checkInGuest(
+        guest.id,
+        { rfidId: rfidId.trim(), plateNumber: plateNumber.trim(), vehicleType },
+        { name: staffName },
+        (msg) => showError(msg),
+      )
+      triggerCameraCapture(logId, 'IN', (msg) => showError(msg))
       onCheckedIn?.()
       onClose()
     } catch (err) {
