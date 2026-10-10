@@ -334,6 +334,17 @@ export function listenToGateStatus(gateId, callback) {
   })
 }
 
+// devices/scanner/{ready,updatedAt} - published by sketch_scanner.ino once its local RFID
+// authorization cache has synced at least once (see its publishScannerReady()). Right after a
+// fresh boot every scan is denied until that first sync lands (a few minutes), with no visual
+// way to tell "still warming up" from "something's wrong" - this lets the Dashboard show that
+// state instead of staff just not knowing why a real card isn't working yet.
+export function listenToScannerStatus(callback) {
+  return onValue(ref(rtdb, 'devices/scanner'), (snapshot) => {
+    callback(snapshot.exists() ? snapshot.val() : null)
+  })
+}
+
 export async function saveAdminProfile(uid, profile) {
   await set(ref(rtdb, `adminProfiles/${uid}`), validateAdminProfile(profile))
 }

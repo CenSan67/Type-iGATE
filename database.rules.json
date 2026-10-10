@@ -125,6 +125,17 @@
         "ip": {
           ".validate": "newData.isString() && newData.val().matches(/^[0-9]{1,3}(\\.[0-9]{1,3}){3}$/)"
         }
+      },
+      "scanner": {
+        ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
+        ".write": false,
+        ".validate": "newData.hasChildren(['ready', 'updatedAt'])",
+        "ready": {
+          ".validate": "newData.isBoolean()"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        }
       }
     },
 

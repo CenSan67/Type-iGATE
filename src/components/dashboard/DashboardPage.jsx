@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import StatsCards from './StatsCards'
+import ScannerStatusBadge from './ScannerStatusBadge'
 import RecentActivityTable from './RecentActivityTable'
 import GuestClearancePanel from './GuestClearancePanel'
 import VisitorPassesPanel from './VisitorPassesPanel'
@@ -46,6 +47,7 @@ export default function DashboardPage(){
             <h4>Campus Status</h4>
             <div className="overview-value">Live</div>
             <p>{lastScanAt ? `Last scan received ${new Date(lastScanAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Waiting for the first scan of this session…'}</p>
+            <ScannerStatusBadge />
           </div>
           {ADMIN_ROLES.includes(role) && (
             <div className="overview-card">
