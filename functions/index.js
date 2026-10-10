@@ -220,6 +220,48 @@ exports.backfillExitSnapshot = onValueCreated(
   }
 )
 
+// Automatically returns a walk-in visitor's temporary pass the moment their card scans
+// OUT, instead of requiring a guard to separately remember to click "Return Pass" on the
+// Dashboard (VisitorPassesPanel) once the visitor's ID is handed back. That manual button
+// is kept exactly as-is as a failsafe (e.g. a lost/unreadable card, or an exit that never
+// actually got scanned) - this just covers the common case automatically. Runs on every
+// new gateLogs entry, the same trigger shape as the functions above, so it covers every
+// write path (hardware, Simulate, any future one) with no firmware/app-side special-casing.
+exports.autoReturnVisitorPass = onValueCreated(
+  { ref: '/gateLogs/{logId}', region: 'us-central1' },
+  async (event) => {
+    const logId = event.params.logId
+    const entry = event.data.val() || {}
+    if ((entry.direction || 'IN').toString().toUpperCase() !== 'OUT') return
+
+    const db = getDatabase()
+    const owner = await findOwnerByCard(db, entry)
+    if (!owner || owner.role !== 'Visitor' || (owner.status || 'Active') !== 'Active') return
+
+    // VIP guests return through GuestClearancePanel's Check Out (checkOutGuest), which
+    // already deactivates their pass and advances their expectedGuests record to
+    // Departed - skip any rfidId an expectedGuests entry currently claims, the same
+    // exclusion useVisitorPasses already applies on the client and for the same reason
+    // (avoid a redundant second deactivation racing/duplicating that flow's own).
+    const guestsSnap = await db.ref('expectedGuests').get()
+    const ownerCard = normalizeId(owner.rfidId)
+    let claimedByGuest = false
+    if (guestsSnap.exists()) {
+      guestsSnap.forEach((child) => {
+        if (normalizeId((child.val() || {}).rfidId) === ownerCard) {
+          claimedByGuest = true
+          return true // stop iterating
+        }
+        return false
+      })
+    }
+    if (claimedByGuest) return
+
+    await db.ref(`rfidUsers/${owner.id}/status`).set('Inactive')
+    logger.info(`gateLogs/${logId}: auto-returned visitor pass rfidUsers/${owner.id} (card scanned OUT)`)
+  }
+)
+
 // ---------------------------------------------------------------------------------------
 // Vehicle snapshot pipeline - lets the ESP32-CAM (CameraWebServer, a separate board from
 // the RFID reader - see CameraWebServer/) upload the photo it captures at the moment of a
