@@ -44,17 +44,28 @@ async function findOwnerByCard(db, entry) {
   const snapshot = await db.ref('rfidUsers').get()
   if (!snapshot.exists()) return null
 
-  let found = null
+  // The university lends from a limited pool of physical cards, so more than one
+  // rfidUsers record can share the same rfidId over time (one per past/current holder -
+  // see src/services/firebase.js#registerRfidUser). Prefer whichever is Active (the
+  // card's current holder) over a past holder's now-inactive record; fall back to any
+  // match if the card isn't currently issued to anyone. Mirrors useEnrichedGateLogs.js's
+  // identical fix for the same bug (SMS/snapshot-reuse going to the wrong, old holder).
+  let activeMatch = null
+  let anyMatch = null
   snapshot.forEach((child) => {
     const value = child.val() || {}
     const rfid = normalizeId(value.rfidId)
-    if (rfid && (rfid === cardId || rfid === cardHex)) {
-      found = { id: child.key, ...value }
-      return true // stop iterating
+    if (!rfid || (rfid !== cardId && rfid !== cardHex)) return false
+
+    const candidate = { id: child.key, ...value }
+    if (!anyMatch) anyMatch = candidate
+    if ((value.status || 'Active') === 'Active') {
+      activeMatch = candidate
+      return true // definitively the best possible match - stop iterating
     }
     return false
   })
-  return found
+  return activeMatch || anyMatch
 }
 
 function buildMessage({ plateNumber, direction, timestamp }) {

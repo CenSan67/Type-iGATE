@@ -25,10 +25,16 @@ export default function useEnrichedGateLogs(){
   return logs.map((entry) => {
     const cardId = normalizeId(entry.cardId)
     const cardHex = normalizeId(entry.cardHex)
-    const user = users.find((u) => {
+    const matchesCard = (u) => {
       const rfid = normalizeId(u.rfidId)
       return rfid && (rfid === cardId || rfid === cardHex)
-    })
+    }
+    // The university lends from a limited pool of physical cards, so more than one
+    // rfidUsers record can share the same rfidId over time (one per past/current holder -
+    // see services/firebase.js#registerRfidUser). Prefer whichever is Active (the card's
+    // current holder) over a past holder's now-inactive record; fall back to any match if
+    // the card isn't currently issued to anyone.
+    const user = users.find((u) => matchesCard(u) && (u.status || 'Active') === 'Active') || users.find(matchesCard)
 
     const rawDirection = entry.direction || entry.dir || 'IN'
     const direction = rawDirection.toString().trim().toUpperCase() === 'OUT' ? 'OUT' : 'IN'
