@@ -25,7 +25,7 @@ export default function VisitorPassesPanel(){
       // functions/index.js#backfillExitSnapshot picks this up automatically and reuses
       // this same visitor's IN photo, the same as any other OUT scan.
       try {
-        await logGateEntry({ cardId: pendingReturn.rfidId, direction: 'OUT', source: 'visitor-return', skipDuplicateCheck: true })
+        await logGateEntry({ cardId: pendingReturn.rfidId, direction: 'OUT', source: 'visitor-return' })
       } catch (scanError) {
         showError(`Pass returned, but the exit could not be recorded: ${getErrorMessage(scanError, 'please log it manually.')}`)
       }
