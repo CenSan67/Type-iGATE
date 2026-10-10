@@ -46,26 +46,28 @@ async function findOwnerByCard(db, entry) {
 
   // The university lends from a limited pool of physical cards, so more than one
   // rfidUsers record can share the same rfidId over time (one per past/current holder -
-  // see src/services/firebase.js#registerRfidUser). Prefer whichever is Active (the
-  // card's current holder) over a past holder's now-inactive record; fall back to any
-  // match if the card isn't currently issued to anyone. Mirrors useEnrichedGateLogs.js's
-  // identical fix for the same bug (SMS/snapshot-reuse going to the wrong, old holder).
-  let activeMatch = null
-  let anyMatch = null
+  // see src/services/firebase.js#registerRfidUser). This scan must stay attributed to
+  // whoever actually held the card AT THAT TIME, not whoever holds it now - otherwise a
+  // card's older scans silently relabel themselves (and misdirect SMS/snapshot reuse) to
+  // the newest holder the moment the card gets reissued. So this picks whichever record
+  // was the most recently created one that still existed at or before this entry's own
+  // timestamp - the registration actually in effect then - falling back to the earliest
+  // record if the entry is somehow older than all of them. Mirrors
+  // useEnrichedGateLogs.js's identical fix for the same bug.
+  const candidates = []
   snapshot.forEach((child) => {
     const value = child.val() || {}
     const rfid = normalizeId(value.rfidId)
-    if (!rfid || (rfid !== cardId && rfid !== cardHex)) return false
-
-    const candidate = { id: child.key, ...value }
-    if (!anyMatch) anyMatch = candidate
-    if ((value.status || 'Active') === 'Active') {
-      activeMatch = candidate
-      return true // definitively the best possible match - stop iterating
-    }
+    if (rfid === cardId || rfid === cardHex) candidates.push({ id: child.key, ...value })
     return false
   })
-  return activeMatch || anyMatch
+  if (candidates.length === 0) return null
+
+  const entryTime = entry.timestamp ?? Infinity
+  const inEffectAtScanTime = candidates
+    .filter((c) => (c.createdAt || 0) <= entryTime)
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0]
+  return inEffectAtScanTime || candidates.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0]
 }
 
 function buildMessage({ plateNumber, direction, timestamp }) {

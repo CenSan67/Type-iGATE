@@ -25,16 +25,25 @@ export default function useEnrichedGateLogs(){
   return logs.map((entry) => {
     const cardId = normalizeId(entry.cardId)
     const cardHex = normalizeId(entry.cardHex)
-    const matchesCard = (u) => {
+    const candidates = users.filter((u) => {
       const rfid = normalizeId(u.rfidId)
       return rfid && (rfid === cardId || rfid === cardHex)
-    }
+    })
     // The university lends from a limited pool of physical cards, so more than one
     // rfidUsers record can share the same rfidId over time (one per past/current holder -
-    // see services/firebase.js#registerRfidUser). Prefer whichever is Active (the card's
-    // current holder) over a past holder's now-inactive record; fall back to any match if
-    // the card isn't currently issued to anyone.
-    const user = users.find((u) => matchesCard(u) && (u.status || 'Active') === 'Active') || users.find(matchesCard)
+    // see services/firebase.js#registerRfidUser). A scan must stay attributed to whoever
+    // actually held the card AT THAT TIME, not whoever holds it now - otherwise every past
+    // visitor's history on this card silently relabels itself to the newest one the moment
+    // the card gets reissued (confirmed: all of a reused card's rows, including ones from
+    // before the latest registration, were showing the newest visitor's name). So this
+    // picks whichever record was the most recently created one that still existed at or
+    // before this scan's own timestamp - the registration actually in effect then. Falls
+    // back to the earliest record if the scan is somehow older than all of them (e.g. a
+    // clock-skew edge case), rather than showing nothing.
+    const user = candidates
+      .filter((u) => (u.createdAt || 0) <= (entry.timestamp || Infinity))
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0]
+      || candidates.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0]
 
     const rawDirection = entry.direction || entry.dir || 'IN'
     const direction = rawDirection.toString().trim().toUpperCase() === 'OUT' ? 'OUT' : 'IN'
