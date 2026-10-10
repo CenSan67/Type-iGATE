@@ -84,9 +84,18 @@ async function getLatestDirectionForCard(key) {
   return latest ? (latest.direction || 'IN').toString().trim().toUpperCase() : null
 }
 
-export async function logGateEntry({ cardId, cardHex, direction = 'IN', source = 'unknown', notes = '' }) {
+// skipDuplicateCheck: true is for administrative actions with a fixed direction -
+// registering/returning a visitor pass, VIP check-in/check-out - which shouldn't be
+// blocked by whatever the card's raw scan history happens to already show. Confirmed as a
+// real bug: registering a visitor forces direction 'IN', but if that card's last logged
+// gate scan also happened to be IN (no OUT in between), this threw "duplicate IN" and the
+// pass's own entry log silently failed, even though the pass was issued fine - looked
+// like a failure to staff. The duplicate-direction guard still applies for everything
+// else (SimulateScanModal/SimulateUserScanModal), where it's protecting against a
+// genuine double-tap of a physical/simulated gate scan, not a fixed business action.
+export async function logGateEntry({ cardId, cardHex, direction = 'IN', source = 'unknown', notes = '', skipDuplicateCheck = false }) {
   const normalizedDirection = (direction || 'IN').toString().trim().toUpperCase()
-  const lastDirection = await getLatestDirectionForCard(cardKey(cardId, cardHex))
+  const lastDirection = skipDuplicateCheck ? null : await getLatestDirectionForCard(cardKey(cardId, cardHex))
 
   if (lastDirection && lastDirection === normalizedDirection) {
     throw new Error(
@@ -549,7 +558,7 @@ export async function checkInGuest(id, { rfidId, plateNumber, vehicleType }, act
 
   let logId = null
   try {
-    logId = await logGateEntry({ cardId: rfidId, direction: 'IN', source: 'vip-checkin' })
+    logId = await logGateEntry({ cardId: rfidId, direction: 'IN', source: 'vip-checkin', skipDuplicateCheck: true })
   } catch (scanError) {
     console.warn('VIP guest checked in, but the gate entry could not be logged:', scanError)
     onWarning?.(`Guest checked in, but today's gate entry could not be recorded: ${getErrorMessage(scanError, 'please log it manually.')}`)
@@ -575,7 +584,7 @@ export async function checkOutGuest(id, onWarning) {
     if (match) await set(ref(rtdb, `rfidUsers/${match[0]}/status`), 'Inactive')
 
     try {
-      await logGateEntry({ cardId: guest.rfidId, direction: 'OUT', source: 'vip-checkout' })
+      await logGateEntry({ cardId: guest.rfidId, direction: 'OUT', source: 'vip-checkout', skipDuplicateCheck: true })
     } catch (scanError) {
       console.warn('VIP guest checked out, but the gate exit could not be logged:', scanError)
       onWarning?.(`Guest checked out, but the gate exit could not be recorded: ${getErrorMessage(scanError, 'please log it manually.')}`)

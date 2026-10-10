@@ -130,7 +130,7 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
       // History without waiting for a separate scan. Non-fatal: the pass itself is already
       // issued even if this log write fails.
       try {
-        const logId = await logGateEntry({ cardId: form.rfidId.trim(), direction: 'IN', source: 'visitor-registration' })
+        const logId = await logGateEntry({ cardId: form.rfidId.trim(), direction: 'IN', source: 'visitor-registration', skipDuplicateCheck: true })
         triggerCameraCapture(logId, 'IN', (msg) => showError(msg))
       } catch (scanError) {
         showError(getErrorMessage(scanError, "Visitor pass issued, but today's gate entry could not be logged."))
