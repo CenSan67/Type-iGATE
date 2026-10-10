@@ -107,8 +107,15 @@ export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType,
   const snapshot = await get(usersRef)
   const existingUsers = snapshot.exists() ? Object.values(snapshot.val() || {}) : []
 
-  if (existingUsers.some((user) => user.rfidId === rfidId)) {
-    throw new Error('This RFID ID is already registered.')
+  // The university lends from a limited pool of physical RFID cards rather than issuing
+  // a fresh one per visitor, so a card is only blocked while it's currently Active on
+  // someone else's record - an Inactive (returned) record for the same rfidId is a past
+  // holder, not a conflict. Kept as its own record rather than overwritten, the same way
+  // a repeat visitor's past visits each keep their own record under a different card -
+  // this just mirrors that for "same card, different visitors" instead.
+  const conflictingActive = existingUsers.some((user) => user.rfidId === rfidId && (user.status || 'Active') === 'Active')
+  if (conflictingActive) {
+    throw new Error('This RFID card is currently active on another account - return that pass before reissuing it.')
   }
 
   const newUserRef = push(usersRef)
