@@ -345,6 +345,19 @@ export function listenToScannerStatus(callback) {
   })
 }
 
+// devices/scanner/lastScan - published by sketch_scanner.ino for every valid (non-noise)
+// tap, regardless of authorization or the gate's own audit-log cooldown. A UI "tap to
+// capture" step (registration, VIP check-in, the admin edit form's re-scan field) needs to
+// see a brand-new, not-yet-registered card's tap immediately - gateLogs can never carry
+// that anymore now that it only ever receives AUTHORIZED scans, since a brand-new card has
+// no way to be "authorized" yet by definition. See useRfidScanner.js, the one place that
+// reads this.
+export function listenToScannerLastScan(callback) {
+  return onValue(ref(rtdb, 'devices/scanner/lastScan'), (snapshot) => {
+    callback(snapshot.exists() ? snapshot.val() : null)
+  })
+}
+
 export async function saveAdminProfile(uid, profile) {
   await set(ref(rtdb, `adminProfiles/${uid}`), validateAdminProfile(profile))
 }

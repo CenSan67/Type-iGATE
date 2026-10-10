@@ -135,6 +135,12 @@
         },
         "updatedAt": {
           ".validate": "newData.isNumber()"
+        },
+        "lastScan": {
+          ".validate": "newData.hasChildren(['cardId', 'cardHex', 'timestamp'])",
+          "cardId": { ".validate": "newData.isNumber()" },
+          "cardHex": { ".validate": "newData.isString()" },
+          "timestamp": { ".validate": "newData.isNumber()" }
         }
       }
     },
