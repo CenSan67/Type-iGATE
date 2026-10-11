@@ -30,6 +30,22 @@ export const GATE_LABELS = { entrance: 'Entrance Gate', exit: 'Exit Gate' }
 
 export const GATE_STATUS_STATES = ['OPEN', 'CLOSED']
 
+// Barrier motor runs = sketch_scanner.ino's MOTOR_RUN_TIME (open, forward) and
+// MOTOR_CLOSE_TIME (close, reverse = open - 200 ms) - keep these in sync with the sketch.
+// Gate Control's buttons stay locked for the run plus one extra second, so a second press
+// can't land while a barrier is still moving.
+export const GATE_MOTOR_RUN_MS = 450
+export const GATE_MOTOR_CLOSE_MS = GATE_MOTOR_RUN_MS - 200
+export const GATE_BUTTON_LOCK_MS = GATE_MOTOR_RUN_MS + 1000
+export const GATE_CLOSE_BUTTON_LOCK_MS = GATE_MOTOR_CLOSE_MS + 1000
+
+// Gate Control button -> scanner command (services/firebase.js#sendScannerCommand).
+// Open = motor forward, Close = the same motor in reverse; closing is manual only.
+export const GATE_ACTIONS = {
+  open: { entrance: 'OPEN_ENTRY', exit: 'OPEN_EXIT', both: 'OPEN_BOTH' },
+  close: { entrance: 'CLOSE_ENTRY', exit: 'CLOSE_EXIT', both: 'CLOSE_BOTH' },
+}
+
 /**
  * @typedef {Object} GateStatus
  * @property {'OPEN'|'CLOSED'} state

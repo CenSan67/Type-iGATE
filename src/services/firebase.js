@@ -211,11 +211,17 @@ export async function setRfidUserStatus(id, status) {
 //          without scanning), then re-download its authorization cache
 //   SYNC - just re-download the authorization cache, so a pass issued or returned in the
 //          app takes effect at the gate within seconds instead of the 5-minute cycle
+//   OPEN_ / CLOSE_ + ENTRY | EXIT | BOTH - Gate Control: open (motor forward) or close
+//          (motor reverse) the entrance, exit, or both barriers (both at the same time).
+//          The scanner remembers each barrier's state, only moves one whose state changes,
+//          and publishes it to settings/app/gateStatus
 // It acknowledges in devices/scanner/commandAck. Best-effort by design: if the scanner is
 // offline the command is simply missed (it ignores whatever command is already waiting
 // when it boots, so a stale EXIT can never fire later).
+const SCANNER_ACTIONS = ['EXIT', 'SYNC', 'OPEN_ENTRY', 'OPEN_EXIT', 'OPEN_BOTH', 'CLOSE_ENTRY', 'CLOSE_EXIT', 'CLOSE_BOTH']
+
 export async function sendScannerCommand(action, { cardId = '', actor } = {}) {
-  if (action !== 'EXIT' && action !== 'SYNC') throw new Error(`Unknown scanner command "${action}"`)
+  if (!SCANNER_ACTIONS.includes(action)) throw new Error(`Unknown scanner command "${action}"`)
   const id = push(ref(rtdb, 'devices/scanner')).key // unique, time-ordered id; nothing is written here
   await set(ref(rtdb, 'devices/scanner/command'), {
     id,
@@ -226,6 +232,11 @@ export async function sendScannerCommand(action, { cardId = '', actor } = {}) {
     requestedByName: actor?.name || '',
   })
   return id
+}
+
+// The scanner's answer to the latest command: { id, action, result, executedAt }.
+export function listenToScannerCommandAck(callback) {
+  return onValue(ref(rtdb, 'devices/scanner/commandAck'), (snapshot) => callback(snapshot.val()))
 }
 
 // Return Pass (walk-in visitor) and VIP Check Out both end a temporary pass the same way:

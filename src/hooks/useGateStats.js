@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { listenToGateLogs, listenToRfidUsers } from '../services/firebase'
+import { holderAtTime } from '../utils/cardHolder'
 
 function cardKey(entry) {
   return (entry.cardId ?? entry.cardHex ?? '').toString().trim().toLowerCase()
@@ -42,10 +43,16 @@ export default function useGateStats(){
       }
     }
 
+    // A card counts as inside only if its latest scan is an IN AND that scan belongs to a
+    // registered holder (utils/cardHolder.js - the same attribution the activity tables
+    // use). Without the holder check, every unregistered/garbage card id ever logged with
+    // a lone IN stayed "inside" forever - 38 junk reads from scanner testing on 10-09/10-10
+    // made the count 38 when no registered vehicle was actually inside.
     let vehiclesInsideCampus = 0
     for (const entry of latestByCard.values()) {
       const direction = (entry.direction || 'IN').toString().trim().toUpperCase()
-      if (direction !== 'OUT') vehiclesInsideCampus += 1
+      if (direction === 'OUT') continue
+      if (holderAtTime(users, entry.cardId, entry.cardHex, entry.timestamp)) vehiclesInsideCampus += 1
     }
 
     const totalRegisteredVehicles = users.filter((u) => (u.status || 'Active') === 'Active').length
