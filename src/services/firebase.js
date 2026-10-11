@@ -13,6 +13,7 @@ import { validateSystemUser } from '../models/systemUser'
 import { validateExpectedGuest } from '../models/expectedGuest'
 import { ROLES } from '../constants/roles'
 import { getErrorMessage } from '../utils/errors'
+import { currentHolder, renewableRecord } from '../utils/cardHolder'
 
 // TODO: replace with your Firebase project values
 const firebaseConfig = {
@@ -102,7 +103,7 @@ export async function logGateEntry({ cardId, cardHex, direction = 'IN', source =
   return entryRef.key
 }
 
-export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, phone, expiresAt, hostName, purpose }) {
+export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, phone, expiresAt, hostName, purpose, guestId }) {
   const usersRef = ref(rtdb, 'rfidUsers')
   const snapshot = await get(usersRef)
   const existingUsers = snapshot.exists() ? Object.values(snapshot.val() || {}) : []
@@ -119,7 +120,7 @@ export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType,
   }
 
   const newUserRef = push(usersRef)
-  await set(newUserRef, validateRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, phone, expiresAt, hostName, purpose, createdAt: Date.now() }))
+  await set(newUserRef, validateRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, phone, expiresAt, hostName, purpose, guestId, createdAt: Date.now() }))
 
   return newUserRef.key
 }
@@ -130,11 +131,16 @@ export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType,
 export async function upsertRfidUser({ rfidId, name, department, plateNumber, vehicleType, vehicleColor, role, email, phone }) {
   const usersRef = ref(rtdb, 'rfidUsers')
   const snapshot = await get(usersRef)
-  const existing = snapshot.exists() ? Object.entries(snapshot.val() || {}) : []
-  const match = existing.find(([, value]) => (value.rfidId || '').toString().toLowerCase() === (rfidId || '').toString().toLowerCase())
+  const existing = snapshot.exists() ? Object.entries(snapshot.val() || {}).map(([id, value]) => ({ id, ...value })) : []
+  // Renew the card's CURRENT holder; failing that, the latest lapsed non-visitor
+  // registration on it (an Inactive student/faculty/staff renewing). A returned visitor
+  // pass is never a match: overwriting it would rename that past visitor's record - and
+  // with it their whole scan history - to whoever is registering the pooled card now.
+  // Picking the first record for the card (the old behavior) did exactly that.
+  const match = renewableRecord(existing, rfidId)
 
   if (match) {
-    const [id, value] = match
+    const { id, ...value } = match
     const finalRole = role || value.role
     const staysVisitor = finalRole === 'Visitor'
     await set(ref(rtdb, `rfidUsers/${id}`), validateRfidUser({
@@ -157,6 +163,8 @@ export async function upsertRfidUser({ rfidId, name, department, plateNumber, ve
       expiresAt: staysVisitor ? value.expiresAt : null,
       hostName: staysVisitor ? value.hostName : '',
       purpose: staysVisitor ? value.purpose : '',
+      guestId: staysVisitor ? value.guestId : '',
+      returnedAt: null, // Active again
     }))
     return id
   }
@@ -194,6 +202,59 @@ export async function setRfidUserStatus(id, status) {
     throw new Error('status must be Active or Inactive')
   }
   await set(ref(rtdb, `rfidUsers/${id}/status`), status)
+}
+
+// ---------------- Gate scanner commands (devices/scanner/command) ----------------
+// The ESP32 (sketch_scanner.ino#pollScannerCommand) polls this single node every ~1.5 s
+// and runs each new command once, keyed by `id`:
+//   EXIT - run the exit barrier motor (Return Pass / VIP Check Out: the visitor leaves
+//          without scanning), then re-download its authorization cache
+//   SYNC - just re-download the authorization cache, so a pass issued or returned in the
+//          app takes effect at the gate within seconds instead of the 5-minute cycle
+// It acknowledges in devices/scanner/commandAck. Best-effort by design: if the scanner is
+// offline the command is simply missed (it ignores whatever command is already waiting
+// when it boots, so a stale EXIT can never fire later).
+export async function sendScannerCommand(action, { cardId = '', actor } = {}) {
+  if (action !== 'EXIT' && action !== 'SYNC') throw new Error(`Unknown scanner command "${action}"`)
+  const id = push(ref(rtdb, 'devices/scanner')).key // unique, time-ordered id; nothing is written here
+  await set(ref(rtdb, 'devices/scanner/command'), {
+    id,
+    action,
+    cardId: (cardId ?? '').toString(),
+    requestedAt: Date.now(),
+    requestedBy: auth.currentUser?.uid || '',
+    requestedByName: actor?.name || '',
+  })
+  return id
+}
+
+// Return Pass (walk-in visitor) and VIP Check Out both end a temporary pass the same way:
+//   1. log the OUT - only if this card's latest gate scan is an IN (the visitor really is
+//      inside); otherwise there's nothing to close and a second OUT would be refused anyway
+//   2. deactivate the record and stamp returnedAt, AFTER that OUT so the OUT still counts
+//      as this visitor's - every scan after returnedAt belongs to nobody until the card is
+//      reissued (utils/cardHolder.js#holderAtTime)
+//   3. tell the gate to open the exit barrier and drop the card from its local cache
+// Steps 1 and 3 are best-effort (reported through onWarning); step 2 is the return itself.
+export async function returnTemporaryPass(pass, { source = 'visitor-return', actor, onWarning } = {}) {
+  if (!pass?.id) throw new Error('Pass not found.')
+  const cardId = (pass.rfidId ?? '').toString()
+
+  try {
+    if (await getLatestDirectionForCard(cardKey(cardId)) === 'IN') {
+      await logGateEntry({ cardId, direction: 'OUT', source })
+    }
+  } catch (scanError) {
+    onWarning?.(`Pass returned, but the exit could not be recorded: ${getErrorMessage(scanError, 'please log it manually.')}`)
+  }
+
+  await update(ref(rtdb, `rfidUsers/${pass.id}`), { status: 'Inactive', returnedAt: Date.now() })
+
+  try {
+    await sendScannerCommand('EXIT', { cardId, actor })
+  } catch (cmdError) {
+    onWarning?.(`Pass returned, but the exit barrier could not be signalled: ${getErrorMessage(cmdError, 'open it manually.')}`)
+  }
 }
 
 // Vehicle snapshot images (Firebase Storage). The ESP32-CAM (once wired up) would
@@ -513,11 +574,9 @@ export async function cancelExpectedGuest(id) {
 // shaped rfidUsers pass, the same one a walk-in visitor gets, valid until the guest's window
 // closes, then marks them Arrived. No payment is recorded - VIP guests don't pay this fee.
 //
-// Also logs the IN gate scan (the guest is entering campus right now, same reasoning as
-// RegisterRfidModal's walk-in visitor flow) and returns its logId so the caller can trigger
-// the camera - kept in the caller (CheckInGuestModal) rather than here to avoid importing
-// services/camera.js into this file, which imports rtdb from here (circular import).
-// Non-fatal: the pass itself is already issued even if this log write fails.
+// Does NOT log an IN: like a walk-in visitor pass, the guest's own card scan at the gate
+// opens the entry barrier and logs the IN (sketch_scanner.ino). The pass carries guestId so
+// that scanner can also mark this guest Departed when the card scans OUT.
 export async function checkInGuest(id, { rfidId, plateNumber, vehicleType }, actor, onWarning) {
   const snap = await get(ref(rtdb, `expectedGuests/${id}`))
   if (!snap.exists()) throw new Error('Guest entry not found.')
@@ -535,6 +594,7 @@ export async function checkInGuest(id, { rfidId, plateNumber, vehicleType }, act
     expiresAt: guest.validUntil,
     hostName: guest.hostName,
     purpose: [guest.category, guest.purpose].filter(Boolean).join(' - '),
+    guestId: id,
   })
 
   await set(ref(rtdb, `expectedGuests/${id}`), validateExpectedGuest({
@@ -547,38 +607,34 @@ export async function checkInGuest(id, { rfidId, plateNumber, vehicleType }, act
     checkedInBy: actor?.name || '',
   }))
 
-  let logId = null
+  // No IN is logged here: the guest enters by scanning the card at the gate, which opens
+  // the entry barrier and logs the IN (with its photo). SYNC just makes the scanner pick
+  // the new pass up immediately.
   try {
-    logId = await logGateEntry({ cardId: rfidId, direction: 'IN', source: 'vip-checkin' })
-  } catch (scanError) {
-    console.warn('VIP guest checked in, but the gate entry could not be logged:', scanError)
-    onWarning?.(`Guest checked in, but today's gate entry could not be recorded: ${getErrorMessage(scanError, 'please log it manually.')}`)
+    await sendScannerCommand('SYNC', { cardId: rfidId, actor })
+  } catch (cmdError) {
+    onWarning?.(`Guest checked in, but the scanner could not be refreshed - the first tap may take a few seconds: ${getErrorMessage(cmdError, '')}`)
   }
-  return logId
 }
 
-// Any staff role. Returns the temporary pass issued at check-in (best-effort - an admin who
-// deleted rfidUsers records in between just means there's nothing left to deactivate) and
-// marks the guest Departed. Also logs the OUT gate scan for the same card - functions/
-// index.js#backfillExitSnapshot picks this up automatically and reuses the guest's IN photo,
-// the same as any other OUT scan. Non-fatal: the guest is already checked out either way.
-export async function checkOutGuest(id, onWarning) {
+// Any staff role. Manual check-out (the guest leaves without scanning): returns the pass
+// through returnTemporaryPass - OUT logged if they're inside, pass deactivated with
+// returnedAt, exit barrier opened - then marks the guest Departed. Nothing to return (an
+// admin deleted the record, or the guest's OUT scan already returned it) is fine.
+export async function checkOutGuest(id, onWarning, actor) {
   const snap = await get(ref(rtdb, `expectedGuests/${id}`))
   if (!snap.exists()) throw new Error('Guest entry not found.')
   const guest = snap.val()
 
   if (guest.rfidId) {
     const usersSnap = await get(ref(rtdb, 'rfidUsers'))
-    const match = usersSnap.exists()
-      ? Object.entries(usersSnap.val() || {}).find(([, v]) => (v.rfidId || '').toString().toLowerCase() === guest.rfidId.toString().toLowerCase())
-      : null
-    if (match) await set(ref(rtdb, `rfidUsers/${match[0]}/status`), 'Inactive')
-
-    try {
-      await logGateEntry({ cardId: guest.rfidId, direction: 'OUT', source: 'vip-checkout' })
-    } catch (scanError) {
-      console.warn('VIP guest checked out, but the gate exit could not be logged:', scanError)
-      onWarning?.(`Guest checked out, but the gate exit could not be recorded: ${getErrorMessage(scanError, 'please log it manually.')}`)
+    const users = usersSnap.exists() ? Object.entries(usersSnap.val() || {}).map(([key, v]) => ({ id: key, ...v })) : []
+    // This guest's own pass (guestId), else the card's current holder - never just the
+    // first record for a pooled card, which could be a long-gone visitor's.
+    const pass = users.find((u) => u.guestId === id && (u.status || 'Active') === 'Active')
+      || currentHolder(users, guest.rfidId)
+    if (pass) {
+      await returnTemporaryPass(pass, { source: 'vip-checkout', actor, onWarning })
     }
   }
 

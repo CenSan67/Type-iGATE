@@ -28,6 +28,13 @@ export const ACCOUNT_STATUSES = ['Active', 'Inactive']
  *   Account Management UI just renders an "Expired" badge instead of "Active".
  * @property {string} [hostName] - Visitor-only: who they're visiting.
  * @property {string} [purpose] - Visitor-only: reason for the visit.
+ * @property {number} [returnedAt] - Visitor-only: when the pass was handed back (ms epoch),
+ *   by the OUT scan (sketch_scanner auto-return) or the Dashboard's Return Pass / VIP Check
+ *   Out. Ends this record's claim on the physical card: scans after it are never attributed
+ *   to this visitor (utils/cardHolder.js#holderAtTime), so a pooled card carries no trace of
+ *   its previous holder.
+ * @property {string} [guestId] - Visitor-only: the expectedGuests/{id} this pass was issued
+ *   to at VIP check-in, so an OUT scan can also mark that guest Departed.
  */
 
 /** @param {Partial<RfidUser>} data @returns {RfidUser} */
@@ -59,6 +66,9 @@ export function validateRfidUser(data) {
   if (data.expiresAt != null && typeof data.expiresAt !== 'number') {
     throw new Error('RfidUser: expiresAt must be a timestamp (ms)')
   }
+  if (data.returnedAt != null && typeof data.returnedAt !== 'number') {
+    throw new Error('RfidUser: returnedAt must be a timestamp (ms)')
+  }
   return {
     name: data.name.trim(),
     rfidId: data.rfidId.trim(),
@@ -75,5 +85,7 @@ export function validateRfidUser(data) {
     expiresAt: data.expiresAt ?? null,
     hostName: (data.hostName || '').trim(),
     purpose: (data.purpose || '').trim(),
+    returnedAt: data.returnedAt ?? null,
+    guestId: data.guestId || '',
   }
 }

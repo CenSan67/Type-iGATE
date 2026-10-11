@@ -34,6 +34,13 @@
           ".validate": "(newData.val() === 'Active' || newData.val() === 'Inactive') && (!data.exists() || data.val() === newData.val() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' || (newData.val() === 'Inactive' && data.parent().child('role').val() === 'Visitor'))"
         },
 
+        "returnedAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "guestId": {
+          ".validate": "newData.isString()"
+        },
+
         "imageUrl": {
           ".validate": "newData.val() == '' || newData.val().matches(/^https:\\/\\//)"
         }
@@ -141,6 +148,14 @@
           "cardId": { ".validate": "newData.isNumber()" },
           "cardHex": { ".validate": "newData.isString()" },
           "timestamp": { ".validate": "newData.isNumber()" }
+        },
+        "command": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
+          ".validate": "newData.hasChildren(['id', 'action', 'requestedAt', 'requestedBy']) && (newData.child('action').val() === 'EXIT' || newData.child('action').val() === 'SYNC') && newData.child('requestedBy').val() === auth.uid",
+          "id": { ".validate": "newData.isString()" },
+          "cardId": { ".validate": "newData.isString()" },
+          "requestedAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
+          "requestedByName": { ".validate": "newData.isString()" }
         }
       }
     },

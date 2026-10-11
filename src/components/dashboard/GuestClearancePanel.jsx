@@ -5,6 +5,7 @@ import ConfirmModal from '../modals/ConfirmModal'
 import { checkOutGuest } from '../../services/firebase'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
 
 const formatWindow = (guest) => {
   const from = new Date(guest.validFrom).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -19,6 +20,8 @@ const formatWindow = (guest) => {
 export default function GuestClearancePanel(){
   const guests = useExpectedGuests()
   const { showError } = useToast()
+  const { user, profile } = useAuth()
+  const staffName = profile?.fullName || profile?.displayName || user?.email || ''
   const [checkingIn, setCheckingIn] = useState(null)
   const [pendingCheckOut, setPendingCheckOut] = useState(null)
 
@@ -27,7 +30,7 @@ export default function GuestClearancePanel(){
   const runCheckOut = async () => {
     if (!pendingCheckOut) return
     try {
-      await checkOutGuest(pendingCheckOut.id, (msg) => showError(msg))
+      await checkOutGuest(pendingCheckOut.id, (msg) => showError(msg), { name: staffName })
     } catch (err) {
       showError(getErrorMessage(err, 'Unable to check this guest out right now.'))
     }

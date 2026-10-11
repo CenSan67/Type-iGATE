@@ -1,10 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { listenToNewGateLogs, listenToRfidUsers } from '../services/firebase'
 import { useToast } from '../context/ToastContext'
-
-function cardKey(cardId, cardHex) {
-  return (cardId ?? cardHex ?? '').toString().trim().toLowerCase()
-}
+import { holderAtTime } from '../utils/cardHolder'
 
 // App-wide toast the instant a vehicle scans OUT, wherever the guard currently is (not just
 // while the Dashboard is open) - a quick "who just left" summary. Both RTDB subscriptions are
@@ -24,8 +21,9 @@ export default function useGateExitNotifications(enabled) {
       const direction = (entry.direction || 'IN').toString().trim().toUpperCase()
       if (direction !== 'OUT') return
 
-      const key = cardKey(entry.cardId, entry.cardHex)
-      const user = usersRef.current.find((u) => cardKey(u.rfidId) === key)
+      // Who held the card at this OUT - first-match on a pooled visitor card named whichever
+      // past visitor happened to be registered on it first.
+      const user = holderAtTime(usersRef.current, entry.cardId, entry.cardHex, entry.timestamp)
       const name = user?.name || 'Unknown vehicle'
       const details = [user?.plateNumber, user?.vehicleType].filter(Boolean).join(' · ')
       const time = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''

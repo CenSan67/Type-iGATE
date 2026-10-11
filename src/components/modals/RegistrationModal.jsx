@@ -10,6 +10,7 @@ import { getErrorMessage } from '../../utils/errors'
 import { toLocalISODate } from '../../utils/dateRange'
 import { useToast } from '../../context/ToastContext'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
+import { renewableRecord, isReturnedPass } from '../../utils/cardHolder'
 import {
   DOCUMENT_LABELS,
   PLATE_OPTIONAL_TYPES,
@@ -113,7 +114,8 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
   const handleSearch = () => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return
-    const match = users.find((u) => {
+    // A returned visitor pass is a finished visit, not someone to renew - never load it.
+    const match = users.filter((u) => !isReturnedPass(u)).find((u) => {
       if (searchType === 'Plate No.') return includesText(u.plateNumber, q)
       if (searchType === 'RFID-ID') return includesText(u.rfidId, q)
       return includesText(u.name, q)
@@ -124,7 +126,10 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
 
   const handleScan = () => {
     startScan((rfid) => {
-      const match = users.find((u) => (u.rfidId || '').toString().toLowerCase() === rfid.toString().toLowerCase())
+      // The card's current holder (or a lapsed student/staff renewing) - never the first
+      // record ever saved for it: on a pooled visitor card that was a past visitor, whose
+      // details were loaded into the form (and then written back over their record).
+      const match = renewableRecord(users, rfid)
       if (match) applyExisting(match)
       else setForm((f) => ({ ...f, rfid }))
     })

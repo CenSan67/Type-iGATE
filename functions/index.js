@@ -63,11 +63,18 @@ async function findOwnerByCard(db, entry) {
   })
   if (candidates.length === 0) return null
 
+  // A returned visitor pass (returnedAt) only covers scans up to and including the OUT
+  // that returned it - a scan while the card sat unassigned belongs to nobody, never to
+  // its previous visitor. Only a scan older than every record falls back to the earliest.
+  // HAND-COPY of src/utils/cardHolder.js#holderAtTime - keep the two in sync.
   const entryTime = entry.timestamp ?? Infinity
-  const inEffectAtScanTime = candidates
-    .filter((c) => (c.createdAt || 0) <= entryTime)
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0]
-  return inEffectAtScanTime || candidates.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0]
+  const created = candidates.filter((c) => (c.createdAt || 0) <= entryTime)
+  if (created.length === 0) {
+    return candidates.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0]
+  }
+  return created
+    .filter((c) => c.returnedAt == null || entryTime <= c.returnedAt)
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0] || null
 }
 
 function buildMessage({ plateNumber, direction, timestamp }) {

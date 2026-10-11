@@ -10,6 +10,8 @@ export default function useVisitorPasses(linkedRfidIds = []) {
 
   return useMemo(() => {
     const linked = new Set(linkedRfidIds.filter(Boolean).map((id) => id.toString().toLowerCase()))
-    return users.filter((u) => u.role === 'Visitor' && u.status === 'Active' && !linked.has((u.rfidId || '').toString().toLowerCase()))
+    // guestId marks a VIP pass directly (issued at check-in); `linked` covers older VIP
+    // passes issued before guestId existed.
+    return users.filter((u) => u.role === 'Visitor' && u.status === 'Active' && !u.guestId && !linked.has((u.rfidId || '').toString().toLowerCase()))
   }, [users, linkedRfidIds])
 }

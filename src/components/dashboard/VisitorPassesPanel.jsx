@@ -2,9 +2,10 @@ import React, { useMemo, useState } from 'react'
 import useExpectedGuests from '../../hooks/useExpectedGuests'
 import useVisitorPasses from '../../hooks/useVisitorPasses'
 import ConfirmModal from '../modals/ConfirmModal'
-import { setRfidUserStatus, logGateEntry } from '../../services/firebase'
+import { returnTemporaryPass } from '../../services/firebase'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
 
 // Any staff role - walk-in visitor passes only (see useVisitorPasses for why VIP guest
 // passes are excluded; those return via GuestClearancePanel's Check Out instead). A guard
@@ -12,23 +13,21 @@ import { useToast } from '../../context/ToastContext'
 // allows any active staff role to deactivate (never reactivate) a Visitor record for this.
 export default function VisitorPassesPanel(){
   const guests = useExpectedGuests()
-  const linkedRfidIds = useMemo(() => guests.filter((g) => g.rfidId).map((g) => g.rfidId), [guests])
+  // Only a guest currently on campus claims their card - a Departed guest's old card is back
+  // in the pool, and excluding it forever would hide every later walk-in visitor issued it.
+  const linkedRfidIds = useMemo(() => guests.filter((g) => g.status === 'Arrived' && g.rfidId).map((g) => g.rfidId), [guests])
   const passes = useVisitorPasses(linkedRfidIds)
   const { showError } = useToast()
+  const { user, profile } = useAuth()
+  const staffName = profile?.fullName || profile?.displayName || user?.email || ''
   const [pendingReturn, setPendingReturn] = useState(null)
 
   const runReturn = async () => {
     if (!pendingReturn) return
     try {
-      await setRfidUserStatus(pendingReturn.id, 'Inactive')
-      // Best-effort - the pass is already returned even if this OUT scan fails to log.
-      // functions/index.js#backfillExitSnapshot picks this up automatically and reuses
-      // this same visitor's IN photo, the same as any other OUT scan.
-      try {
-        await logGateEntry({ cardId: pendingReturn.rfidId, direction: 'OUT', source: 'visitor-return' })
-      } catch (scanError) {
-        showError(`Pass returned, but the exit could not be recorded: ${getErrorMessage(scanError, 'please log it manually.')}`)
-      }
+      // Logs the OUT (if they're inside), deactivates the pass with returnedAt - wiping this
+      // visitor from the card for its next holder - and opens the exit barrier.
+      await returnTemporaryPass(pendingReturn, { source: 'visitor-return', actor: { name: staffName }, onWarning: showError })
     } catch (err) {
       showError(getErrorMessage(err, 'Unable to return this pass right now.'))
     }
@@ -76,7 +75,7 @@ export default function VisitorPassesPanel(){
       {pendingReturn && (
         <ConfirmModal
           title="Return this visitor pass?"
-          message={`Deactivate ${pendingReturn.name || pendingReturn.rfidId}'s temporary pass now that their ID has been returned?`}
+          message={`Return ${pendingReturn.name || pendingReturn.rfidId}'s temporary pass now that their ID has been handed back? The exit barrier will open and card ${pendingReturn.rfidId} will be cleared for the next visitor.`}
           confirmLabel="Return Pass"
           onConfirm={runReturn}
           onClose={() => setPendingReturn(null)}

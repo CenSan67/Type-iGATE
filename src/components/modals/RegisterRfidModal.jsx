@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
-import { registerRfidUser, logGateEntry } from '../../services/firebase'
-import { triggerCameraCapture } from '../../services/camera'
+import { registerRfidUser, sendScannerCommand } from '../../services/firebase'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
 import useRfidScanner from '../../hooks/useRfidScanner'
 import useRfidUsers from '../../hooks/useRfidUsers'
@@ -125,15 +124,14 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
         purpose: isVisitor ? form.purpose.trim() : '',
       })
 
-      // The pass is issued at the gate, so the visitor is entering campus right now - log
-      // that IN immediately so this registration shows up in Recent Activity/Reports/Search
-      // History without waiting for a separate scan. Non-fatal: the pass itself is already
-      // issued even if this log write fails.
+      // No IN is logged here and no barrier moves: the visitor enters by scanning the
+      // issued card at the gate, which opens the entry barrier and logs the IN with its
+      // photo (sketch_scanner.ino). SYNC makes the scanner load the new pass right away
+      // instead of on its first-tap refresh. Non-fatal: the pass is already issued.
       try {
-        const logId = await logGateEntry({ cardId: form.rfidId.trim(), direction: 'IN', source: 'visitor-registration' })
-        triggerCameraCapture(logId, 'IN', (msg) => showError(msg))
-      } catch (scanError) {
-        showError(getErrorMessage(scanError, "Visitor pass issued, but today's gate entry could not be logged."))
+        await sendScannerCommand('SYNC', { cardId: form.rfidId.trim() })
+      } catch (cmdError) {
+        showError(getErrorMessage(cmdError, 'Visitor pass issued, but the scanner could not be refreshed - the first tap may take a few seconds.'))
       }
 
       onRegistered?.()

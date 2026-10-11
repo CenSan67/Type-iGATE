@@ -100,10 +100,14 @@ export default function SearchHistoryPage(){
   )
 
   const logs = useMemo(() => {
-    const rfidSet = new Set(matches.map((u) => (u.rfidId || '').toString().toLowerCase()).filter(Boolean))
-    if (rfidSet.size === 0) return []
+    // By record, not by card number: a pooled visitor card is shared by many visitors over
+    // time, and each scan is already attributed to whoever held the card then
+    // (useEnrichedGateLogs -> rfidUserId), so matching on rfidId listed every other visitor's
+    // scans on that card under this person.
+    const recordIds = new Set(matches.map((u) => u.id).filter(Boolean))
+    if (recordIds.size === 0) return []
     return entries
-      .filter((entry) => rfidSet.has((entry.rfidId || '').toString().toLowerCase()))
+      .filter((entry) => entry.rfidUserId && recordIds.has(entry.rfidUserId))
       .slice()
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       .map((entry) => ({
