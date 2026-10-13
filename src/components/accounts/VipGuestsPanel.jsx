@@ -1,10 +1,7 @@
 import React, { useState } from 'react'
 import useExpectedGuests from '../../hooks/useExpectedGuests'
 import AddExpectedGuestModal from '../modals/AddExpectedGuestModal'
-import ConfirmModal from '../modals/ConfirmModal'
-import { cancelExpectedGuest } from '../../services/firebase'
-import { getErrorMessage } from '../../utils/errors'
-import { useToast } from '../../context/ToastContext'
+import GuestAdminActions from '../shared/GuestAdminActions'
 
 const formatWindow = (guest) => {
   const from = new Date(guest.validFrom).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -20,23 +17,11 @@ const STATUS_BADGE = {
 }
 
 // Admin-only (Account Management): pre-clear VIP guests ahead of time and withdraw a
-// pre-clearance that's no longer happening. Check-in/out at the gate is a guard action, done
+// pre-clearance that's no longer happening, or reschedule its arrival window. Check-in/out at the gate is a guard action, done
 // from the Dashboard's GuestClearancePanel instead - see CLAUDE.md's Phase 11 note.
 export default function VipGuestsPanel(){
   const guests = useExpectedGuests()
-  const { showError } = useToast()
   const [showAdd, setShowAdd] = useState(false)
-  const [pendingCancel, setPendingCancel] = useState(null)
-
-  const runCancel = async () => {
-    if (!pendingCancel) return
-    try {
-      await cancelExpectedGuest(pendingCancel.id)
-    } catch (err) {
-      showError(getErrorMessage(err, 'Unable to cancel this guest right now.'))
-    }
-    setPendingCancel(null)
-  }
 
   return (
     <div className="activity-panel">
@@ -70,9 +55,7 @@ export default function VipGuestsPanel(){
               <td>{formatWindow(g)}</td>
               <td><span className={`status-badge ${STATUS_BADGE[g.status] || 'badge-neutral'}`}>{g.status}</span></td>
               <td>
-                {g.status === 'Expected' && (
-                  <button type="button" className="btn-secondary" onClick={() => setPendingCancel(g)}>Cancel</button>
-                )}
+                <GuestAdminActions guest={g} />
               </td>
             </tr>
           ))}
@@ -80,17 +63,6 @@ export default function VipGuestsPanel(){
       </table>
 
       {showAdd && <AddExpectedGuestModal onClose={() => setShowAdd(false)} />}
-
-      {pendingCancel && (
-        <ConfirmModal
-          title="Cancel this pre-clearance?"
-          message={`Withdraw ${pendingCancel.name}'s pre-clearance? A guard will no longer be able to check them in.`}
-          confirmLabel="Cancel Guest"
-          danger
-          onConfirm={runCancel}
-          onClose={() => setPendingCancel(null)}
-        />
-      )}
     </div>
   )
 }

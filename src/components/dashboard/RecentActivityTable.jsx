@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useRemarks } from '../../hooks/useRemarks'
+import { useRemarks, remarkKeyOf } from '../../hooks/useRemarks'
 import RemarkModal from '../modals/RemarkModal'
 import RegisterRfidModal from '../modals/RegisterRfidModal'
 import SimulateUserScanModal from '../modals/SimulateUserScanModal'
@@ -15,13 +15,14 @@ const CameraPlaceholderIcon = () => (
 )
 
 export default function RecentActivityTable(){
-  const { remarks, saveRemark } = useRemarks()
   const [activeRow, setActiveRow] = useState(null)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
   const [simulateDirection, setSimulateDirection] = useState(null)
   const [justArrivedId, setJustArrivedId] = useState(null)
   const [previewImage, setPreviewImage] = useState(null)
   const entries = useEnrichedGateLogs()
+  // Remarks are per person and per visit (see hooks/useRemarks.js) - shared with Search History.
+  const { remarkFor, entryHasRemark, saveRemark } = useRemarks(entries)
 
   const logs = entries
     .slice()
@@ -112,7 +113,7 @@ export default function RecentActivityTable(){
                 <span className="name-with-remark">
                   {row.name || 'Unknown'}
                   <RemarkAddButton onClick={() => setActiveRow(row)} />
-                  {remarks[row.id] && <RemarkTick onClick={() => setActiveRow(row)} />}
+                  {entryHasRemark(row) && <RemarkTick onClick={() => setActiveRow(row)} />}
                 </span>
               </td>
               <td>{row.vehicleType || '—'}</td>
@@ -130,9 +131,9 @@ export default function RecentActivityTable(){
         <RemarkModal
           name={activeRow.name || activeRow.rfidId || 'Unknown'}
           rfid={activeRow.id}
-          initialRemark={remarks[activeRow.id]}
+          initialRemark={remarkFor(remarkKeyOf(activeRow))?.text}
           onClose={() => setActiveRow(null)}
-          onSave={(text) => saveRemark(activeRow.id, text)}
+          onSave={(text) => saveRemark(remarkKeyOf(activeRow), text)}
         />
       )}
 

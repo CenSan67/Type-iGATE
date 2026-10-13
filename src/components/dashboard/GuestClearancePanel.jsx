@@ -6,6 +6,8 @@ import { checkOutGuest } from '../../services/firebase'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
+import { ADMIN_ROLES } from '../../constants/roles'
+import GuestAdminActions from '../shared/GuestAdminActions'
 
 const formatWindow = (guest) => {
   const from = new Date(guest.validFrom).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -16,11 +18,13 @@ const formatWindow = (guest) => {
 // Any staff role - the gate-side half of VIP pre-clearance. Administrators add guests from
 // Account Management's VipGuestsPanel; a guard here checks them in (issuing the temporary
 // pass) and out (returning it) without needing an admin at the gate. Only Expected/Arrived
-// guests show - Departed/Cancelled ones have nothing left to do.
+// guests show - Departed/Cancelled ones have nothing left to do. Admins also get Edit Time /
+// Cancel on an Expected guest (GuestAdminActions) - rules don't let a guard do either.
 export default function GuestClearancePanel(){
   const guests = useExpectedGuests()
   const { showError } = useToast()
-  const { user, profile } = useAuth()
+  const { user, profile, role } = useAuth()
+  const isAdmin = ADMIN_ROLES.includes(role)
   const staffName = profile?.fullName || profile?.displayName || user?.email || ''
   const [checkingIn, setCheckingIn] = useState(null)
   const [pendingCheckOut, setPendingCheckOut] = useState(null)
@@ -73,6 +77,7 @@ export default function GuestClearancePanel(){
                 ) : (
                   <button type="button" className="btn-secondary" onClick={() => setPendingCheckOut(g)}>Check Out</button>
                 )}
+                {isAdmin && <GuestAdminActions guest={g} />}
               </td>
             </tr>
           ))}

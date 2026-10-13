@@ -151,11 +151,12 @@
         },
         "command": {
           ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
-          ".validate": "newData.hasChildren(['id', 'action', 'requestedAt', 'requestedBy']) && (newData.child('action').val() === 'EXIT' || newData.child('action').val() === 'SYNC' || newData.child('action').val() === 'OPEN_ENTRY' || newData.child('action').val() === 'OPEN_EXIT' || newData.child('action').val() === 'OPEN_BOTH' || newData.child('action').val() === 'CLOSE_ENTRY' || newData.child('action').val() === 'CLOSE_EXIT' || newData.child('action').val() === 'CLOSE_BOTH') && newData.child('requestedBy').val() === auth.uid",
+          ".validate": "newData.hasChildren(['id', 'action', 'requestedAt', 'requestedBy']) && (newData.child('action').val() === 'EXIT' || newData.child('action').val() === 'SYNC' || newData.child('action').val() === 'OPEN_ENTRY' || newData.child('action').val() === 'OPEN_EXIT' || newData.child('action').val() === 'OPEN_BOTH' || newData.child('action').val() === 'CLOSE_ENTRY' || newData.child('action').val() === 'CLOSE_EXIT' || newData.child('action').val() === 'CLOSE_BOTH' || (newData.child('action').val() === 'SET_AUTO_CLOSE' && newData.child('seconds').isNumber())) && newData.child('requestedBy').val() === auth.uid",
           "id": { ".validate": "newData.isString()" },
           "cardId": { ".validate": "newData.isString()" },
           "requestedAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
-          "requestedByName": { ".validate": "newData.isString()" }
+          "requestedByName": { ".validate": "newData.isString()" },
+          "seconds": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 60" }
         }
       }
     },

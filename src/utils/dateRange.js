@@ -26,11 +26,16 @@ export function fromLocalInputDateTime(value) {
 
 export const QUICK_SELECTS = ['Today', 'This week', 'This month']
 
-// Rolling windows that end today (inclusive): Today = today..today, This week = the last 7
-// days, This month = the last 30 days.
-const QUICK_SELECT_DAYS = { 'Today': 1, 'This week': 7, 'This month': 30 }
+// Windows that end today (inclusive): Today = today..today, This week = the last 7 days,
+// This month = the current calendar month so far (the 1st through today - not the last 30
+// days, which reached back into the previous month).
+const QUICK_SELECT_DAYS = { 'Today': 1, 'This week': 7 }
 
 export function getQuickRange(kind, today = new Date()) {
+  if (kind === 'This month') {
+    const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+    return { from: toLocalISODate(firstOfMonth), to: toLocalISODate(today) }
+  }
   const days = QUICK_SELECT_DAYS[kind]
   if (!days) return { from: '', to: '' }
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1))

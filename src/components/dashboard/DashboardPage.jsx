@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import StatsCards from './StatsCards'
 import ScannerStatusBadge from './ScannerStatusBadge'
+import AutoCloseControl from './AutoCloseControl'
 import RecentActivityTable from './RecentActivityTable'
 import GuestClearancePanel from './GuestClearancePanel'
 import VisitorPassesPanel from './VisitorPassesPanel'
@@ -48,6 +49,7 @@ export default function DashboardPage(){
             <div className="overview-value">Live</div>
             <p>{lastScanAt ? `Last scan received ${new Date(lastScanAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Waiting for the first scan of this session…'}</p>
             <ScannerStatusBadge />
+            {ADMIN_ROLES.includes(role) && <AutoCloseControl />}
           </div>
           {ADMIN_ROLES.includes(role) && (
             <div className="overview-card">

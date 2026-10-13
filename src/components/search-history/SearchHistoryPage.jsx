@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useRemarks } from '../../hooks/useRemarks'
+import PaginationRow from '../shared/PaginationRow'
 import RemarkModal from '../modals/RemarkModal'
 import { RemarkTick } from '../shared/RemarkBadge'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
@@ -15,6 +16,8 @@ import useDateRangeFilter from '../../hooks/useDateRangeFilter'
 
 const searchTypes = ['Plate No.', 'RFID-ID', 'Name']
 const PAGE_SIZE = 10
+// The searched person's own IN/OUT history: 4 scans per page.
+const PERSON_LOG_PAGE_SIZE = 4
 
 const PersonIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 12c2.7614 0 5-2.2386 5-5s-2.2386-5-5-5-5 2.2386-5 5 2.2386 5 5 5z" fill="currentColor" /><path d="M4 20c0-3.3137 2.6863-6 6-6h4c3.3137 0 6 2.6863 6 6v1H4v-1z" fill="currentColor" /></svg>
@@ -44,7 +47,6 @@ export default function SearchHistoryPage(){
   const [searchType, setSearchType] = useState('Plate No.')
   const [query, setQuery] = useState('')
   const [submittedQuery, setSubmittedQuery] = useState('')
-  const { remarks, saveRemark } = useRemarks()
   const [showRemarkModal, setShowRemarkModal] = useState(false)
   const [users, setUsers] = useState([])
   const entries = useEnrichedGateLogs()
@@ -52,6 +54,7 @@ export default function SearchHistoryPage(){
   // All Entry & Exit Logs section state
   const { dateFrom, dateTo, maxDate, changeFrom, changeTo } = useDateRangeFilter()
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('All')
+  const [directionFilter, setDirectionFilter] = useState('All') // 'All' | 'IN' | 'OUT'
   const [rfidFilter, setRfidFilter] = useState('')
   const [driverFilter, setDriverFilter] = useState('')
   const [sortKey, setSortKey] = useState('timestamp')
@@ -129,6 +132,16 @@ export default function SearchHistoryPage(){
   useEffect(() => { setSelectedLogId(null) }, [person?.id])
   const selectedLog = logs.find((l) => l.id === selectedLogId) || logs[0] || null
 
+  // This person's history, PERSON_LOG_PAGE_SIZE rows per page (back to page 1 on a new search).
+  const [personPage, setPersonPage] = useState(1)
+  useEffect(() => { setPersonPage(1) }, [person?.id])
+  const personPageLogs = logs.slice((personPage - 1) * PERSON_LOG_PAGE_SIZE, personPage * PERSON_LOG_PAGE_SIZE)
+
+  // Visit-scoped remark (hooks/useRemarks.js): the same one the Dashboard writes for this
+  // person, shown until their next IN.
+  const { remarkFor, saveRemark } = useRemarks(entries)
+  const personRemark = person ? remarkFor(person.id) : null
+
   // --- All Entry & Exit Logs: filter -> sort -> paginate ---
   const filteredLogs = useMemo(() => {
     const rfidQ = rfidFilter.trim().toLowerCase()
@@ -141,7 +154,8 @@ export default function SearchHistoryPage(){
       const matchesVehicle = vehicleTypeFilter === 'All' || entry.vehicleType === vehicleTypeFilter
       const matchesRfid = !rfidQ || (entry.rfidId || '').toLowerCase().includes(rfidQ)
       const matchesDriver = !driverQ || (entry.name || '').toLowerCase().includes(driverQ)
-      return matchesFrom && matchesTo && matchesVehicle && matchesRfid && matchesDriver
+      const matchesDirection = directionFilter === 'All' || entry.direction === directionFilter
+      return matchesFrom && matchesTo && matchesVehicle && matchesRfid && matchesDriver && matchesDirection
     })
 
     const sorted = filtered.slice().sort((a, b) => {
@@ -152,9 +166,9 @@ export default function SearchHistoryPage(){
     })
 
     return sorted
-  }, [entries, dateFrom, dateTo, vehicleTypeFilter, rfidFilter, driverFilter, sortKey, sortDir])
+  }, [entries, dateFrom, dateTo, vehicleTypeFilter, rfidFilter, driverFilter, directionFilter, sortKey, sortDir])
 
-  useEffect(() => { setPage(1) }, [dateFrom, dateTo, vehicleTypeFilter, rfidFilter, driverFilter])
+  useEffect(() => { setPage(1) }, [dateFrom, dateTo, vehicleTypeFilter, rfidFilter, driverFilter, directionFilter])
 
   const totalPages = Math.max(1, Math.ceil(filteredLogs.length / PAGE_SIZE))
   const pageItems = filteredLogs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -241,7 +255,7 @@ export default function SearchHistoryPage(){
                 <div>
                   <span className="name-with-remark">
                     <strong>{person.name || 'Unknown'}</strong>
-                    {remarks[person.rfidId] && <RemarkTick onClick={() => setShowRemarkModal(true)} title="View remark" />}
+                    {personRemark && <RemarkTick onClick={() => setShowRemarkModal(true)} title="View remark" />}
                   </span>
                   <div className="result-rfid">{person.rfidId}</div>
                 </div>
@@ -263,7 +277,7 @@ export default function SearchHistoryPage(){
                 <tbody>
                   {logs.length === 0 ? (
                     <tr><td colSpan={4} className="empty-state">No gate activity recorded for this RFID yet.</td></tr>
-                  ) : logs.map((log) => (
+                  ) : personPageLogs.map((log) => (
                     <tr
                       key={log.id}
                       className={`activity-row selectable-row ${log.id === selectedLog?.id ? 'selected' : ''}`}
@@ -279,14 +293,7 @@ export default function SearchHistoryPage(){
                 </tbody>
               </table>
 
-              <div className="pagination-row">
-                <span>Showing 1 to {logs.length} of {logs.length} entries</span>
-                <div className="pagination-controls">
-                  <button type="button" disabled>‹</button>
-                  <button type="button" className="active">1</button>
-                  <button type="button" disabled>›</button>
-                </div>
-              </div>
+              <PaginationRow page={personPage} pageSize={PERSON_LOG_PAGE_SIZE} total={logs.length} onPageChange={setPersonPage} />
 
               <h4 className="vehicles-used-title">Vehicles Used</h4>
               <table className="activity-table">
@@ -351,15 +358,6 @@ export default function SearchHistoryPage(){
                   <div className="info-row"><span>Date Registered:</span><span>{person.createdAt ? new Date(person.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—'}</span></div>
                 </div>
               </div>
-
-              <div className="pagination-row card-style">
-                <span>Showing 1 to {logs.length} of {logs.length} entries</span>
-                <div className="pagination-controls">
-                  <button type="button" disabled>‹</button>
-                  <button type="button" className="active">1</button>
-                  <button type="button" disabled>›</button>
-                </div>
-              </div>
             </div>
           </div>
         ) : (
@@ -382,6 +380,13 @@ export default function SearchHistoryPage(){
           <select value={vehicleTypeFilter} onChange={(e) => setVehicleTypeFilter(e.target.value)}>
             <option value="All">All</option>
             {VEHICLE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+
+          <label className="filter-label">Direction</label>
+          <select value={directionFilter} onChange={(e) => setDirectionFilter(e.target.value)}>
+            <option value="All">All (IN and OUT)</option>
+            <option value="IN">IN only (entries)</option>
+            <option value="OUT">OUT only (exits)</option>
           </select>
 
           <label className="filter-label">RFID Tag</label>
@@ -449,7 +454,7 @@ export default function SearchHistoryPage(){
 
       {showPrintReport && (
         <PrintReportModal
-          title="Vehicle Access Report"
+          title={directionFilter === 'IN' ? 'Vehicle Access Report - Entries Only' : directionFilter === 'OUT' ? 'Vehicle Access Report - Exits Only' : 'Vehicle Access Report'}
           {...buildGateLogReport(filteredLogs, { from: dayStartMs(dateFrom), to: dayEndMs(dateTo) })}
           onClose={() => setShowPrintReport(false)}
         />
@@ -459,9 +464,9 @@ export default function SearchHistoryPage(){
         <RemarkModal
           name={person.name}
           rfid={person.rfidId}
-          initialRemark={remarks[person.rfidId]}
+          initialRemark={personRemark?.text}
           onClose={() => setShowRemarkModal(false)}
-          onSave={(text) => saveRemark(person.rfidId, text)}
+          onSave={(text) => saveRemark(person.id, text)}
         />
       )}
     </div>

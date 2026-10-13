@@ -215,18 +215,25 @@ export async function setRfidUserStatus(id, status) {
 //          (motor reverse) the entrance, exit, or both barriers (both at the same time).
 //          The scanner remembers each barrier's state, only moves one whose state changes,
 //          and publishes it to settings/app/gateStatus
+//   SET_AUTO_CLOSE - `seconds` (1-60): how long a scan-opened barrier stays open before it
+//          closes by itself. Saved on the scanner; it reports the value back in
+//          devices/scanner/autoCloseSeconds
 // It acknowledges in devices/scanner/commandAck. Best-effort by design: if the scanner is
 // offline the command is simply missed (it ignores whatever command is already waiting
 // when it boots, so a stale EXIT can never fire later).
-const SCANNER_ACTIONS = ['EXIT', 'SYNC', 'OPEN_ENTRY', 'OPEN_EXIT', 'OPEN_BOTH', 'CLOSE_ENTRY', 'CLOSE_EXIT', 'CLOSE_BOTH']
+const SCANNER_ACTIONS = ['EXIT', 'SYNC', 'OPEN_ENTRY', 'OPEN_EXIT', 'OPEN_BOTH', 'CLOSE_ENTRY', 'CLOSE_EXIT', 'CLOSE_BOTH', 'SET_AUTO_CLOSE']
 
-export async function sendScannerCommand(action, { cardId = '', actor } = {}) {
+export async function sendScannerCommand(action, { cardId = '', seconds, actor } = {}) {
   if (!SCANNER_ACTIONS.includes(action)) throw new Error(`Unknown scanner command "${action}"`)
+  if (action === 'SET_AUTO_CLOSE' && !(Number.isInteger(seconds) && seconds >= 1 && seconds <= 60)) {
+    throw new Error('Auto-close delay must be a whole number of seconds from 1 to 60.')
+  }
   const id = push(ref(rtdb, 'devices/scanner')).key // unique, time-ordered id; nothing is written here
   await set(ref(rtdb, 'devices/scanner/command'), {
     id,
     action,
     cardId: (cardId ?? '').toString(),
+    ...(action === 'SET_AUTO_CLOSE' ? { seconds } : {}),
     requestedAt: Date.now(),
     requestedBy: auth.currentUser?.uid || '',
     requestedByName: actor?.name || '',
@@ -424,6 +431,20 @@ export function listenToScannerStatus(callback) {
   })
 }
 
+// devices/camera - { ip, lastSeen }. The ESP32-CAM (CameraWebServer.ino) refreshes lastSeen
+// (Firebase server time) every ~30 s; see hooks/useDeviceStatus.js for Online/Offline.
+export function listenToCameraStatus(callback) {
+  return onValue(ref(rtdb, 'devices/camera'), (snapshot) => {
+    callback(snapshot.exists() ? snapshot.val() : null)
+  })
+}
+
+// Difference between Firebase's server clock and this browser's, so a device's server-
+// timestamped lastSeen can be compared with "now" even if the PC clock is off.
+export function listenToServerTimeOffset(callback) {
+  return onValue(ref(rtdb, '.info/serverTimeOffset'), (snapshot) => callback(snapshot.val() || 0))
+}
+
 // devices/scanner/lastScan - published by sketch_scanner.ino for every valid (non-noise)
 // tap, regardless of authorization or the gate's own audit-log cooldown. A UI "tap to
 // capture" step (registration, VIP check-in, the admin edit form's re-scan field) needs to
@@ -578,6 +599,16 @@ export async function cancelExpectedGuest(id) {
   const snap = await get(ref(rtdb, `expectedGuests/${id}`))
   if (!snap.exists()) throw new Error('Guest entry not found.')
   await set(ref(rtdb, `expectedGuests/${id}`), validateExpectedGuest({ ...snap.val(), status: 'Cancelled' }))
+}
+
+// Admin only (rules): moves a not-yet-arrived guest's arrival window (they're coming earlier
+// or later than planned). Everything else on the entry stays as it was.
+export async function updateExpectedGuestWindow(id, { validFrom, validUntil }) {
+  const snap = await get(ref(rtdb, `expectedGuests/${id}`))
+  if (!snap.exists()) throw new Error('Guest entry not found.')
+  const guest = snap.val()
+  if (guest.status !== 'Expected') throw new Error('Only a guest who has not arrived yet can be rescheduled.')
+  await set(ref(rtdb, `expectedGuests/${id}`), validateExpectedGuest({ ...guest, validFrom, validUntil }))
 }
 
 // Any staff role (rules restrict this to only the Expected->Arrived transition plus the
