@@ -7,6 +7,7 @@ import DummyFillButton from '../shared/DummyFillButton'
 import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, formatPhoneInput, generateDummyRfid } from '../../utils/validators'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
+import { fieldInputValue } from '../../utils/textCase'
 
 const initialForm = {
   name: '',
@@ -50,7 +51,8 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
   const handleDummyFill = () => setForm((f) => ({ ...f, rfidId: generateDummyRfid() }))
 
   const handleChange = (event) => {
-    const { name, value } = event.target
+    const { name } = event.target
+    const value = fieldInputValue(name, event) // name/plate in ALL CAPS
     setForm((prev) => ({ ...prev, [name]: value }))
   }
 

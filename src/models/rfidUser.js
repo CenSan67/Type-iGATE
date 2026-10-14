@@ -1,4 +1,5 @@
 import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, normalizePhone } from '../utils/validators'
+import { toCaps } from '../utils/textCase'
 
 // This is the vehicle-owner "role" (who the card belongs to), unrelated to the
 // admin login roles in src/constants/roles.js. Security guards register under 'Staff'.
@@ -70,12 +71,12 @@ export function validateRfidUser(data) {
     throw new Error('RfidUser: returnedAt must be a timestamp (ms)')
   }
   return {
-    name: data.name.trim(),
+    name: toCaps(data.name.trim()),
     rfidId: data.rfidId.trim(),
     plateNumber: (data.plateNumber || '').trim().toUpperCase(),
     vehicleType: data.vehicleType || 'Car',
-    vehicleColor: (data.vehicleColor || '').trim(),
-    department: data.department || '',
+    vehicleColor: toCaps((data.vehicleColor || '').trim()),
+    department: toCaps((data.department || '').trim()),
     role: data.role || 'Student',
     email: (data.email || '').trim(),
     phone: normalizePhone(data.phone),

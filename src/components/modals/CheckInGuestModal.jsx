@@ -7,6 +7,7 @@ import { VEHICLE_TYPES } from '../../models/rfidUser'
 import { isValidRfid, isValidPlate } from '../../utils/validators'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
+import { capsInputValue } from '../../utils/textCase'
 
 // Any staff role, from the Dashboard's GuestClearancePanel: issues the pre-cleared guest a
 // temporary pass at the gate. Plate/vehicle are pre-filled from the pre-clearance record but
@@ -73,7 +74,7 @@ export default function CheckInGuestModal({ guest, onClose, onCheckedIn }){
         </label>
         <label>
           Plate Number
-          <input value={plateNumber} onChange={(e) => setPlateNumber(e.target.value)} placeholder="ABC-1234" />
+          <input value={plateNumber} onChange={(e) => setPlateNumber(capsInputValue(e))} placeholder="ABC-1234" />
         </label>
         <label>
           Vehicle Type

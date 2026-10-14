@@ -1431,6 +1431,29 @@ html, body, #root {
 .badge-negative { background: #c12d2d; color: #fff; }
 .badge-neutral { background: #9a9a9a; color: #fff; }
 
+.auth-loading-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--maroon);
+  font-weight: 600;
+}
+
+.connection-banner {
+  background: #fff4d6;
+  border: 1px solid #f4c542;
+  border-left: 4px solid var(--maroon);
+  color: #4a2a00;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .scanner-status-row {
   display: flex;
   align-items: center;
@@ -2154,6 +2177,15 @@ html, body, #root {
   margin: 0;
   color: #888;
   font-size: 12px;
+}
+
+.gate-override-log {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .gate-toggle-btn {

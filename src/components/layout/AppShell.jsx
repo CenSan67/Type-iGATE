@@ -1,5 +1,6 @@
 import React from 'react'
 import Sidebar from '../sidebar/Sidebar'
+import ConnectionBanner from '../shared/ConnectionBanner'
 import { useAppState } from '../../context/AppStateContext'
 
 export default function AppShell({ children, topbar }){
@@ -19,6 +20,7 @@ export default function AppShell({ children, topbar }){
           className="dashboard-content"
           onClick={() => { if (sidebarOpen) dispatch({ type: 'CLOSE_SIDEBAR' }) }}
         >
+          <ConnectionBanner />
           {children}
         </main>
       </div>

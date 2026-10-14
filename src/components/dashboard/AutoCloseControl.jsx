@@ -4,6 +4,7 @@ import useDeviceStatus from '../../hooks/useDeviceStatus'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { getErrorMessage } from '../../utils/errors'
+import useConnectionStatus from '../../hooks/useConnectionStatus'
 
 const COMMAND_TIMEOUT_MS = 10000 // same as Gate Control's wait for the scanner's ack
 
@@ -15,6 +16,7 @@ export default function AutoCloseControl(){
   const { user, profile } = useAuth()
   const { showError, showInfo } = useToast()
   const current = scanner?.autoCloseSeconds
+  const online = useConnectionStatus()
   const [seconds, setSeconds] = useState('')
   const [awaitingId, setAwaitingId] = useState(null)
   const [ack, setAck] = useState(null)
@@ -69,7 +71,7 @@ export default function AutoCloseControl(){
         style={{ width: 70 }}
       />
       <span className="form-hint">seconds</span>
-      <button type="submit" className="btn-secondary" disabled={!!awaitingId || seconds === ''}>
+      <button type="submit" className="btn-secondary" disabled={!!awaitingId || seconds === '' || !online}>
         {awaitingId ? 'Saving…' : 'Save'}
       </button>
       <span className="form-hint">{current ? `Scanner is set to ${current} s` : 'Current value not reported yet'}</span>

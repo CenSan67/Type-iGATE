@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import GateButton from '../settings/GateButton'
 import ConfirmModal from '../modals/ConfirmModal'
-import { listenToGateStatus, sendScannerCommand, listenToScannerCommandAck } from '../../services/firebase'
+import { listenToGateStatus, sendScannerCommand, listenToScannerCommandAck, listenToOverrideLogs } from '../../services/firebase'
 import { useAuth } from '../../context/AuthContext'
 import { ROLES } from '../../constants/roles'
 import { GATE_IDS, GATE_LABELS, GATE_ACTIONS, GATE_BUTTON_LOCK_MS, GATE_CLOSE_BUTTON_LOCK_MS } from '../../models/appSettings'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
+import useConnectionStatus from '../../hooks/useConnectionStatus'
 
 // How long to wait for the scanner to acknowledge before telling staff it didn't respond
 // (it polls every ~1.5 s, longer only while busy with a scan or a motor run).
@@ -35,7 +36,8 @@ export default function GateStatusCard(){
   const [awaiting, setAwaiting] = useState(null) // { id, target, open } - sent, scanner hasn't answered yet
   const [ack, setAck] = useState(null)
   const locked = lockedUntil > 0
-  const busy = locked || !!awaiting
+  const online = useConnectionStatus()
+  const busy = locked || !!awaiting || !online // offline: a command would be queued and run later
   const { showError, showInfo } = useToast()
 
   useEffect(() => {
@@ -46,6 +48,9 @@ export default function GateStatusCard(){
   }, [])
 
   useEffect(() => listenToScannerCommandAck(setAck), [])
+
+  const [overrides, setOverrides] = useState([])
+  useEffect(() => listenToOverrideLogs(setOverrides), [])
 
   const targetName = (target) => (target === 'both' ? 'Both gates' : GATE_LABELS[target])
 
@@ -89,6 +94,7 @@ export default function GateStatusCard(){
     : { label: 'UNKNOWN', className: 'badge-neutral' }
 
   const buttonLabel = (open) => {
+    if (!online) return 'Offline'
     if (awaiting) return 'Sending…'
     if (locked) return lastMove?.open ? 'Opening…' : 'Closing…'
     return open ? 'Open' : 'Close'
@@ -189,6 +195,17 @@ export default function GateStatusCard(){
           <p className="gate-meta">{bothOpen ? 'Closes' : 'Opens'} the entrance and exit barriers at the same time.</p>
         </div>
       </div>
+
+      {overrides.length > 0 && (
+        <div className="gate-override-log">
+          <p className="gate-meta"><strong>Master card overrides</strong> (tap 1 opens and holds both barriers, tap 2 closes them)</p>
+          {overrides.map((o) => (
+            <p key={o.id} className="gate-meta">
+              {new Date(o.timestamp).toLocaleString()}{o.timeApprox ? ' (approx. time - tapped while offline)' : ''} - {o.action === 'OPEN_BOTH' ? 'Opened and held both barriers' : 'Closed both barriers'}
+            </p>
+          ))}
+        </div>
+      )}
 
       {confirmText && (
         <ConfirmModal

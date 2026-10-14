@@ -1,7 +1,7 @@
 // Firebase v9 modular SDK setup
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getDatabase, ref, set, update, push, get, remove, query, orderByChild, equalTo, onValue, onChildAdded, runTransaction } from 'firebase/database'
+import { getDatabase, ref, set, update, push, get, remove, query, orderByChild, equalTo, limitToLast, onValue, onChildAdded, runTransaction } from 'firebase/database'
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { validateGateLog } from '../models/gateLog'
@@ -14,6 +14,7 @@ import { validateExpectedGuest } from '../models/expectedGuest'
 import { ROLES } from '../constants/roles'
 import { getErrorMessage } from '../utils/errors'
 import { currentHolder, renewableRecord } from '../utils/cardHolder'
+import { toCaps } from '../utils/textCase'
 
 // TODO: replace with your Firebase project values
 const firebaseConfig = {
@@ -35,6 +36,29 @@ export const storage = getStorage(app)
 export const functions = getFunctions(app, 'us-central1')
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+// Offline handling: while this browser has no connection to Firebase, the SDK queues writes
+// and sends them whenever the connection comes back - possibly minutes later. That's fine for
+// an edit, but not for anything that moves a barrier or needs a server reply (receipt number,
+// pass return), so those call assertOnline() first and fail right away instead of hanging.
+let rtdbConnected = false
+let serverTimeOffsetMs = 0
+onValue(ref(rtdb, '.info/connected'), (snapshot) => { rtdbConnected = snapshot.val() === true })
+onValue(ref(rtdb, '.info/serverTimeOffset'), (snapshot) => { serverTimeOffsetMs = snapshot.val() || 0 })
+
+export function assertOnline(what) {
+  if (!rtdbConnected) {
+    throw new Error(`No internet connection - ${what} needs to be online. Try again once the connection is back.`)
+  }
+}
+
+// Firebase server time in ms - right even if this PC's clock is off.
+const serverNow = () => Date.now() + serverTimeOffsetMs
+
+// true/false as this browser connects to / loses Firebase (hooks/useConnectionStatus.js).
+export function listenToConnection(callback) {
+  return onValue(ref(rtdb, '.info/connected'), (snapshot) => callback(snapshot.val() === true))
+}
 
 export async function initializeFirebaseCollections(onError) {
   try {
@@ -228,17 +252,30 @@ export async function sendScannerCommand(action, { cardId = '', seconds, actor }
   if (action === 'SET_AUTO_CLOSE' && !(Number.isInteger(seconds) && seconds >= 1 && seconds <= 60)) {
     throw new Error('Auto-close delay must be a whole number of seconds from 1 to 60.')
   }
+  // A command queued offline would move a barrier whenever the connection returned. Refused
+  // here, by the rules (requestedAt older than 60 s) and by the scanner (same 60 s) as well.
+  assertOnline('the gate controller')
   const id = push(ref(rtdb, 'devices/scanner')).key // unique, time-ordered id; nothing is written here
   await set(ref(rtdb, 'devices/scanner/command'), {
     id,
     action,
     cardId: (cardId ?? '').toString(),
     ...(action === 'SET_AUTO_CLOSE' ? { seconds } : {}),
-    requestedAt: Date.now(),
+    requestedAt: serverNow(),
     requestedBy: auth.currentUser?.uid || '',
     requestedByName: actor?.name || '',
   })
   return id
+}
+
+// Master card taps (sketch_scanner.ino#handleMasterCard): { action: 'OPEN_BOTH'|'CLOSE_BOTH',
+// cardId, timestamp, source, timeApprox? }, newest first. Written only by the scanner (rules:
+// read-only for staff); a tap made offline arrives once the scanner is back online.
+export function listenToOverrideLogs(callback, count = 5) {
+  return onValue(query(ref(rtdb, 'overrideLogs'), orderByChild('timestamp'), limitToLast(count)), (snapshot) => {
+    const rows = Object.entries(snapshot.val() || {}).map(([id, v]) => ({ id, ...v }))
+    callback(rows.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)))
+  })
 }
 
 // The scanner's answer to the latest command: { id, action, result, executedAt }.
@@ -256,6 +293,7 @@ export function listenToScannerCommandAck(callback) {
 // Steps 1 and 3 are best-effort (reported through onWarning); step 2 is the return itself.
 export async function returnTemporaryPass(pass, { source = 'visitor-return', actor, onWarning } = {}) {
   if (!pass?.id) throw new Error('Pass not found.')
+  assertOnline('returning a pass')
   const cardId = (pass.rfidId ?? '').toString()
 
   try {
@@ -574,6 +612,7 @@ export async function createExpectedGuest(data, actor) {
   const guestRef = push(ref(rtdb, 'expectedGuests'))
   await set(guestRef, validateExpectedGuest({
     ...data,
+    name: toCaps(data.name), // ALL CAPS on create only - check-in must leave it unchanged (rules)
     status: 'Expected',
     createdBy: actor?.uid || '',
     createdByName: actor?.name || '',
@@ -620,6 +659,7 @@ export async function updateExpectedGuestWindow(id, { validFrom, validUntil }) {
 // opens the entry barrier and logs the IN (sketch_scanner.ino). The pass carries guestId so
 // that scanner can also mark this guest Departed when the card scans OUT.
 export async function checkInGuest(id, { rfidId, plateNumber, vehicleType }, actor, onWarning) {
+  assertOnline('checking in a guest')
   const snap = await get(ref(rtdb, `expectedGuests/${id}`))
   if (!snap.exists()) throw new Error('Guest entry not found.')
   const guest = snap.val()
@@ -664,6 +704,7 @@ export async function checkInGuest(id, { rfidId, plateNumber, vehicleType }, act
 // returnedAt, exit barrier opened - then marks the guest Departed. Nothing to return (an
 // admin deleted the record, or the guest's OUT scan already returned it) is fine.
 export async function checkOutGuest(id, onWarning, actor) {
+  assertOnline('checking out a guest')
   const snap = await get(ref(rtdb, `expectedGuests/${id}`))
   if (!snap.exists()) throw new Error('Guest entry not found.')
   const guest = snap.val()

@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext'
-import { upsertRfidUser, recordPayment, getNextReceiptNo } from '../services/firebase'
+import { upsertRfidUser, recordPayment, getNextReceiptNo, assertOnline } from '../services/firebase'
 import { getVehicleFee, REGISTRATION_VALIDITY_MONTHS, PRIVACY_NOTICE_VERSION } from '../constants/fees'
 import { toLocalISODate } from '../utils/dateRange'
 
@@ -12,6 +12,8 @@ export default function usePaymentRegistration() {
   const staffName = profile?.fullName || profile?.displayName || user?.email || ''
 
   const register = async (form) => {
+    // Needs a receipt number from the server - checked first so nothing is half-saved offline.
+    assertOnline('registration')
     const now = new Date()
     const rfidId = form.rfid.trim()
     const name = form.name.trim()

@@ -1,3 +1,5 @@
+import { toCaps } from '../utils/textCase'
+
 export const PAYMENT_TYPES = ['Registration', 'Renewal']
 export const PAYMENT_STATUSES = ['Paid', 'Pending']
 
@@ -48,9 +50,9 @@ export function validatePayment(data) {
 
   return {
     rfidId: data.rfidId,
-    name: data.name || '',
-    department: data.department || '',
-    plateNumber: data.plateNumber || '',
+    name: toCaps((data.name || '').trim()),
+    department: toCaps((data.department || '').trim()),
+    plateNumber: toCaps((data.plateNumber || '').trim()),
     paymentType: data.paymentType || 'Registration',
     amount: data.amount,
     status: data.status || 'Paid',

@@ -8,6 +8,7 @@ import { isValidPlate } from '../../utils/validators'
 import { toLocalInputDateTime, fromLocalInputDateTime } from '../../utils/dateRange'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
+import { fieldInputValue } from '../../utils/textCase'
 
 // Default window: from now until 4 hours from now - a reasonable single-event visit, easy
 // to widen for a multi-day booking.
@@ -36,7 +37,10 @@ export default function AddExpectedGuestModal({ onClose, onCreated }){
   const [form, setForm] = useState(defaultForm)
   const [submitting, setSubmitting] = useState(false)
 
-  const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+  const update = (field) => (e) => {
+    const value = fieldInputValue(field, e) // name/plate in ALL CAPS
+    setForm((f) => ({ ...f, [field]: value }))
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()

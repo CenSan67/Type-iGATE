@@ -7,6 +7,7 @@ import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, generateDummyRfi
 import { VEHICLE_OWNER_ROLES, VEHICLE_TYPES } from '../../models/rfidUser'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
+import { fieldInputValue } from '../../utils/textCase'
 
 export default function EditRfidUserModal({ user, onClose, onSaved }){
   const [form, setForm] = useState({
@@ -25,7 +26,8 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
   const { scanning, startScan, stopScan } = useRfidScanner()
 
   const handleChange = (e) => {
-    const { name, value } = e.target
+    const { name } = e.target
+    const value = fieldInputValue(name, e) // name/plate/color/department in ALL CAPS
     setForm((f) => ({ ...f, [name]: value }))
   }
 

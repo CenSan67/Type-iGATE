@@ -11,6 +11,7 @@ import { toLocalISODate } from '../../utils/dateRange'
 import { useToast } from '../../context/ToastContext'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
 import { renewableRecord, isReturnedPass } from '../../utils/cardHolder'
+import { fieldInputValue } from '../../utils/textCase'
 import {
   DOCUMENT_LABELS,
   PLATE_OPTIONAL_TYPES,
@@ -72,7 +73,7 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
   }, [])
 
   const update = (field) => (e) => {
-    const value = e.target.value
+    const value = fieldInputValue(field, e) // name/plate/department/color in ALL CAPS
     setForm((f) => {
       const next = { ...f, [field]: value }
       if (field === 'vehicle') {

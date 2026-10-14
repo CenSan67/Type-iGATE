@@ -15,6 +15,21 @@ function writeStoredViewRole(uid, value) {
   try { localStorage.setItem(VIEW_ROLE_KEY(uid), value) } catch { /* storage unavailable - view role just won't persist */ }
 }
 
+// Offline reload: the Realtime Database keeps nothing on disk, so the profile listener never
+// answers without internet and the app used to stay blank. The last profile seen on this
+// device is kept here and used if the live one hasn't arrived after PROFILE_FALLBACK_MS. UI
+// only - the database rules still check the real profile on every read/write.
+const PROFILE_CACHE_KEY = (uid) => `igate_profile_cache_${uid}`
+const PROFILE_FALLBACK_MS = 4000
+
+function readCachedProfile(uid) {
+  try { return JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY(uid)) || 'null') } catch { return null }
+}
+
+function writeCachedProfile(uid, value) {
+  try { localStorage.setItem(PROFILE_CACHE_KEY(uid), JSON.stringify(value ?? null)) } catch { /* storage unavailable - offline reload just waits for the live profile */ }
+}
+
 export function AuthProvider({children}){
   const [user,setUser] = useState(null)
   const [realRole,setRealRole] = useState(null)
@@ -41,7 +56,8 @@ export function AuthProvider({children}){
 
   useEffect(() => {
     if (!user?.uid) return
-    const unsub = listenToAdminProfile(user.uid, (nextProfile) => {
+    let liveArrived = false
+    const applyProfile = (nextProfile) => {
       const nextRealRole = nextProfile?.role || null
       // Restore the last "view as" choice in the same batch as the real role (no flash of
       // the wrong UI), but only if it's still allowed for that role - so a demoted account,
@@ -51,8 +67,17 @@ export function AuthProvider({children}){
       setProfile(nextProfile)
       setViewRole(getViewableRoles(nextRealRole).includes(stored) ? stored : nextRealRole)
       setRoleLoading(false)
+    }
+    const unsub = listenToAdminProfile(user.uid, (nextProfile) => {
+      liveArrived = true
+      writeCachedProfile(user.uid, nextProfile)
+      applyProfile(nextProfile)
     })
-    return () => unsub && unsub()
+    const fallback = setTimeout(() => {
+      const cached = readCachedProfile(user.uid)
+      if (!liveArrived && cached) applyProfile(cached)
+    }, PROFILE_FALLBACK_MS)
+    return () => { clearTimeout(fallback); unsub && unsub() }
   }, [user?.uid])
 
   const availableRoles = getViewableRoles(realRole)
