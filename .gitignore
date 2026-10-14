@@ -3,3 +3,6 @@ node_modules/
 dist/
 .vscode/
 .DS_Store
+
+# Firebase CLI deploy cache
+.firebase/
