@@ -77,6 +77,9 @@
         },
         "status": {
           ".validate": "(data.parent().child('role').val() !== 'Super Admin' || !data.exists() || data.val() === newData.val()) && (newData.val() === 'Pending' || newData.val() === 'Active' || newData.val() === 'Inactive' || newData.val() === 'Locked') && (data.val() === newData.val() || (!data.exists() && auth.uid === $uid && newData.val() === 'Pending') || (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.val() !== 'Pending') || (data.val() === 'Pending' && (newData.val() === 'Inactive' || (newData.val() === 'Active' && data.parent().child('emailVerified').val() === true && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' && data.parent().child('requestedRole').val() === 'Security Guard'))))))"
+        },
+        "username": {
+          ".validate": "data.val() === newData.val()"
         }
       }
     },
@@ -184,6 +187,14 @@
         "at"
       ],
       ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
+      ".write": false
+    },
+    "usernames": {
+      ".read": false,
+      ".write": false
+    },
+    "usernameLoginThrottle": {
+      ".read": false,
       ".write": false
     }
   }

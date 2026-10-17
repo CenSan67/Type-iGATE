@@ -4,9 +4,12 @@ import { getErrorMessage } from '../utils/errors'
 
 // Handles the link in Firebase's emails (/auth/action?mode=...&oobCode=...).
 // status: 'checking' -> 'ready' (reset form) -> 'saving' -> 'done'
-//         'checking' -> 'verified' (email verification)
+//         'checking' -> 'verified' | 'emailChanged' | 'emailRestored' (one-click email links)
 //         'error' (expired / used / invalid link or request) - terminal
 const LINK_ERROR = 'This link is invalid or has already been used. Request a new one.'
+
+// One-click links: Firebase applies the code, nothing to fill in. mode -> resulting status.
+const APPLY_MODES = { verifyEmail: 'verified', verifyAndChangeEmail: 'emailChanged', recoverEmail: 'emailRestored' }
 
 export default function useAuthAction(mode, code) {
   const [status, setStatus] = useState('checking')
@@ -22,13 +25,13 @@ export default function useAuthAction(mode, code) {
     handledCode.current = code
     const fail = (err) => { setError(getErrorMessage(err, LINK_ERROR)); setStatus('error') }
 
-    if (!code || (mode !== 'resetPassword' && mode !== 'verifyEmail')) {
+    if (!code || (mode !== 'resetPassword' && !APPLY_MODES[mode])) {
       setError('This link is incomplete or not supported. Open the latest link from your email, or request a new one.')
       setStatus('error')
     } else if (mode === 'resetPassword') {
       checkPasswordResetCode(code).then((accountEmail) => { setEmail(accountEmail); setStatus('ready') }, fail)
     } else {
-      applyEmailVerificationCode(code).then(() => setStatus('verified'), fail)
+      applyEmailVerificationCode(code).then(() => setStatus(APPLY_MODES[mode]), fail)
     }
   }, [mode, code])
 

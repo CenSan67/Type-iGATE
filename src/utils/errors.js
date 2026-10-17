@@ -6,10 +6,10 @@ const DEFAULT_MESSAGE = 'Something went wrong. Please try again.'
 // (auth/invalid-login-credentials).") names the vendor and the internal code, which is noise
 // to staff and tells an attacker which check failed, so it is never shown as-is.
 const CODE_MESSAGES = {
-  'auth/invalid-credential': 'Incorrect email or password.',
-  'auth/invalid-login-credentials': 'Incorrect email or password.',
-  'auth/wrong-password': 'Incorrect email or password.',
-  'auth/user-not-found': 'Incorrect email or password.',
+  'auth/invalid-credential': 'Incorrect email/username or password.',
+  'auth/invalid-login-credentials': 'Incorrect email/username or password.',
+  'auth/wrong-password': 'Incorrect email/username or password.',
+  'auth/user-not-found': 'Incorrect email/username or password.',
   'auth/invalid-email': 'Enter a valid email address.',
   'auth/missing-password': 'Enter your password.',
   'auth/user-disabled': 'This account is unavailable. Please contact an administrator.',

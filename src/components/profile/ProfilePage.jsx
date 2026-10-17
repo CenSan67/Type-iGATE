@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ChangePasswordModal from '../modals/ChangePasswordModal'
+import UsernameField from './UsernameField'
+import ChangeEmailModal from '../modals/ChangeEmailModal'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
 import { useAuth } from '../../context/AuthContext'
 import { listenToAdminProfile, saveAdminProfile } from '../../services/firebase'
@@ -84,6 +86,7 @@ export default function ProfilePage(){
   const [draft, setDraft] = useState(profile)
   const [editing, setEditing] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [showEmailModal, setShowEmailModal] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
@@ -196,7 +199,19 @@ export default function ProfilePage(){
 
           <div className="profile-fields-col">
             <ProfileField label="Full Name:" value={editing ? draft.fullName : profile.fullName} editing={editing} onChange={updateDraft('fullName')} />
-            <ProfileField label="Email:" value={editing ? draft.email : profile.email} editing={editing && !user} onChange={updateDraft('email')} type="email" />
+            {user ? (
+              // Login email: changed through Firebase Auth (confirm link to the new address), not Edit Profile
+              <div className="profile-field-row">
+                <label>Email:</label>
+                <div className="profile-value-action">
+                  <div className="profile-field-display">{profile.email}</div>
+                  <button type="button" className="btn-secondary" onClick={() => setShowEmailModal(true)}>Change</button>
+                </div>
+              </div>
+            ) : (
+              <ProfileField label="Email:" value={editing ? draft.email : profile.email} editing={editing} onChange={updateDraft('email')} type="email" />
+            )}
+            {user && <UsernameField username={profile.username} />}
             <ProfileField label="Phone:" value={editing ? draft.phone : profile.phone} editing={editing} onChange={updateDraft('phone')} />
             <ProfileField label="Address:" value={editing ? draft.address : profile.address} editing={editing} onChange={updateDraft('address')} />
             {/* Role is intentionally always read-only here, even in edit mode - self-service
@@ -229,6 +244,7 @@ export default function ProfilePage(){
       </div>
 
       {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
+      {showEmailModal && <ChangeEmailModal currentEmail={user?.email || profile.email} onClose={() => setShowEmailModal(false)} />}
     </div>
   )
 }

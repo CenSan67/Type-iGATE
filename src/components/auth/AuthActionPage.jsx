@@ -48,6 +48,20 @@ export default function AuthActionPage(){
           </>
         )}
 
+        {status === 'emailChanged' && (
+          <>
+            <p className="form-success" style={{textAlign:'center'}}>Your email has been changed. Sign in again with the new email (or your username).</p>
+            <Link to="/login" className="btn-login" style={{display:'block', textAlign:'center'}}>Go to login</Link>
+          </>
+        )}
+
+        {status === 'emailRestored' && (
+          <>
+            <p className="form-success" style={{textAlign:'center'}}>Your previous email has been restored. If you didn't ask for the change, reset your password now - someone may know it.</p>
+            <Link to="/login" state={{ forgot: true }} className="btn-login" style={{display:'block', textAlign:'center'}}>Reset password</Link>
+          </>
+        )}
+
         {status === 'done' && (
           <>
             <p className="form-success" style={{textAlign:'center'}}>Your password has been changed. Every other device signed in to this account has been signed out.</p>

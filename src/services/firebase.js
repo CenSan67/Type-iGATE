@@ -627,6 +627,12 @@ export async function markProfileEmailVerified(uid) {
   await update(ref(rtdb, `adminProfiles/${uid}`), { emailVerified: true })
 }
 
+// After a confirmed email change (services/auth.js#requestEmailChange) Firebase Auth holds the
+// new address; this brings the profile's display copy in line. Targeted leaf update only.
+export async function syncProfileEmail(uid, email) {
+  await update(ref(rtdb, `adminProfiles/${uid}`), { email })
+}
+
 // ---- VIP pre-clearance (expectedGuests) ------------------------------------------------
 // An Administrator enters a guest ahead of time (createExpectedGuest); any staff role can
 // then check them in/out at the gate (checkInGuest/checkOutGuest) without the admin's

@@ -47,6 +47,8 @@ export default function LoginForm(){
   const handleSubmit = async (e)=>{
     e.preventDefault()
     if (submitting || cooldownLeft > 0) return
+    if (!email.trim()) { setError('Enter your email or username.'); return }
+    if (!password) { setError('Enter your password.'); return }
     setSubmitting(true)
     setError(null)
 
@@ -157,14 +159,14 @@ export default function LoginForm(){
             <span className="input-icon" aria-hidden>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12c2.7614 0 5-2.2386 5-5s-2.2386-5-5-5-5 2.2386-5 5 2.2386 5 5 5z" fill="currentColor"/><path d="M4 20c0-3.3137 2.6863-6 6-6h4c3.3137 0 6 2.6863 6 6v1H4v-1z" fill="currentColor"/></svg>
             </span>
-            <input className="input-field" placeholder="Enter your email" value={email} onChange={e=>setEmail(e.target.value)} />
+            <input className="input-field" placeholder="Email or username" aria-label="Email or username" autoComplete="username" autoCapitalize="none" spellCheck={false} value={email} onChange={e=>setEmail(e.target.value)} />
           </div>
 
           <div className="input-row">
             <span className="input-icon" aria-hidden>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 8V7a5 5 0 10-10 0v1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none"/><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
             </span>
-            <input className="input-field" placeholder="Enter your password" type={showPassword ? 'text' : 'password'} value={password} onChange={e=>setPassword(e.target.value)} />
+            <input className="input-field" placeholder="Enter your password" aria-label="Password" autoComplete="current-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e=>setPassword(e.target.value)} />
             <button type="button" className="password-toggle" onClick={() => setShowPassword(prev => !prev)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M8.5 12a3.5 3.5 0 107 0 3.5 3.5 0 00-7 0z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>
             </button>

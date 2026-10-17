@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signUp } from '../../services/auth'
-import { isValidEmail, isValidPhone, formatPhoneInput, isValidPassword } from '../../utils/validators'
+import { isValidEmail, isValidPhone, formatPhoneInput, isValidPassword, isValidUsername, normalizeUsername, USERNAME_HINT } from '../../utils/validators'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
 import PasswordRules from '../shared/PasswordRules'
@@ -29,7 +29,7 @@ function Field({ icon, children }){
 
 export default function SignupForm(){
   const navigate = useNavigate()
-  const [form, setForm] = useState({ fullName: '', email: '', phone: '', requestedRole: DEFAULT_SIGNUP_ROLE, password: '', confirmPassword: '' })
+  const [form, setForm] = useState({ fullName: '', email: '', username: '', phone: '', requestedRole: DEFAULT_SIGNUP_ROLE, password: '', confirmPassword: '' })
   const [showPassword, setShowPassword] = useState(false)
   const { showError } = useToast()
   const [submitting, setSubmitting] = useState(false)
@@ -39,6 +39,7 @@ export default function SignupForm(){
   const validate = () => {
     if (!form.fullName.trim()) return 'Full name is required.'
     if (!form.email.trim() || !isValidEmail(form.email)) return 'Enter a valid email address.'
+    if (!isValidUsername(form.username)) return `Choose a username: ${USERNAME_HINT}.`
     if (!isValidPhone(form.phone)) return 'Enter a valid PH mobile number (e.g. 09XXXXXXXXX).'
     if (!ASSIGNABLE_ROLES.includes(form.requestedRole)) return 'Choose the role you are applying for.'
     if (!isValidPassword(form.password)) return 'Password does not meet all the requirements below.'
@@ -53,7 +54,7 @@ export default function SignupForm(){
 
     setSubmitting(true)
     try {
-      await signUp({ email: form.email.trim(), password: form.password, fullName: form.fullName.trim(), phone: form.phone, requestedRole: form.requestedRole })
+      await signUp({ email: form.email.trim(), password: form.password, fullName: form.fullName.trim(), phone: form.phone, requestedRole: form.requestedRole, username: normalizeUsername(form.username) })
       navigate('/pending')
     } catch (err) {
       showError(getErrorMessage(err, 'Unable to create the account right now.'))
@@ -76,6 +77,10 @@ export default function SignupForm(){
           <Field icon="mail">
             <input className="input-field" type="email" placeholder="Email address" value={form.email} onChange={update('email')} autoComplete="email" />
           </Field>
+          <Field icon="person">
+            <input className="input-field" placeholder="Username (for signing in)" value={form.username} onChange={(e) => setForm((f) => ({ ...f, username: e.target.value.toLowerCase() }))} autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={30} />
+          </Field>
+          <p className={`signup-role-hint ${form.username && !isValidUsername(form.username) ? 'username-hint-error' : ''}`}>Username: {USERNAME_HINT}. You can sign in with it or your email.</p>
           <Field icon="phone">
             <input
               className="input-field"

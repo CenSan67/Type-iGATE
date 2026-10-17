@@ -32,6 +32,21 @@ export function isValidEmail(value) {
   return !trimmed || EMAIL_PATTERN.test(trimmed)
 }
 
+// Login usernames: 3-30 characters, lowercase letters, numbers, dot, underscore, hyphen;
+// starts and ends with a letter or number; never contains "@", which is how the login box
+// tells a username from an email. Stored and compared lowercase ("Juan.Cruz" = "juan.cruz").
+// HAND-COPY in functions/index.js (USERNAME_PATTERN/normalizeUsername) - keep them identical.
+export const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{1,28})[a-z0-9]$/
+export const USERNAME_HINT = '3-30 characters: letters, numbers, dot, underscore or hyphen'
+
+export function normalizeUsername(value) {
+  return (value || '').toString().trim().toLowerCase()
+}
+
+export function isValidUsername(value) {
+  return USERNAME_PATTERN.test(normalizeUsername(value))
+}
+
 // Canonical stored/display format is local PH mobile: 09XXXXXXXXX (11 digits) — this is
 // the format Semaphore's SMS API (functions/index.js) expects for the `number` param, so
 // normalizePhone() below is what both the registration forms and validateRfidUser call

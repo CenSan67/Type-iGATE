@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
-import { auth, listenToAdminProfile } from '../services/firebase'
+import { auth, listenToAdminProfile, syncProfileEmail } from '../services/firebase'
 import { getViewableRoles } from '../constants/roles'
 
 const AuthContext = createContext()
@@ -82,6 +82,10 @@ export function AuthProvider({children}){
       liveArrived = true
       writeCachedProfile(user.uid, nextProfile)
       applyProfile(nextProfile)
+      // A confirmed email change lives in Firebase Auth; mirror it onto the profile once.
+      if (nextProfile?.email && user.email && nextProfile.email.toLowerCase() !== user.email.toLowerCase()) {
+        syncProfileEmail(user.uid, user.email).catch(() => { /* e.g. Inactive account - rules refuse; harmless */ })
+      }
     })
     const fallback = setTimeout(() => {
       const cached = readCachedProfile(user.uid)

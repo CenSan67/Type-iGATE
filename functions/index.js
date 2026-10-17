@@ -13,7 +13,8 @@
 //      external HTTP call, which the free Spark plan blocks entirely)
 
 const functionsV1 = require('firebase-functions/v1')
-const { onValueCreated, onValueUpdated, onValueWritten } = require('firebase-functions/v2/database')
+const crypto = require('node:crypto')
+const { onValueCreated, onValueUpdated, onValueWritten, onValueDeleted } = require('firebase-functions/v2/database')
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const { defineSecret, defineString } = require('firebase-functions/params')
 const logger = require('firebase-functions/logger')
@@ -469,3 +470,136 @@ exports.auditGateLogs = auditTrigger('/gateLogs/{id}', 'gateLogs', (changes, act
 // The ESP32 rewrites gateStatus on every barrier move, and App.jsx's initializeFirebaseCollections
 // re-stamps createdAt on every admin login - neither is a settings change.
 exports.auditAppSettings = auditTrigger('/settings/app', 'settings', (changes) => onlyFields(changes, ['gateStatus', 'createdAt']))
+
+// ---------------------------------------------------------------------------------------
+// Username login. Firebase Authentication only signs in with email + password, so a username
+// is resolved HERE, server-side, and the email never leaves this function:
+//   usernames/{key} -> { uid, username }   (server-only - database.rules.json: no client read/write)
+//   adminProfiles/{uid}/username            (display copy - clients can't change it, see rules)
+// signInWithUsername checks the password with Firebase Auth itself (the same REST endpoint the
+// client SDK uses) and only then returns a one-time custom token for that uid; the client signs
+// in with it. No password is stored or logged anywhere. setUsername is the ONLY way to claim or
+// change a username, always for the caller's own uid, inside a transaction (no duplicates).
+//
+// Production requirement: createCustomToken needs the functions' service account to hold the
+// "Service Account Token Creator" role (Google Cloud console -> IAM). Without it username login
+// fails with a signBlob permission error; email login is unaffected.
+//
+// HAND-COPY of src/utils/validators.js (USERNAME_PATTERN / normalizeUsername) - keep identical.
+const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{1,28})[a-z0-9]$/
+const normalizeUsername = (value) => (value || '').toString().trim().toLowerCase()
+// RTDB keys can't contain ".", so the lookup key swaps it for "," (not allowed in usernames).
+const usernameKey = (username) => username.replace(/\./g, ',')
+
+// The Firebase web API key is public by design (it's in the web app bundle - src/services/
+// firebase.js); it only names the project. A plain constant, not a deploy-time param.
+const FIREBASE_WEB_API_KEY = 'AIzaSyCiUx-CAXk45UrgEGW99fbIO2rOJ84-B7o'
+const USERNAME_LOGIN_MAX_FAILURES = 10
+const USERNAME_LOGIN_WINDOW_MS = 15 * 60 * 1000
+
+// Cloud Run appends the caller's real address as the LAST X-Forwarded-For entry.
+function callerIp(request) {
+  const raw = request.rawRequest
+  const forwarded = (raw?.headers?.['x-forwarded-for'] || '').toString().split(',').map((s) => s.trim()).filter(Boolean)
+  return forwarded[forwarded.length - 1] || raw?.ip || 'unknown'
+}
+
+const ipKey = (request) => crypto.createHash('sha256').update(callerIp(request)).digest('hex').slice(0, 40)
+
+// Per-IP failure budget, so this endpoint can't be used for fast password guessing (Firebase
+// Auth also throttles per account). Server-only node usernameLoginThrottle/{ipHash}.
+async function usernameLoginBlocked(db, request) {
+  const state = (await db.ref(`usernameLoginThrottle/${ipKey(request)}`).get()).val()
+  return !!state && Date.now() - state.firstAt < USERNAME_LOGIN_WINDOW_MS && state.count >= USERNAME_LOGIN_MAX_FAILURES
+}
+
+async function recordUsernameLoginFailure(db, request) {
+  const now = Date.now()
+  await db.ref(`usernameLoginThrottle/${ipKey(request)}`).transaction((current) => {
+    const fresh = !current || now - current.firstAt >= USERNAME_LOGIN_WINDOW_MS
+    return { firstAt: fresh ? now : current.firstAt, count: (fresh ? 0 : current.count) + 1 }
+  })
+}
+
+// Same message for "no such username" and "wrong password", so it can't be used to find usernames.
+const badCredentials = () => new HttpsError('unauthenticated', 'Incorrect username or password.')
+
+async function passwordMatches(email, password) {
+  const host = process.env.FIREBASE_AUTH_EMULATOR_HOST
+  const base = host ? `http://${host}/identitytoolkit.googleapis.com` : 'https://identitytoolkit.googleapis.com'
+  const response = await fetch(`${base}/v1/accounts:signInWithPassword?key=${FIREBASE_WEB_API_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, returnSecureToken: false }),
+  })
+  if (response.ok) return 'ok'
+  const code = ((await response.json().catch(() => null))?.error?.message || '').split(' ')[0]
+  if (code === 'TOO_MANY_ATTEMPTS_TRY_LATER') return 'throttled'
+  if (code === 'USER_DISABLED') return 'disabled'
+  return 'bad'
+}
+
+exports.signInWithUsername = onCall({ region: 'us-central1' }, async (request) => {
+  const username = normalizeUsername(request.data?.username)
+  const password = request.data?.password
+  if (!USERNAME_PATTERN.test(username) || typeof password !== 'string' || !password) throw badCredentials()
+
+  const db = getDatabase()
+  if (await usernameLoginBlocked(db, request)) {
+    throw new HttpsError('resource-exhausted', 'Too many attempts. Please try again later.')
+  }
+
+  const entry = (await db.ref(`usernames/${usernameKey(username)}`).get()).val()
+  const user = entry?.uid ? await getAuth().getUser(entry.uid).catch(() => null) : null
+  const result = user?.email ? await passwordMatches(user.email, password) : 'bad'
+
+  if (result === 'throttled') throw new HttpsError('resource-exhausted', 'Too many attempts. Please try again later.')
+  if (result === 'disabled') throw new HttpsError('permission-denied', 'This account is unavailable. Please contact an administrator.')
+  if (result !== 'ok') {
+    await recordUsernameLoginFailure(db, request)
+    throw badCredentials()
+  }
+  return { token: await getAuth().createCustomToken(user.uid) }
+})
+
+exports.setUsername = onCall({ region: 'us-central1' }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.')
+  const uid = request.auth.uid
+  const username = normalizeUsername(request.data?.username)
+  if (!USERNAME_PATTERN.test(username)) {
+    throw new HttpsError('invalid-argument', 'Usernames are 3-30 characters: letters, numbers, dot, underscore or hyphen, starting and ending with a letter or number.')
+  }
+
+  const db = getDatabase()
+  const profileRef = db.ref(`adminProfiles/${uid}`)
+  const profile = (await profileRef.get()).val()
+  if (!profile) throw new HttpsError('failed-precondition', 'Your account has no profile yet.')
+  if (profile.status === 'Inactive') throw new HttpsError('permission-denied', 'This account is inactive.')
+  if (profile.username === username) return { username }
+
+  // Claim the new name atomically: succeeds only if it's free or already ours.
+  const claim = await db.ref(`usernames/${usernameKey(username)}`).transaction((current) => {
+    if (current && current.uid !== uid) return undefined // taken - abort
+    return { uid, username, claimedAt: Date.now() }
+  })
+  if (!claim.committed) throw new HttpsError('already-exists', 'That username is already taken.')
+
+  // Release the previous name (only if it still points at this account).
+  if (profile.username) {
+    const oldRef = db.ref(`usernames/${usernameKey(profile.username)}`)
+    if ((await oldRef.get()).val()?.uid === uid) await oldRef.remove()
+  }
+  await profileRef.update({ username })
+  return { username }
+})
+
+// A removed profile (declined signup "start over", Super Admin "Remove") frees its username.
+exports.releaseUsername = onValueDeleted(
+  { ref: '/adminProfiles/{uid}', region: 'us-central1' },
+  async (event) => {
+    const username = event.data.val()?.username
+    if (!username) return
+    const ref = getDatabase().ref(`usernames/${usernameKey(username)}`)
+    if ((await ref.get()).val()?.uid === event.params.uid) await ref.remove()
+  }
+)

@@ -11,6 +11,7 @@ import { ROLES } from '../constants/roles'
  * @property {'Pending'|'Active'|'Inactive'|'Locked'} status  Pending = signed up, awaiting admin approval; Locked = legacy only (the removed sign-in lockout) - a Super Admin can Reactivate it
  * @property {'Super Admin'|'Administrator'|'Security Guard'} [requestedRole]  role asked for at signup
  * @property {boolean} [emailVerified]  mirrored from Firebase Auth, checked by rules against the auth token
+ * @property {string} [username]  login username (lowercase); written only by functions/index.js#setUsername
  * @property {string} joinedDate
  * @property {string|null} avatar
  */
@@ -43,6 +44,8 @@ export function validateAdminProfile(data) {
     // `undefined` and a full set() (e.g. a Super Admin's role change) must not silently drop
     // them from an existing record.
     ...(data.requestedRole ? { requestedRole: data.requestedRole } : {}),
+    // Set only by the setUsername Cloud Function; kept here so a profile save doesn't drop it.
+    ...(data.username ? { username: data.username } : {}),
     ...(typeof data.emailVerified === 'boolean' ? { emailVerified: data.emailVerified } : {}),
   }
 }
