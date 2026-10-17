@@ -12,7 +12,8 @@
 //   3. firebase deploy --only functions   (requires the Blaze plan - Semaphore is an
 //      external HTTP call, which the free Spark plan blocks entirely)
 
-const { onValueCreated, onValueUpdated } = require('firebase-functions/v2/database')
+const functionsV1 = require('firebase-functions/v1')
+const { onValueCreated, onValueUpdated, onValueWritten } = require('firebase-functions/v2/database')
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const { defineSecret, defineString } = require('firebase-functions/params')
 const logger = require('firebase-functions/logger')
@@ -109,6 +110,23 @@ async function sendSemaphoreSms({ apiKey, senderName, phone, message }) {
   return payload
 }
 
+// Per-phone SMS limits: at most one text per SMS_MIN_INTERVAL_MS and SMS_DAILY_LIMIT per
+// Manila calendar day. smsRate/{phone} is server-only (database.rules.json). Returns whether
+// this text may be sent.
+const SMS_MIN_INTERVAL_MS = 30 * 1000
+const SMS_DAILY_LIMIT = 20
+
+async function reserveSmsSlot(db, phone) {
+  const now = Date.now()
+  const day = new Date(now + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const result = await db.ref(`smsRate/${phone}`).transaction((current) => {
+    const state = current && current.day === day ? current : { day, count: 0, lastAt: 0 }
+    if (now - (state.lastAt || 0) < SMS_MIN_INTERVAL_MS || state.count >= SMS_DAILY_LIMIT) return undefined
+    return { day, count: state.count + 1, lastAt: now }
+  })
+  return result.committed
+}
+
 // NOTE: region should match the RTDB instance's actual location (Firebase console ->
 // Realtime Database -> your instance). igate-bulsu-default-rtdb's .firebaseio.com
 // hostname (rather than a regional *.firebasedatabase.app one) indicates the classic
@@ -137,6 +155,23 @@ exports.sendGateScanSms = onValueCreated(
     let status = 'sent'
     let errorMessage = null
     let semaphoreResponse = null
+
+    // Any active staff account can create gateLogs (Simulate, Return Pass), so a flood of
+    // them must not turn into a flood of texts to one owner (or an SMS bill).
+    if (!(await reserveSmsSlot(db, owner.phone))) {
+      await db.ref(`smsLogs/${logId}`).set({
+        rfidUserId: owner.id,
+        phone: owner.phone,
+        message,
+        direction,
+        status: 'rate-limited',
+        errorMessage: null,
+        semaphoreResponse: null,
+        sentAt: Date.now(),
+      })
+      logger.warn(`gateLogs/${logId}: SMS to ${owner.phone} skipped (rate limit)`)
+      return
+    }
 
     try {
       semaphoreResponse = await sendSemaphoreSms({
@@ -324,142 +359,113 @@ exports.finalizeSnapshot = onRequest(
 )
 
 // ---------------------------------------------------------------------------------------
-// Account lockout (5 failed sign-ins -> temporary lock, admin unlock or auto-expiry).
-//
-// This has to live server-side: database.rules.json requires auth != null on every path
-// (see the RBAC audit note in CLAUDE.md), so a client can't write a failed-attempt counter
-// before it has successfully signed in - there is nowhere in RTDB an unauthenticated
-// browser is allowed to write. These callables use the Admin SDK, which bypasses that the
-// same way sendGateScanSms's writes to smsLogs above do, and disable the Firebase Auth
-// login itself (not just the app-level `status` field) so a locked account can't complete
-// sign-in at all, not merely get bounced by RequireAuth after the fact.
-//
-// A lock also auto-expires (LOCK_DURATION_MS) so an account is never permanently stuck
-// just because no admin happens to be available - see checkLoginLock. This matters most
-// for the sole-Super-Admin case: if the only Super Admin locks themselves out, there is no
-// one else in-app who can unlock them, so the lock must eventually clear on its own. (If
-// they've also forgotten their password, that's a separate problem - see resetPassword in
-// src/services/auth.js - and the last-resort fallback is the same one already documented
-// for provisioning the first Super Admin: fix it directly in the Firebase console.)
-const MAX_FAILED_ATTEMPTS = 5
-const LOCK_DURATION_MS = 30 * 60 * 1000 // 30 minutes
+// Staff custom claim for Firebase Storage. storage.rules can't read RTDB, so an Active
+// adminProfiles/{uid} is mirrored onto the Auth token as `staff: true` (+ `role`); any other
+// status (Pending, Inactive, removed) clears it. A token only picks up a change when
+// it refreshes (at most an hour) - src/services/firebase.js#ensureStorageAccess calls
+// refreshStaffClaims and force-refreshes before an upload, so a just-approved account
+// doesn't have to wait.
+function staffClaimsFor(profile) {
+  return profile && profile.status === 'Active' ? { staff: true, role: profile.role } : { staff: false }
+}
 
-// Deliberately generic on any "account doesn't exist" case (unknown email, no profile) so
-// these callables don't become an email-enumeration oracle for an unauthenticated caller.
-async function getProfileByEmail(db, email) {
-  let userRecord
-  try {
-    userRecord = await getAuth().getUserByEmail(email)
-  } catch {
-    return null
+async function applyStaffClaims(uid, profile) {
+  const want = staffClaimsFor(profile)
+  const user = await getAuth().getUser(uid)
+  const { staff, role, ...others } = user.customClaims || {}
+  if (staff === want.staff && role === want.role) return want
+  await getAuth().setCustomUserClaims(uid, { ...others, ...want })
+  return want
+}
+
+exports.syncStaffClaims = onValueWritten(
+  { ref: '/adminProfiles/{uid}', region: 'us-central1' },
+  async (event) => {
+    try {
+      await applyStaffClaims(event.params.uid, event.data.after.val())
+    } catch (err) {
+      if (err.code !== 'auth/user-not-found') logger.error(`syncStaffClaims ${event.params.uid} failed`, err)
+    }
   }
-  const snapshot = await db.ref(`adminProfiles/${userRecord.uid}`).get()
-  if (!snapshot.exists()) return null
-  return { uid: userRecord.uid, profile: snapshot.val() }
-}
+)
 
-async function autoUnlockIfExpired(db, uid, profile) {
-  if (profile.status !== 'Locked') return profile
-  if (typeof profile.lockExpiresAt === 'number' && Date.now() < profile.lockExpiresAt) return profile
-  const restoredStatus = profile.preLockStatus || 'Active'
-  await getAuth().updateUser(uid, { disabled: false })
-  await db.ref(`adminProfiles/${uid}`).update({
-    status: restoredStatus,
-    failedLoginAttempts: 0,
-    lockedAt: null,
-    lockExpiresAt: null,
-    preLockStatus: null,
-  })
-  return { ...profile, status: restoredStatus, failedLoginAttempts: 0 }
-}
-
-// Called before every sign-in attempt so a locked account never even reaches
-// signInWithEmailAndPassword, and so an expired lock clears itself on the next attempt.
-exports.checkLoginLock = onCall({ region: 'us-central1' }, async (request) => {
-  const email = (request.data?.email || '').trim()
-  if (!email) return { locked: false }
-
-  const db = getDatabase()
-  const found = await getProfileByEmail(db, email)
-  if (!found) return { locked: false }
-
-  const profile = await autoUnlockIfExpired(db, found.uid, found.profile)
-  if (profile.status !== 'Locked') return { locked: false }
-  return { locked: true, retryAt: profile.lockExpiresAt }
+exports.refreshStaffClaims = onCall({ region: 'us-central1' }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.')
+  const snapshot = await getDatabase().ref(`adminProfiles/${request.auth.uid}`).get()
+  const claims = await applyStaffClaims(request.auth.uid, snapshot.val())
+  return { staff: claims.staff }
 })
 
-// Called after a failed signInWithEmailAndPassword. Bumps the failed-attempt counter and
-// locks the account (disabling the Firebase Auth login) once it reaches MAX_FAILED_ATTEMPTS.
-exports.recordFailedLogin = onCall({ region: 'us-central1' }, async (request) => {
-  const email = (request.data?.email || '').trim()
-  if (!email) return { locked: false }
+// ---------------------------------------------------------------------------------------
+// Audit trail: every change to the records that matter is copied into auditLogs/{pushId}
+// with WHO made it, so after a compromised or misused account you can see exactly what it
+// changed and put it back. auditLogs is read-only for active Super Admins and not writable by
+// any client (database.rules.json) - not even a Super Admin can erase their tracks from the app.
+//
+// These use the 1st-gen (v1) database triggers on purpose: they report the signed-in user
+// who made the write (context.auth / context.authType); the 2nd-gen ones above don't.
+// authType 'ADMIN' = not an app user: the ESP32 (legacy database secret), a Cloud Function,
+// or someone editing in the Firebase console - logged as by: 'system'.
+//
+// Entry: { at, entity, entityId, action: create|update|delete, by, byName, byRole,
+//          changes: { field: { from?, to? } } } - a missing from/to means the field didn't exist.
+function diffFields(before, after) {
+  const changes = {}
+  const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})])
+  for (const key of keys) {
+    const from = before?.[key]
+    const to = after?.[key]
+    if (JSON.stringify(from) === JSON.stringify(to)) continue
+    changes[key] = { ...(from !== undefined ? { from } : {}), ...(to !== undefined ? { to } : {}) }
+  }
+  return changes
+}
 
-  const db = getDatabase()
-  const found = await getProfileByEmail(db, email)
-  if (!found) return { locked: false }
+// `skip(changes, action, isAppUser)` drops routine machine traffic so the log stays readable.
+function auditTrigger(refPattern, entity, skip = () => false) {
+  return functionsV1.region('us-central1').database.ref(refPattern).onWrite(async (change, context) => {
+    const before = change.before.val()
+    const after = change.after.val()
+    const action = before == null ? 'create' : after == null ? 'delete' : 'update'
+    const isAppUser = context.authType === 'USER' && !!context.auth?.uid
+    const isObject = (v) => v !== null && typeof v === 'object'
+    const changes = isObject(before) || isObject(after)
+      ? diffFields(isObject(before) ? before : {}, isObject(after) ? after : {})
+      : { value: { ...(before != null ? { from: before } : {}), ...(after != null ? { to: after } : {}) } }
+    if (Object.keys(changes).length === 0 || skip(changes, action, isAppUser)) return
 
-  const { uid } = found
-  const profile = await autoUnlockIfExpired(db, uid, found.profile)
-  if (profile.status === 'Locked') return { locked: true, retryAt: profile.lockExpiresAt }
-
-  const attempts = (profile.failedLoginAttempts || 0) + 1
-
-  if (attempts >= MAX_FAILED_ATTEMPTS) {
-    const lockExpiresAt = Date.now() + LOCK_DURATION_MS
-    await getAuth().updateUser(uid, { disabled: true })
-    await db.ref(`adminProfiles/${uid}`).update({
-      failedLoginAttempts: attempts,
-      status: 'Locked',
-      preLockStatus: profile.status,
-      lockedAt: Date.now(),
-      lockExpiresAt,
+    const db = getDatabase()
+    let byName = ''
+    let byRole = ''
+    if (isAppUser) {
+      const actor = (await db.ref(`adminProfiles/${context.auth.uid}`).get()).val() || {}
+      byName = actor.fullName || actor.displayName || context.auth.token?.email || ''
+      byRole = actor.role || ''
+    }
+    await db.ref('auditLogs').push({
+      at: Date.parse(context.timestamp) || Date.now(), // when the change happened, not when this ran
+      entity,
+      entityId: Object.values(context.params || {})[0] || entity,
+      action,
+      by: isAppUser ? context.auth.uid : 'system',
+      byName: isAppUser ? byName : 'Device / server / Firebase console',
+      byRole,
+      changes,
     })
-    logger.info(`adminProfiles/${uid}: locked after ${attempts} failed sign-in attempts`)
-    return { locked: true, retryAt: lockExpiresAt }
-  }
-
-  await db.ref(`adminProfiles/${uid}`).update({ failedLoginAttempts: attempts })
-  return { locked: false, attemptsRemaining: MAX_FAILED_ATTEMPTS - attempts }
-})
-
-// Called right after a successful sign-in to zero out the counter so occasional typos
-// don't accumulate toward a lock over separate sessions.
-exports.resetLoginAttempts = onCall({ region: 'us-central1' }, async (request) => {
-  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.')
-  const db = getDatabase()
-  await db.ref(`adminProfiles/${request.auth.uid}/failedLoginAttempts`).set(0)
-  return { ok: true }
-})
-
-// Admin/Super Admin action from Account Management's Locked Accounts panel. Authorization
-// is enforced here (not by database.rules.json, since the Admin SDK bypasses rules) by
-// re-reading the caller's own profile the same way the rules would have checked it.
-exports.unlockAccount = onCall({ region: 'us-central1' }, async (request) => {
-  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.')
-  const targetUid = request.data?.uid
-  if (!targetUid) throw new HttpsError('invalid-argument', 'Missing uid.')
-
-  const db = getDatabase()
-  const callerSnap = await db.ref(`adminProfiles/${request.auth.uid}`).get()
-  const caller = callerSnap.val()
-  if (!caller || caller.status !== 'Active' || !['Super Admin', 'Administrator'].includes(caller.role)) {
-    throw new HttpsError('permission-denied', 'Only an active Administrator or Super Admin can unlock an account.')
-  }
-
-  const targetSnap = await db.ref(`adminProfiles/${targetUid}`).get()
-  const target = targetSnap.val()
-  if (!target || target.status !== 'Locked') {
-    throw new HttpsError('failed-precondition', 'That account is not locked.')
-  }
-
-  await getAuth().updateUser(targetUid, { disabled: false })
-  await db.ref(`adminProfiles/${targetUid}`).update({
-    status: target.preLockStatus || 'Active',
-    failedLoginAttempts: 0,
-    lockedAt: null,
-    lockExpiresAt: null,
-    preLockStatus: null,
   })
-  logger.info(`adminProfiles/${targetUid}: unlocked by ${request.auth.uid}`)
-  return { ok: true }
-})
+}
+
+const onlyFields = (changes, fields) => Object.keys(changes).every((key) => fields.includes(key))
+
+exports.auditAdminProfiles = auditTrigger('/adminProfiles/{uid}', 'adminProfiles')
+exports.auditRfidUsers = auditTrigger('/rfidUsers/{id}', 'rfidUsers')
+exports.auditPayments = auditTrigger('/payments/{id}', 'payments')
+exports.auditExpectedGuests = auditTrigger('/expectedGuests/{id}', 'expectedGuests')
+// Who pressed Gate Control / Return Pass / auto-close (each command overwrites the last).
+exports.auditScannerCommands = auditTrigger('/devices/scanner/command', 'scannerCommand')
+// Scanner scans and camera photos are routine; staff-made entries and any edit/delete are not.
+exports.auditGateLogs = auditTrigger('/gateLogs/{id}', 'gateLogs', (changes, action, isAppUser) =>
+  (action === 'create' && !isAppUser) || (action === 'update' && onlyFields(changes, ['imageUrl'])))
+// The ESP32 rewrites gateStatus on every barrier move, and App.jsx's initializeFirebaseCollections
+// re-stamps createdAt on every admin login - neither is a settings change.
+exports.auditAppSettings = auditTrigger('/settings/app', 'settings', (changes) => onlyFields(changes, ['gateStatus', 'createdAt']))

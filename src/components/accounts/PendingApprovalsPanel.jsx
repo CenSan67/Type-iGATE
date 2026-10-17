@@ -20,6 +20,7 @@ export default function PendingApprovalsPanel(){
 
   const blockedReason = (p) => {
     if (!p.emailVerified) return 'Waiting for this person to verify their email'
+    if (p.requestedRole === 'Super Admin') return 'Super Admin accounts are set up in the Firebase console only - decline this request'
     if (!canApproveRole(role, p.requestedRole)) return `Only a Super Admin can approve ${p.requestedRole} requests`
     return ''
   }

@@ -2,11 +2,19 @@
 
 // Firebase Storage rules are a separate product from database.rules.json (Realtime
 // Database) - deploy this in Firebase Console -> Storage -> Rules, not the RTDB tab.
+//
+// Storage can't read the Realtime Database, so "an Active staff account" is carried as an
+// Auth custom claim (`staff: true`) set by functions/index.js#syncStaffClaims from
+// adminProfiles/{uid}/status. A Pending, declined, deactivated or removed account has no
+// such claim, so it can neither list/read nor upload snapshots. Uploads are create-only:
+// an existing photo can never be overwritten or deleted from the client (evidence).
+// The ESP32-CAM uploads through a signed URL, which bypasses these rules.
 service firebase.storage {
   match /b/{bucket}/o {
     match /vehicle-snapshots/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow read: if request.auth != null && request.auth.token.staff == true;
+      allow create: if request.auth != null
+        && request.auth.token.staff == true
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }

@@ -5,7 +5,7 @@ import { isValidEmail, isValidPhone, formatPhoneInput, isValidPassword } from '.
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
 import PasswordRules from '../shared/PasswordRules'
-import { ROLES, DEFAULT_SIGNUP_ROLE } from '../../constants/roles'
+import { ASSIGNABLE_ROLES, DEFAULT_SIGNUP_ROLE } from '../../constants/roles'
 import logo from '../../assets/bsu_logo-removebg-preview.png'
 
 const icons = {
@@ -40,7 +40,7 @@ export default function SignupForm(){
     if (!form.fullName.trim()) return 'Full name is required.'
     if (!form.email.trim() || !isValidEmail(form.email)) return 'Enter a valid email address.'
     if (!isValidPhone(form.phone)) return 'Enter a valid PH mobile number (e.g. 09XXXXXXXXX).'
-    if (!ROLES.includes(form.requestedRole)) return 'Choose the role you are applying for.'
+    if (!ASSIGNABLE_ROLES.includes(form.requestedRole)) return 'Choose the role you are applying for.'
     if (!isValidPassword(form.password)) return 'Password does not meet all the requirements below.'
     if (form.password !== form.confirmPassword) return 'Passwords do not match.'
     return null
@@ -90,7 +90,7 @@ export default function SignupForm(){
           </Field>
           <Field icon="badge">
             <select className="input-field" value={form.requestedRole} onChange={update('requestedRole')} aria-label="Role you are applying for">
-              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </Field>
           <p className="signup-role-hint">The role you pick is a request - you get access only after verifying your email and an admin approving it.</p>

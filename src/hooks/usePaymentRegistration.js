@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext'
-import { upsertRfidUser, recordPayment, getNextReceiptNo, assertOnline } from '../services/firebase'
+import { upsertRfidUser, getNextReceiptNo, assertOnline } from '../services/firebase'
 import { getVehicleFee, REGISTRATION_VALIDITY_MONTHS, PRIVACY_NOTICE_VERSION } from '../constants/fees'
 import { toLocalISODate } from '../utils/dateRange'
 
@@ -25,6 +25,9 @@ export default function usePaymentRegistration() {
     const validUntilDate = new Date(now)
     validUntilDate.setMonth(validUntilDate.getMonth() + REGISTRATION_VALIDITY_MONTHS)
 
+    const receiptNo = await getNextReceiptNo()
+
+    // One atomic write: the registration only exists together with its payment (rules).
     await upsertRfidUser({
       rfidId,
       name,
@@ -35,11 +38,7 @@ export default function usePaymentRegistration() {
       role: form.role,
       email: form.email?.trim() || '',
       phone: form.phone,
-    })
-
-    const receiptNo = await getNextReceiptNo()
-
-    await recordPayment({
+    }, { payment: {
       rfidId,
       name,
       department,
@@ -59,7 +58,7 @@ export default function usePaymentRegistration() {
       licenseExpiry: form.licenseExpiry,
       consentAt: now.getTime(),
       privacyNoticeVersion: PRIVACY_NOTICE_VERSION,
-    })
+    } })
 
     return {
       receiptNo,

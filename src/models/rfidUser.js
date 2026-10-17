@@ -36,6 +36,7 @@ export const ACCOUNT_STATUSES = ['Active', 'Inactive']
  *   its previous holder.
  * @property {string} [guestId] - Visitor-only: the expectedGuests/{id} this pass was issued
  *   to at VIP check-in, so an OUT scan can also mark that guest Departed.
+ * @property {string} [paymentId] - the payments/{id} of the latest paid registration/renewal.
  */
 
 /** @param {Partial<RfidUser>} data @returns {RfidUser} */
@@ -88,5 +89,8 @@ export function validateRfidUser(data) {
     purpose: (data.purpose || '').trim(),
     returnedAt: data.returnedAt ?? null,
     guestId: data.guestId || '',
+    // The payments/{id} that paid for this registration - database.rules.json requires it
+    // when a non-admin creates a non-visitor record (see upsertRfidUser).
+    ...(data.paymentId ? { paymentId: data.paymentId } : {}),
   }
 }

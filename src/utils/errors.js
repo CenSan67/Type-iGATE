@@ -16,7 +16,12 @@ const CODE_MESSAGES = {
   'auth/too-many-requests': 'Too many attempts. Please try again later.',
   'auth/network-request-failed': 'Network problem. Check your connection and try again.',
   'auth/email-already-in-use': 'An account with that email already exists.',
-  'auth/weak-password': `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+  'auth/weak-password': `Password must be at least ${MIN_PASSWORD_LENGTH} characters, with an uppercase letter, a lowercase letter, a number and a special character.`,
+  // Firebase's own password policy (console -> Authentication -> Settings -> Password policy).
+  'auth/password-does-not-meet-requirements': 'Password does not meet the requirements: at least 8 characters, with an uppercase letter, a lowercase letter, a number and a special character.',
+  'auth/missing-email': 'Enter your account email.',
+  'auth/expired-action-code': 'This link has expired. Request a new one.',
+  'auth/invalid-action-code': 'This link is invalid or has already been used. Request a new one.',
   'auth/requires-recent-login': 'Please log out and back in, then try again.',
   'PERMISSION_DENIED': "You don't have permission to do that.",
   'permission-denied': "You don't have permission to do that.",

@@ -12,6 +12,12 @@ export const getViewableRoles = (realRole) => {
   return idx === -1 ? [] : ROLES.slice(idx)
 }
 
+// Roles that can be requested at signup or assigned in Account Management. Super Admin is
+// never one of them: the system keeps a fixed set of two Super Admin accounts, created and
+// changed only in the Firebase console (database.rules.json refuses any client write that
+// makes, unmakes, deactivates or removes a Super Admin).
+export const ASSIGNABLE_ROLES = ['Administrator', 'Security Guard']
+
 // Interim role stored on a brand-new signup while it is still Pending. The role the user
 // actually asked for lives in `requestedRole` and only replaces this on admin approval.
 export const DEFAULT_SIGNUP_ROLE = 'Security Guard'
@@ -19,6 +25,7 @@ export const DEFAULT_SIGNUP_ROLE = 'Security Guard'
 // Who may approve which signup request (mirrored server-side in database.rules.json):
 // a Super Admin can approve any requested role; an Administrator only Security Guard requests.
 export const canApproveRole = (approverRole, requestedRole) => {
+  if (!ASSIGNABLE_ROLES.includes(requestedRole)) return false
   if (approverRole === 'Super Admin') return true
   if (approverRole === 'Administrator') return requestedRole === 'Security Guard'
   return false

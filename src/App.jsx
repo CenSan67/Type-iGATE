@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './components/auth/LoginForm'
 import SignupPage from './components/auth/SignupForm'
 import PendingApprovalPage from './components/auth/PendingApprovalPage'
+import AuthActionPage from './components/auth/AuthActionPage'
 import RequireAuth from './components/auth/RequireAuth'
 import RequireRole from './components/auth/RequireRole'
 import DashboardWrapper from './components/dashboard/DashboardWrapper'
@@ -42,6 +43,7 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/pending" element={<PendingApprovalPage />} />
+      <Route path="/auth/action" element={<AuthActionPage />} />
 
       <Route element={<RequireAuth />}>
         <Route path="/dashboard" element={<DashboardWrapper />} />

@@ -1,57 +1,40 @@
-import { createUserWithEmailAndPassword, deleteUser, EmailAuthProvider, reauthenticateWithCredential, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { httpsCallable } from 'firebase/functions'
-import { auth, functions, saveAdminProfile, deleteAdminProfile } from './firebase'
+import { applyActionCode, confirmPasswordReset, createUserWithEmailAndPassword, deleteUser, EmailAuthProvider, reauthenticateWithCredential, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, verifyPasswordResetCode } from 'firebase/auth'
+import { auth, saveAdminProfile, deleteAdminProfile } from './firebase'
 import { DEFAULT_SIGNUP_ROLE } from '../constants/roles'
 import { normalizePhone } from '../utils/validators'
 
-const checkLoginLockFn = httpsCallable(functions, 'checkLoginLock')
-const recordFailedLoginFn = httpsCallable(functions, 'recordFailedLogin')
-const resetLoginAttemptsFn = httpsCallable(functions, 'resetLoginAttempts')
-
-const WRONG_CREDENTIAL_CODES = ['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials', 'auth/user-not-found']
-
-// Thrown when a sign-in is blocked by the 5-failed-attempts lock (see functions/index.js).
-// Not a Firebase error, so it gets its own code - getErrorMessage/LoginForm special-case it
-// to show the actual unlock time rather than a generic string.
-function accountLockedError(retryAt) {
-  const err = new Error('Account temporarily locked')
-  err.code = 'app/account-locked'
-  err.retryAt = retryAt
-  return err
-}
-
+// Repeated wrong passwords are throttled by Firebase Auth itself (auth/too-many-requests,
+// enforced server-side for every caller) plus LoginForm's escalating cooldown. There is no
+// app-level account lock: anyone can type someone else's email, so a lock that strangers
+// can trigger only helps them keep real staff out.
 export async function signIn(email,password){
-  // Checked before every attempt, not just after 5 failures land, so a locked account
-  // never even reaches signInWithEmailAndPassword - and so an expired lock (see
-  // LOCK_DURATION_MS server-side) clears itself right here on the next attempt.
-  const precheck = await checkLoginLockFn({ email }).catch(() => ({ data: { locked: false } }))
-  if (precheck.data?.locked) throw accountLockedError(precheck.data.retryAt)
-
-  try {
-    const res = await signInWithEmailAndPassword(auth,email,password)
-    // Best-effort - a failure here shouldn't block a successful sign-in.
-    resetLoginAttemptsFn().catch(() => {})
-    return res.user
-  } catch (err) {
-    if (WRONG_CREDENTIAL_CODES.includes(err.code)) {
-      const record = await recordFailedLoginFn({ email }).catch(() => null)
-      if (record?.data?.locked) throw accountLockedError(record.data.retryAt)
-      if (typeof record?.data?.attemptsRemaining === 'number') {
-        err.attemptsRemaining = record.data.attemptsRemaining
-      }
-    }
-    throw err
-  }
+  const res = await signInWithEmailAndPassword(auth,email,password)
+  return res.user
 }
 
 // Self-service "forgot password" - sends Firebase's own reset-link email. Doesn't reveal
-// whether the address has an account (the caller shows the same message either way); if it
-// does, wrong-password lockout is irrelevant here since this doesn't touch failedLoginAttempts.
+// whether the address has an account (the caller shows the same message either way).
 export async function resetPassword(email){
-  await sendPasswordResetEmail(auth, email).catch((err) => {
+  await sendPasswordResetEmail(auth, email.trim()).catch((err) => {
     if (err.code === 'auth/user-not-found') return // swallow - avoid confirming the email doesn't exist
     throw err
   })
+}
+
+// The reset/verify link in Firebase's email opens /auth/action?mode=...&oobCode=... (the
+// action URL set in Firebase console -> Authentication -> Templates). The code itself, its
+// one-time use and its expiry are all Firebase's; these only hand it back to Firebase.
+// verifyPasswordResetCode returns the account's email without changing anything.
+export async function checkPasswordResetCode(code){
+  return verifyPasswordResetCode(auth, code)
+}
+
+export async function completePasswordReset(code, newPassword){
+  await confirmPasswordReset(auth, code, newPassword)
+}
+
+export async function applyEmailVerificationCode(code){
+  await applyActionCode(auth, code)
 }
 
 // Self-service signup. The account is created Pending: the stored role is the harmless

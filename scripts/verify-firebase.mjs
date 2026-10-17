@@ -25,8 +25,9 @@
 
 import { initializeApp } from 'firebase/app'
 import { getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { getDatabase, ref, set, get, remove, push } from 'firebase/database'
+import { getDatabase, ref, set, get, remove, push, update } from 'firebase/database'
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+import { getFunctions, httpsCallable } from 'firebase/functions'
 
 const ADMIN_ROLES = ['Super Admin', 'Administrator']
 
@@ -44,6 +45,7 @@ const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 const db = getDatabase(app)
 const storage = getStorage(app)
+const functions = getFunctions(app, 'us-central1')
 const testBytes = () => new TextEncoder().encode('not-real-image-bytes')
 
 const args = {}
@@ -121,9 +123,20 @@ async function main() {
       let gateLogKey = null
       await expectAllowed('Create a NEW gateLogs entry (any authenticated role)', async () => {
         const newRef = push(ref(db, 'gateLogs'))
-        await set(newRef, { cardId: 'TEST-CARD', cardHex: 'DEADBEEF', direction: 'IN', source: 'verify-script', timestamp: Date.now() })
+        await set(newRef, { cardId: 'TEST-CARD', cardHex: 'DEADBEEF', direction: 'IN', source: 'simulated', timestamp: Date.now() })
         gateLogKey = newRef.key
         return gateLogKey
+      })
+      // Only the ESP32 (legacy secret, bypasses rules) may log hardware sources or backdate.
+      await expectAllowedIfAdmin(isAdmin, 'Create a gateLogs entry posing as the scanner (source esp32-live)', async () => {
+        const newRef = push(ref(db, 'gateLogs'))
+        await set(newRef, { cardId: 'TEST-CARD', cardHex: 'DEADBEEF', direction: 'IN', source: 'esp32-live', timestamp: Date.now() })
+        await remove(newRef).catch(() => {})
+      })
+      await expectAllowedIfAdmin(isAdmin, 'Create a backdated gateLogs entry (1 day old)', async () => {
+        const newRef = push(ref(db, 'gateLogs'))
+        await set(newRef, { cardId: 'TEST-CARD', cardHex: 'DEADBEEF', direction: 'IN', source: 'simulated', timestamp: Date.now() - 86400000 })
+        await remove(newRef).catch(() => {})
       })
 
       if (gateLogKey) {
@@ -143,10 +156,21 @@ async function main() {
 
       let rfidKey = null
       const originalRfidId = `TEST-${Date.now()}`
-      await expectAllowed('Create a NEW rfidUser (any authenticated role)', async () => {
+      const seedUser = { name: 'Test Seed User', rfidId: originalRfidId, plateNumber: 'TEST-0000', vehicleType: 'Car', department: 'BSIT', role: 'Student', status: 'Active', email: '', phone: '', createdAt: Date.now() }
+      // A non-visitor registration needs its payment in the same atomic write (Payment page).
+      await expectAllowedIfAdmin(isAdmin, 'Create a NEW non-visitor rfidUser WITHOUT a payment', async () => {
         const newRef = push(ref(db, 'rfidUsers'))
-        await set(newRef, { name: 'Test Seed User', rfidId: originalRfidId, plateNumber: 'TEST-0000', vehicleType: 'Car', department: 'BSIT', role: 'Student', status: 'Active', email: '', phone: '', createdAt: Date.now() })
-        rfidKey = newRef.key
+        await set(newRef, { ...seedUser, rfidId: `${originalRfidId}-NOPAY` })
+        await remove(newRef).catch(() => {})
+      })
+      await expectAllowed('Create a NEW rfidUser together with its payment (any authenticated role)', async () => {
+        const newKey = push(ref(db, 'rfidUsers')).key
+        const paymentId = push(ref(db, 'payments')).key
+        await update(ref(db), {
+          [`rfidUsers/${newKey}`]: { ...seedUser, paymentId },
+          [`payments/${paymentId}`]: { rfidId: originalRfidId, amount: 100, amountTendered: 100, vehicleType: 'Car', name: 'verify-script', status: 'Paid', receivedBy: uid, timestamp: Date.now() },
+        })
+        rfidKey = newKey
         return rfidKey
       })
 
@@ -154,6 +178,11 @@ async function main() {
         await expectAllowed('Any authenticated role can update a non-identity field (department) on an EXISTING rfidUser', () =>
           set(ref(db, `rfidUsers/${rfidKey}/department`), 'BSCS')
         )
+        // Turning a record into a Visitor would let a guard then "return" (deactivate) it.
+        await expectAllowedIfAdmin(isAdmin, 'Change an EXISTING Student rfidUser to role Visitor', async () => {
+          await set(ref(db, `rfidUsers/${rfidKey}/role`), 'Visitor')
+          await set(ref(db, `rfidUsers/${rfidKey}/role`), 'Student')
+        })
         // Phase 9: reassigning an EXISTING rfidUser's rfidId (which physical card it's
         // bound to) is now admin-only - see database.rules.json.
         await expectAllowedIfAdmin(isAdmin, 'Reassign rfidId on an EXISTING rfidUser', () =>
@@ -173,23 +202,23 @@ async function main() {
         set(ref(db, `adminProfiles/${uid}/role`), 'Staff')
       )
 
-      // Phase 9: settings/app (appName/campus/status/createdAt) is now admin-only,
-      // but gateStatus is deliberately carved out - Security Guards must retain the
-      // ability to trigger the manual barrier-gate override from the Dashboard
-      // (Phase 6, existing/working functionality this phase must not break).
+      // settings/app (appName/campus/status/createdAt) is admin-only. gateStatus is written
+      // only by the ESP32 (legacy secret) - Gate Control goes through devices/scanner/command.
       await expectAllowedIfAdmin(isAdmin, 'Write settings/app/campus (general app settings)', () =>
         set(ref(db, 'settings/app/campus'), 'Bustos Campus')
       )
-      await expectAllowed('Write settings/app/gateStatus (any authenticated role - Phase 6 guard override)', () =>
-        set(ref(db, 'settings/app/gateStatus'), { state: 'CLOSED', updatedAt: Date.now(), updatedBy: uid, updatedByName: email })
+      await expectDenied('Write settings/app/gateStatus/entrance (scanner-only)', () =>
+        set(ref(db, 'settings/app/gateStatus/entrance'), { state: 'CLOSED', updatedAt: Date.now() })
       )
 
-      // Phase 9: payments are append-only for non-admins - create is fine, modifying/
-      // deleting an EXISTING payment record is admin-only.
+      // Payments are append-only for non-admins, and a new one must charge the fee table.
+      await expectDenied('Create a payment with an amount that is not the vehicle fee', () =>
+        set(push(ref(db, 'payments')), { rfidId: originalRfidId, amount: 1, vehicleType: 'Car', name: 'verify-script', status: 'Paid', receivedBy: uid, timestamp: Date.now() })
+      )
       let paymentKey = null
       await expectAllowed('Create a NEW payment record (any authenticated role)', async () => {
         const newRef = push(ref(db, 'payments'))
-        await set(newRef, { rfidId: originalRfidId, amount: 1, name: 'verify-script', status: 'Paid', timestamp: Date.now() })
+        await set(newRef, { rfidId: originalRfidId, amount: 100, vehicleType: 'Car', name: 'verify-script', status: 'Paid', receivedBy: uid, timestamp: Date.now() })
         paymentKey = newRef.key
         return paymentKey
       })
@@ -198,13 +227,19 @@ async function main() {
         await expectAllowedIfAdmin(isAdmin, 'Delete an EXISTING payment record', () => remove(ref(db, `payments/${paymentKey}`)))
       }
 
+      // Storage needs the `staff` claim (functions/index.js#syncStaffClaims) - fetch it first.
+      await httpsCallable(functions, 'refreshStaffClaims')().catch(() => {})
+      await cred.user.getIdToken(true)
       const imgPath = `vehicle-snapshots/_verify/${Date.now()}.png`
-      await expectAllowed('Authenticated upload of a valid image to Storage', async () => {
+      await expectAllowed('Active staff upload of a valid image to Storage', async () => {
         await uploadBytes(storageRef(storage, imgPath), testBytes(), { contentType: 'image/png' })
         const url = await getDownloadURL(storageRef(storage, imgPath))
         return url.slice(0, 60) + '...'
       })
-      await deleteObject(storageRef(storage, imgPath)).catch(() => {})
+      await expectDenied('Overwrite an EXISTING Storage snapshot', () =>
+        uploadBytes(storageRef(storage, imgPath), testBytes(), { contentType: 'image/png' })
+      )
+      await expectDenied('Delete an EXISTING Storage snapshot', () => deleteObject(storageRef(storage, imgPath)))
 
       await expectDenied('Storage rule rejects a non-image content type', () =>
         uploadBytes(storageRef(storage, `vehicle-snapshots/_verify/${Date.now()}.txt`), new TextEncoder().encode('hi'), { contentType: 'text/plain' })

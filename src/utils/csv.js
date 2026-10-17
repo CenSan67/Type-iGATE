@@ -1,5 +1,8 @@
 function escapeCsvCell(value) {
-  const str = value === null || value === undefined ? '' : String(value)
+  let str = value === null || value === undefined ? '' : String(value)
+  // A text cell starting with = + - @ (or tab/CR) runs as a formula when the CSV is opened in
+  // Excel - a name like =HYPERLINK(...) could do that. A leading ' makes it plain text.
+  if (typeof value === 'string' && /^[=+\-@\t\r]/.test(str)) str = `'${str}`
   return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
 }
 

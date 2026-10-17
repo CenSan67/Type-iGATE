@@ -4,9 +4,9 @@ import { listenToRfidUsers, listenToPayments, deleteRfidUser, setRfidUserStatus,
 import EditRfidUserModal from '../modals/EditRfidUserModal'
 import ConfirmModal from '../modals/ConfirmModal'
 import { useAuth } from '../../context/AuthContext'
-import { ROLES } from '../../constants/roles'
+import { ASSIGNABLE_ROLES } from '../../constants/roles'
+import AuditLogPanel from './AuditLogPanel'
 import PendingApprovalsPanel from './PendingApprovalsPanel'
-import LockedAccountsPanel from './LockedAccountsPanel'
 import VipGuestsPanel from './VipGuestsPanel'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
@@ -72,6 +72,15 @@ export default function AccountManagementPage(){
     const unsub = listenToPayments(setPayments)
     return () => unsub && unsub()
   }, [])
+
+  // Record id -> display name, so the Audit Log shows people instead of database keys.
+  const auditNames = useMemo(() => {
+    const map = {}
+    users.forEach((u) => { map[u.id] = u.name })
+    payments.forEach((p) => { map[p.id] = [p.receiptNo, p.name].filter(Boolean).join(' · ') })
+    staffProfiles.forEach((p) => { map[p.id] = p.fullName || p.displayName || p.email })
+    return map
+  }, [users, payments, staffProfiles])
 
   useEffect(() => {
     if (!isSuperAdmin) return
@@ -376,8 +385,6 @@ export default function AccountManagementPage(){
 
         <PendingApprovalsPanel />
 
-        <LockedAccountsPanel />
-
         <VipGuestsPanel />
 
         {isSuperAdmin && (
@@ -407,26 +414,31 @@ export default function AccountManagementPage(){
                     <td>{profile.email || '—'}</td>
                     <td><span className="tag-pill">{profile.role}</span></td>
                     <td>
-                      <span className={`status-badge ${profile.status === 'Active' ? 'badge-positive' : profile.status === 'Locked' ? 'badge-negative' : 'badge-neutral'}`}>{profile.status || 'Active'}</span>
+                      <span className={`status-badge ${profile.status === 'Active' ? 'badge-positive' : 'badge-neutral'}`}>{profile.status || 'Active'}</span>
                     </td>
                     <td>
-                      <select
-                        value={profile.role}
-                        disabled={profile.id === user?.uid}
-                        title={profile.id === user?.uid ? "Use My Profile to view your own role - it can't be changed from here to avoid locking yourself out" : undefined}
-                        onChange={(e) => {
-                          const newRole = e.target.value
-                          if (newRole === profile.role) return
-                          setPendingRoleChange({ uid: profile.id, profile, newRole })
-                        }}
-                      >
-                        {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-                      </select>
+                      {profile.role === 'Super Admin' ? (
+                        <span className="form-hint">Fixed - managed in the Firebase console</span>
+                      ) : (
+                        <select
+                          value={profile.role}
+                          disabled={profile.id === user?.uid}
+                          title={profile.id === user?.uid ? "Use My Profile to view your own role - it can't be changed from here to avoid locking yourself out" : undefined}
+                          onChange={(e) => {
+                            const newRole = e.target.value
+                            if (newRole === profile.role) return
+                            setPendingRoleChange({ uid: profile.id, profile, newRole })
+                          }}
+                        >
+                          {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                      )}
                     </td>
                     <td>
-                      {profile.status === 'Locked' ? (
-                        <span className="form-hint">Use the Locked Accounts panel above to unlock</span>
-                      ) : profile.status === 'Inactive' ? (
+                      {/* 'Locked' only exists on records left over from the removed lockout feature. */}
+                      {profile.role === 'Super Admin' ? (
+                        <span className="form-hint">—</span>
+                      ) : profile.status === 'Inactive' || profile.status === 'Locked' ? (
                         <div className="pending-actions-cell">
                           <button type="button" className="btn-primary" onClick={() => setPendingStatusChange({ profile, nextStatus: 'Active' })}>Reactivate</button>
                           <button type="button" className="btn-secondary" disabled={profile.id === user?.uid} onClick={() => setPendingRemoval(profile)}>Remove</button>
@@ -449,6 +461,8 @@ export default function AccountManagementPage(){
             </table>
           </div>
         )}
+
+        {isSuperAdmin && <AuditLogPanel names={auditNames} />}
       </div>
 
       {pendingRoleChange && (

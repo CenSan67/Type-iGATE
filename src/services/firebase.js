@@ -152,7 +152,19 @@ export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType,
 // Used by the Payment flow: a successful payment registers the card if it's new,
 // or refreshes its details if it's a renewal — unlike registerRfidUser, it never
 // throws on an existing RFID since renewals are expected to already be registered.
-export async function upsertRfidUser({ rfidId, name, department, plateNumber, vehicleType, vehicleColor, role, email, phone }) {
+// With `payment`, the record and its payments/{id} entry are written in ONE atomic update,
+// and the record carries that paymentId: database.rules.json only lets a non-admin create a
+// non-visitor record together with a brand-new payment for the same card, received by them.
+export async function upsertRfidUser({ rfidId, name, department, plateNumber, vehicleType, vehicleColor, role, email, phone }, { payment } = {}) {
+  const paymentId = payment ? push(ref(rtdb, 'payments')).key : null
+  const save = async (id, record) => {
+    const value = validateRfidUser({ ...record, ...(paymentId ? { paymentId } : {}) })
+    if (!paymentId) return set(ref(rtdb, `rfidUsers/${id}`), value)
+    return update(ref(rtdb), {
+      [`rfidUsers/${id}`]: value,
+      [`payments/${paymentId}`]: buildPaymentRecord(payment),
+    })
+  }
   const usersRef = ref(rtdb, 'rfidUsers')
   const snapshot = await get(usersRef)
   const existing = snapshot.exists() ? Object.entries(snapshot.val() || {}).map(([id, value]) => ({ id, ...value })) : []
@@ -167,7 +179,7 @@ export async function upsertRfidUser({ rfidId, name, department, plateNumber, ve
     const { id, ...value } = match
     const finalRole = role || value.role
     const staysVisitor = finalRole === 'Visitor'
-    await set(ref(rtdb, `rfidUsers/${id}`), validateRfidUser({
+    await save(id, {
       ...value,
       name: name || value.name,
       department: department || value.department,
@@ -189,12 +201,12 @@ export async function upsertRfidUser({ rfidId, name, department, plateNumber, ve
       purpose: staysVisitor ? value.purpose : '',
       guestId: staysVisitor ? value.guestId : '',
       returnedAt: null, // Active again
-    }))
+    })
     return id
   }
 
   const newUserRef = push(usersRef)
-  await set(newUserRef, validateRfidUser({ name, rfidId, plateNumber, vehicleType, vehicleColor, department, role, email, phone, createdAt: Date.now() }))
+  await save(newUserRef.key, { name, rfidId, plateNumber, vehicleType, vehicleColor, department, role, email, phone, createdAt: Date.now() })
 
   return newUserRef.key
 }
@@ -271,6 +283,18 @@ export async function sendScannerCommand(action, { cardId = '', seconds, actor }
 // Master card taps (sketch_scanner.ino#handleMasterCard): { action: 'OPEN_BOTH'|'CLOSE_BOTH',
 // cardId, timestamp, source, timeApprox? }, newest first. Written only by the scanner (rules:
 // read-only for staff); a tap made offline arrives once the scanner is back online.
+// Audit trail (functions/index.js#auditTrigger): newest first. Rules: active Super Admins only.
+export function listenToAuditLogs(callback, count = 500) {
+  return onValue(
+    query(ref(rtdb, 'auditLogs'), orderByChild('at'), limitToLast(count)),
+    (snapshot) => {
+      const rows = Object.entries(snapshot.val() || {}).map(([id, v]) => ({ id, ...v }))
+      callback(rows.sort((a, b) => (b.at || 0) - (a.at || 0)))
+    },
+    () => callback([]),
+  )
+}
+
 export function listenToOverrideLogs(callback, count = 5) {
   return onValue(query(ref(rtdb, 'overrideLogs'), orderByChild('timestamp'), limitToLast(count)), (snapshot) => {
     const rows = Object.entries(snapshot.val() || {}).map(([id, v]) => ({ id, ...v }))
@@ -317,6 +341,21 @@ export async function returnTemporaryPass(pass, { source = 'visitor-return', act
 // eventually upload directly to this same `vehicle-snapshots/{rfidUserId}/...` path
 // and PATCH the resulting URL onto the matching gateLogs entry - this function is
 // the placeholder for that, driven by the web mock selector/uploader in the meantime.
+// storage.rules require the `staff` custom claim (functions/index.js#syncStaffClaims). A token
+// issued before the account was approved, or before claims existed, doesn't carry it yet -
+// ask the server to set it from adminProfiles and fetch a fresh token.
+const refreshStaffClaimsFn = httpsCallable(functions, 'refreshStaffClaims')
+
+async function ensureStorageAccess() {
+  const user = auth.currentUser
+  if (!user) throw new Error('Sign in first.')
+  const { claims } = await user.getIdTokenResult()
+  if (claims.staff === true) return
+  const result = await refreshStaffClaimsFn()
+  if (!result.data?.staff) throw new Error('Your account is not active - uploads are disabled.')
+  await user.getIdToken(true)
+}
+
 export async function uploadVehicleSnapshot(file, { gateLogId, rfidUserId } = {}) {
   if (!file) throw new Error('No image file provided.')
   if (!file.type || !file.type.startsWith('image/')) {
@@ -326,6 +365,7 @@ export async function uploadVehicleSnapshot(file, { gateLogId, rfidUserId } = {}
     throw new Error('Image is too large (max 5MB).')
   }
 
+  await ensureStorageAccess()
   const path = `vehicle-snapshots/${rfidUserId || 'unassigned'}/${Date.now()}-${file.name}`
   const fileRef = storageRef(storage, path)
   await uploadBytes(fileRef, file, { contentType: file.type })
@@ -395,9 +435,14 @@ export async function getNextReceiptNo() {
   return `OR-${String(result.snapshot.val()).padStart(6, '0')}`
 }
 
-export async function recordPayment({ rfidId, name, department, plateNumber, paymentType, amount, status = 'Paid', date, time, validUntil, vehicleType, amountTendered, receiptNo, receivedBy, receivedByName, docsVerified, licenseExpiry, consentAt, privacyNoticeVersion }) {
+export async function recordPayment(payment) {
   const paymentRef = push(ref(rtdb, 'payments'))
-  await set(paymentRef, validatePayment({
+  await set(paymentRef, buildPaymentRecord(payment))
+  return paymentRef.key
+}
+
+function buildPaymentRecord({ rfidId, name, department, plateNumber, paymentType, amount, status = 'Paid', date, time, validUntil, vehicleType, amountTendered, receiptNo, receivedBy, receivedByName, docsVerified, licenseExpiry, consentAt, privacyNoticeVersion }) {
+  return validatePayment({
     rfidId,
     name,
     department,
@@ -418,9 +463,7 @@ export async function recordPayment({ rfidId, name, department, plateNumber, pay
     consentAt,
     privacyNoticeVersion,
     timestamp: Date.now()
-  }))
-
-  return paymentRef.key
+  })
 }
 
 export function listenToPayments(callback) {
@@ -566,33 +609,6 @@ export async function deleteAdminProfile(uid) {
 
 export async function rejectAdminProfile(uid) {
   await update(ref(rtdb, `adminProfiles/${uid}`), { status: 'Inactive' })
-}
-
-// ---- Account lockout (5 failed sign-ins) -----------------------------------------------
-// The counter/lock itself lives server-side in functions/index.js (Admin SDK - RTDB rules
-// require auth != null on every path, so an unauthenticated client can't write it itself).
-// These are just the client's read of the locked slice and its call into the unlock action.
-
-// Admin-only read, same query-scoped pattern as listenToPendingProfiles - Administrators
-// may read only the Locked slice of adminProfiles (rules allow that exact query), Super
-// Admins may read everything.
-export function listenToLockedProfiles(callback) {
-  const lockedQuery = query(ref(rtdb, 'adminProfiles'), orderByChild('status'), equalTo('Locked'))
-  return onValue(
-    lockedQuery,
-    (snapshot) => {
-      callback(snapshot.exists() ? Object.entries(snapshot.val()).map(([id, value]) => ({ id, ...value })) : [])
-    },
-    () => callback([]),
-  )
-}
-
-// Re-enables the Firebase Auth login and restores the profile's prior status. Authorization
-// (caller must be an active Administrator/Super Admin) is enforced inside the Function
-// itself, since its Admin SDK writes bypass database.rules.json entirely.
-export async function unlockAdminAccount(uid) {
-  const unlockAccount = httpsCallable(functions, 'unlockAccount')
-  await unlockAccount({ uid })
 }
 
 // Called by the signed-in user themself once Firebase Auth reports their email verified.

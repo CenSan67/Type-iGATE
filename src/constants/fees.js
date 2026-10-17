@@ -7,6 +7,8 @@ export const REGISTRATION_VALIDITY_MONTHS = 5
 
 // Same fee for a new registration and a renewal. Large EVs (e.g. a Tesla) are registered as
 // 'Car' and pay the four-wheel fee.
+// database.rules.json (payments/$paymentId .validate) refuses a new payment whose amount
+// doesn't match this table - change both together and run `firebase deploy --only database`.
 export const VEHICLE_FEES = {
   Motorcycle: 50,
   Tricycle: 75,
