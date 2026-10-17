@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth, listenToAdminProfile } from '../services/firebase'
 import { getViewableRoles } from '../constants/roles'
@@ -30,6 +30,12 @@ function writeCachedProfile(uid, value) {
   try { localStorage.setItem(PROFILE_CACHE_KEY(uid), JSON.stringify(value ?? null)) } catch { /* storage unavailable - offline reload just waits for the live profile */ }
 }
 
+// On sign-out the cached copy goes too, so a shared guardhouse PC doesn't keep the last
+// person's name/role/phone after they log out.
+function clearCachedProfile(uid) {
+  try { localStorage.removeItem(PROFILE_CACHE_KEY(uid)) } catch { /* storage unavailable - nothing was cached */ }
+}
+
 export function AuthProvider({children}){
   const [user,setUser] = useState(null)
   const [realRole,setRealRole] = useState(null)
@@ -38,8 +44,12 @@ export function AuthProvider({children}){
   const [authLoading,setAuthLoading] = useState(true)
   const [roleLoading,setRoleLoading] = useState(true)
 
+  const signedInUid = useRef(null)
+
   useEffect(()=>{
     const unsub = onAuthStateChanged(auth,u=>{
+      if (!u && signedInUid.current) clearCachedProfile(signedInUid.current)
+      signedInUid.current = u?.uid || null
       setUser(u)
       setAuthLoading(false)
       if (!u) {
@@ -82,8 +92,12 @@ export function AuthProvider({children}){
 
   const availableRoles = getViewableRoles(realRole)
 
+  // Changes only what the UI shows ("view as"); it can only go DOWN from the real role, and the
+  // database rules keep enforcing realRole either way. Throws if the switch isn't allowed, so the
+  // caller (hooks/useRoleSwitch.js) can tell the user instead of silently doing nothing.
   const switchRole = (nextRole) => {
-    if (!user?.uid || !availableRoles.includes(nextRole)) return
+    if (!user?.uid) throw new Error('Your session has ended. Please sign in again.')
+    if (!availableRoles.includes(nextRole)) throw new Error(`Your account can't switch to ${nextRole}.`)
     setViewRole(nextRole)
     writeStoredViewRole(user.uid, nextRole)
   }

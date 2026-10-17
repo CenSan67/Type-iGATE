@@ -1,5 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
+import LogoutConfirmModal from '../modals/LogoutConfirmModal'
+import LogoutIcon from '../shared/LogoutIcon'
 import dashboardIcon from '../../assets/Rectangle 10.png'
 import accountIcon from '../../assets/Rectangle 12.png'
 import searchIcon from '../../assets/Rectangle 13.png'
@@ -24,11 +27,16 @@ const navItems = [
   { label: 'System Settings', icon: settingsIcon, path: '/settings' },
 ]
 
-export default function Sidebar({ open, onToggle, onOpen }){
+// Same breakpoint as index.css's drawer layout: there, picking a page should also close the
+// drawer (on desktop the rail just stays as it was).
+const isDrawerLayout = () => window.matchMedia('(max-width: 768px)').matches
+
+export default function Sidebar({ open, onToggle, onOpen, onClose }){
   const navigate = useNavigate()
   const location = useLocation()
   const { role } = useAuth()
   const visibleItems = navItems.filter((item) => !item.roles || item.roles.includes(role))
+  const [showLogout, setShowLogout] = useState(false)
 
   return (
     <aside className={`sidebar ${open ? 'open' : 'collapsed'}`} onClick={() => !open && onOpen()}>
@@ -57,7 +65,8 @@ export default function Sidebar({ open, onToggle, onOpen }){
                 onToggle()
                 return
               }
-              if (!open) onOpen()
+              if (isDrawerLayout()) onClose()
+              else if (!open) onOpen()
               if (item.path) navigate(item.path)
             }}
           >
@@ -69,6 +78,28 @@ export default function Sidebar({ open, onToggle, onOpen }){
           )
         })}
       </div>
+
+      {/* Anchored to the bottom of the rail/drawer. Same confirmation + sign-out path as the
+          top-bar menu and System Settings (LogoutConfirmModal -> services/auth.js#logOut). */}
+      <div className="sidebar-footer">
+        <button
+          type="button"
+          title="Logout"
+          className="sidebar-item sidebar-logout"
+          onClick={(e) => {
+            e.stopPropagation() // don't let the collapsed rail's click-to-open fire
+            if (isDrawerLayout()) onClose()
+            setShowLogout(true)
+          }}
+        >
+          <span className="sidebar-icon"><LogoutIcon size={22} /></span>
+          <span className="sidebar-label">Logout</span>
+        </button>
+      </div>
+
+      {/* Rendered at <body>: on phones the drawer slides off-screen (a CSS transform) when it
+          closes, and a dialog inside it would slide away with it. */}
+      {showLogout && createPortal(<LogoutConfirmModal onClose={() => setShowLogout(false)} />, document.body)}
     </aside>
   )
 }

@@ -5,6 +5,9 @@ import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 import { useAuth } from '../../context/AuthContext'
 import { ADMIN_ROLES } from '../../constants/roles'
 import LogoutConfirmModal from '../modals/LogoutConfirmModal'
+import MobileMenuButton from './MobileMenuButton'
+import RoleSwitchOverlay from '../shared/RoleSwitchOverlay'
+import useRoleSwitch from '../../hooks/useRoleSwitch'
 
 const BellIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -37,8 +40,9 @@ export default function TopHeader(){
   const navigate = useNavigate()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showRoleMenu, setShowRoleMenu] = useState(false)
-  const { role, availableRoles, switchRole } = useAuth()
+  const { role, availableRoles } = useAuth()
   const canSwitchRole = availableRoles.length > 1
+  const { switchingTo, requestSwitch } = useRoleSwitch()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const entries = useEnrichedGateLogs()
   const recent = entries.slice(0, RECENT_COUNT)
@@ -46,6 +50,7 @@ export default function TopHeader(){
   return (
     <header className="app-topbar">
       <div className="app-topbar-branding">
+        <MobileMenuButton />
         <img src={bsuLogo} alt="Bulacan State University Seal" className="app-topbar-logo" />
         <div>
           <h1>Bulacan State University</h1>
@@ -124,7 +129,8 @@ export default function TopHeader(){
                           <button
                             type="button"
                             className={`role-option ${r === role ? 'active' : ''}`}
-                            onClick={() => { switchRole(r); setShowRoleMenu(false) }}
+                            disabled={!!switchingTo}
+                            onClick={() => { setShowRoleMenu(false); requestSwitch(r) }}
                           >
                             {r}
                             {r === role && <span className="role-option-check">✓</span>}
@@ -159,6 +165,7 @@ export default function TopHeader(){
       </div>
 
       {showLogoutConfirm && <LogoutConfirmModal onClose={() => setShowLogoutConfirm(false)} />}
+      {switchingTo && <RoleSwitchOverlay role={switchingTo} />}
     </header>
   )
 }

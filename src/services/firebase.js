@@ -1,9 +1,9 @@
 // Firebase v9 modular SDK setup
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getDatabase, ref, set, update, push, get, remove, query, orderByChild, equalTo, limitToLast, onValue, onChildAdded, runTransaction } from 'firebase/database'
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { getFunctions, httpsCallable } from 'firebase/functions'
+import { getAuth, connectAuthEmulator } from 'firebase/auth'
+import { getDatabase, connectDatabaseEmulator, ref, set, update, push, get, remove, query, orderByChild, equalTo, limitToLast, onValue, onChildAdded, runTransaction } from 'firebase/database'
+import { getStorage, connectStorageEmulator, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { getFunctions, connectFunctionsEmulator, httpsCallable } from 'firebase/functions'
 import { validateGateLog } from '../models/gateLog'
 import { validateRfidUser } from '../models/rfidUser'
 import { validatePayment } from '../models/payment'
@@ -34,6 +34,16 @@ export const rtdb = getDatabase(app)
 export const storage = getStorage(app)
 // Region must match functions/index.js's callables (see the region note there).
 export const functions = getFunctions(app, 'us-central1')
+
+// Local testing only: with VITE_USE_EMULATORS=true (e.g. `VITE_USE_EMULATORS=true npm run dev`
+// while `firebase emulators:start` runs) the app talks to the Firebase emulators instead of the
+// live project - fake data, fake accounts. Never set it for a production build.
+if (import.meta.env.VITE_USE_EMULATORS === 'true') {
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
+  connectDatabaseEmulator(rtdb, '127.0.0.1', 9000)
+  connectStorageEmulator(storage, '127.0.0.1', 9199)
+  connectFunctionsEmulator(functions, '127.0.0.1', 5001)
+}
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 

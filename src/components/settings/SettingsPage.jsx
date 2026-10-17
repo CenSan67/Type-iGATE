@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import GateStatusCard from '../dashboard/GateStatusCard'
 import ChangePasswordModal from '../modals/ChangePasswordModal'
 import LogoutConfirmModal from '../modals/LogoutConfirmModal'
+import LogoutIcon from '../shared/LogoutIcon'
 import { useAuth } from '../../context/AuthContext'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
@@ -36,9 +37,6 @@ const ProfileIcon = () => (
 )
 const KeyIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="15" r="4" stroke="currentColor" strokeWidth="1.8" /><path d="M11 12l9-9M16 5l3 3M13 8l2 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-)
-const LogoutIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
 )
 
 export default function SettingsPage(){

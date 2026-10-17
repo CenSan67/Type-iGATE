@@ -13,7 +13,9 @@ export default function useAuthAction(mode, code) {
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [formError, setFormError] = useState('')
-  const handledCode = useRef(null) // a verify code works once - React's dev double-effect must not spend it twice
+  // A verify code works once - React's dev double-effect must not spend it twice. Starts as
+  // undefined, not null: a link with no oobCode gives code === null, which must still run once.
+  const handledCode = useRef(undefined)
 
   useEffect(() => {
     if (handledCode.current === code) return

@@ -520,6 +520,18 @@ html, body, #root {
   object-fit: contain;
 }
 
+/* Logout pinned to the bottom (margin-top: auto in the column-flex sidebar). The sidebar
+   scrolls vertically if a short window can't fit every item plus Logout. */
+.sidebar { overflow-y: auto; overflow-x: hidden; }
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+.sidebar-logout .sidebar-icon { color: #fff; }
+.sidebar-logout:hover .sidebar-icon,
+.sidebar-logout:focus-visible .sidebar-icon { color: var(--maroon); }
+
 .sidebar-label {
   margin-left: 14px;
   font-size: 15px;
@@ -633,7 +645,7 @@ html, body, #root {
 
 .overview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -1705,12 +1717,6 @@ html, body, #root {
 
 .reports-filter-col { display: grid; gap: 16px; }
 
-@media (max-width: 1100px) {
-  .reports-grid { grid-template-columns: 1fr; }
-  .payment-grid { grid-template-columns: 1fr; }
-  .search-results-grid { grid-template-columns: 1fr; }
-}
-
 /* ============================================================
    Payment page
    ============================================================ */
@@ -1733,7 +1739,7 @@ html, body, #root {
 
 .payment-summary-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: 16px;
   margin-bottom: 18px;
 }
@@ -1803,7 +1809,7 @@ html, body, #root {
    ============================================================ */
 .accounts-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -2189,7 +2195,7 @@ html, body, #root {
 
 .gate-buttons-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 20px;
 }
 
@@ -2256,7 +2262,7 @@ html, body, #root {
 
 .settings-bottom-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 20px;
 }
 
@@ -2786,4 +2792,268 @@ html, body, #root {
   .registration-fields { grid-template-columns: 1fr; }
   .registration-search { grid-template-columns: 1fr auto; }
   .registration-search select { grid-column: 1 / -1; }
+}
+
+/* ============================================================
+   Role switch overlay (RoleSwitchOverlay / useRoleSwitch): "Changing to <role>" with two
+   meshing gears. Above every dialog (z 400) and blocks clicks while the switch runs.
+   ============================================================ */
+.role-switch-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  animation: role-switch-fade 0.18s ease-out;
+}
+.role-switch-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(340px, 100%);
+  box-sizing: border-box;
+  padding: 28px 24px 24px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+.role-switch-text {
+  margin: 0;
+  color: var(--maroon);
+  font-size: 18px;
+  font-weight: 700;
+}
+.role-switch-gear-big { fill: var(--maroon); animation: role-switch-spin 2.4s linear infinite; }
+.role-switch-gear-small { fill: var(--gold); animation: role-switch-spin-back 1.5s linear infinite; }
+.role-switch-gear-hole { fill: #fff; }
+.role-switch-gear-big, .role-switch-gear-small { transform-origin: 0 0; }
+@keyframes role-switch-spin { to { transform: rotate(360deg); } }
+@keyframes role-switch-spin-back { to { transform: rotate(-360deg); } }
+@keyframes role-switch-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .role-switch-overlay, .role-switch-gear-big, .role-switch-gear-small { animation: none; }
+}
+
+/* ============================================================
+   Mobile & tablet layout. Kept at the END of the file on purpose: these overrides must
+   come after the base rules they adjust (the 1100px block used to sit above
+   .payment-grid/.search-results-grid and was silently overridden by them).
+   Desktop (> 768px) is unchanged apart from the 1100px stacking below.
+   ============================================================ */
+@media (max-width: 1100px) {
+  /* minmax(0, ...) not 1fr: a plain 1fr column grows to its widest table instead of letting it scroll */
+  .reports-grid, .payment-grid, .search-results-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Shown only on phones/tablets (see the 768px block) */
+.mobile-menu-btn,
+.mobile-nav-bar,
+.sidebar-backdrop { display: none; }
+
+/* Inputs beside a button must be allowed to shrink, or the button is pushed off-screen */
+.search-bar-row input,
+.payment-search-row input { min-width: 0; }
+
+/* Dialog forms: a <select>'s natural width is its longest option (e.g. a long owner name),
+   which used to widen the whole form past the dialog's edge. No effect when it fits. */
+.register-form,
+.registration-form,
+.register-form label,
+.registration-form label { grid-template-columns: minmax(0, 1fr); }
+.register-form input,
+.register-form select,
+.registration-form input,
+.registration-form select,
+.registration-form textarea { min-width: 0; max-width: 100%; }
+
+@media (max-width: 768px) {
+  /* --- Navigation: the icon rail becomes a slide-in drawer opened from a menu button --- */
+  .mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    cursor: pointer;
+  }
+  .mobile-nav-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    margin: -12px -12px 12px;
+    padding: 8px 12px;
+    background: var(--maroon);
+    color: #fff;
+  }
+  .mobile-nav-title { font-weight: 700; font-size: 17px; letter-spacing: 0.5px; }
+  .sidebar,
+  .dashboard-shell.has-topbar .sidebar {
+    top: 0;
+    bottom: 0;
+    height: 100vh;
+    height: 100dvh;
+    width: 270px;
+    min-width: 270px;
+    max-width: 85vw;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    z-index: 95;
+    overflow-y: auto;
+  }
+  .sidebar.open,
+  .dashboard-shell.has-topbar .sidebar.open { /* must out-rank the has-topbar rule above */
+    width: 270px;
+    min-width: 270px;
+    transform: none;
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.3);
+  }
+  .sidebar .sidebar-label { opacity: 1; }
+  .sidebar-toggle { left: auto; right: 14px; top: 14px; width: 40px; height: 40px; }
+  .sidebar-item { min-height: 48px; }
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(0, 0, 0, 0.45);
+  }
+  .dashboard-content,
+  .dashboard-shell.sidebar-open .dashboard-content {
+    margin-left: 0;
+    padding: 12px;
+  }
+
+  /* --- Dashboard top bar --- */
+  .dashboard-shell.has-topbar { --topbar-h: 64px; }
+  .app-topbar { padding: 8px 12px; gap: 8px; flex-wrap: nowrap; }
+  .app-topbar-branding { gap: 10px; min-width: 0; }
+  .app-topbar-logo { width: 38px; height: 38px; }
+  .app-topbar-branding h1 { font-size: 15px; line-height: 1.2; }
+  .app-topbar-actions { gap: 8px; flex-shrink: 0; }
+  .app-topbar-bell { width: 40px; height: 40px; }
+  .app-topbar-admin { display: none; } /* role is shown in the account menu */
+  .notification-dropdown,
+  .notification-dropdown.role-dropdown {
+    position: fixed;
+    top: calc(var(--topbar-h, 64px) + 4px);
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
+
+  /* --- Per-page maroon header (logo + clock): compact, clock on its own line --- */
+  .dashboard-header { padding: 14px 16px; margin-bottom: 16px; gap: 10px; border-radius: 14px; }
+  .dashboard-logo { height: 38px; }
+  .dashboard-branding h1 { font-size: 17px; }
+  .dashboard-branding p { display: none; }
+  .dashboard-clock { text-align: left; width: 100%; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .dashboard-clock div:first-child { font-size: 18px; }
+  .dashboard-clock div:last-child { margin-top: 0; }
+
+  /* --- Stat cards / summary boxes: two per row instead of one tall column --- */
+  .stats-panel,
+  .accounts-summary,
+  .payment-summary-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stat-card { padding: 14px; }
+  .overview-grid { gap: 12px; }
+  .overview-card { padding: 16px; }
+
+  /* --- Tables: each table scrolls sideways on its own (header/toolbar stay put) and
+         cells keep their natural width instead of wrapping one word per line --- */
+  .activity-panel { overflow-x: hidden; }
+  .activity-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  .activity-table th,
+  .activity-table td { white-space: nowrap; padding: 12px 14px; }
+  /* "No records" spans every column; centred across a wide table it lands off-screen */
+  .activity-table td.accounts-empty { white-space: normal; text-align: left; }
+
+  /* --- Login / sign-up / reset: the card uses the screen width instead of 40px gutters --- */
+  .login-page { padding: 24px 12px; }
+  .signup-page { padding-top: 96px; }
+  .login-card { width: 100%; padding: 64px 18px 24px; }
+  .activity-header { padding: 16px; }
+  .accounts-toolbar { padding: 0 16px 16px; }
+  .accounts-search { flex: 1 1 100%; }
+  .filter-group { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  .filter-btn { flex-shrink: 0; min-height: 40px; }
+
+  /* Audit Log: a card per change (too many long values for a sideways table) */
+  .audit-table { display: block; overflow: visible; }
+  .audit-table thead { display: none; }
+  .audit-table tbody { display: block; }
+  /* Time | By, Action | Record side by side; Changes full width */
+  .audit-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #eee;
+  }
+  .audit-table td { display: block; padding: 0; border: none; white-space: normal; width: auto; min-width: 0; }
+  .audit-table td[data-label="Changes"], .audit-table td.accounts-empty { grid-column: 1 / -1; }
+  .audit-table td:last-child { width: auto; }
+  .audit-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .audit-table td.accounts-empty { text-align: center; }
+
+  /* --- Touch targets --- */
+  .pagination-controls { flex-wrap: wrap; }
+  .pagination-controls button, .pagination-ellipsis { min-width: 40px; height: 40px; font-size: 13px; }
+  .pagination-row { justify-content: center; padding: 14px 12px; }
+  .row-action-btn { width: 40px; height: 40px; }
+  .search-tab, .quick-select-btn { min-height: 40px; }
+
+  /* --- Page-specific stacking --- */
+  .search-tabs { flex-wrap: wrap; }
+  .search-tab { flex: 1 1 auto; }
+  .payment-card, .filter-card, .gate-control-card { padding: 16px; }
+  .payment-tabs { flex-wrap: wrap; }
+  .payment-tabs button { min-height: 44px; }
+  .profile-card { padding: 18px; gap: 18px; }
+  /* Chrome won't shrink a date box below ~117px, so two side by side need ~260px */
+  .date-range-row { flex-wrap: wrap; }
+  .date-range-row input { flex: 1 1 120px; min-height: 40px; }
+
+  /* --- Dialogs: use the whole small screen, keep the action buttons reachable --- */
+  .modal-backdrop, .modal-overlay { padding: 12px; align-items: flex-start; }
+  .modal-close, .print-report-close { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+  /* Card ID box + "Scan" button: the button drops under the box when there isn't room */
+  .rfid-scan-row { flex-wrap: wrap; }
+  .rfid-scan-row input { flex: 1 1 140px; }
+  .rfid-scan-row button { flex: 1 1 auto; min-height: 44px; }
+  .modal-actions { flex-wrap: wrap; }
+  .modal-actions button { flex: 1 1 auto; min-height: 44px; }
+  .modal-card {
+    padding: 18px;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+  .print-report-overlay { padding: 12px 8px; }
 }

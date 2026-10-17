@@ -133,20 +133,20 @@ export default function AuditLogPanel({ names = {} }){
             const label = recordLabel(log, names)
             return (
               <tr key={log.id} className="activity-row">
-                <td className="audit-nowrap">
+                <td className="audit-nowrap" data-label="Time">
                   {new Date(log.at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                   <span className="audit-sub">{new Date(log.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                 </td>
-                <td>
+                <td data-label="By">
                   {actorName(log)}
                   {actorDetail(log) && <span className="audit-sub">{actorDetail(log)}</span>}
                 </td>
-                <td><span className={`status-badge ${ACTION_BADGES[log.action] || 'badge-neutral'}`}>{ACTION_LABELS[log.action] || log.action}</span></td>
-                <td>
+                <td data-label="Action"><span className={`status-badge ${ACTION_BADGES[log.action] || 'badge-neutral'}`}>{ACTION_LABELS[log.action] || log.action}</span></td>
+                <td data-label="Record">
                   {ENTITY_LABELS[log.entity] || log.entity}
                   {label && <span className="audit-sub" title={log.entityId}>{label}</span>}
                 </td>
-                <td>
+                <td data-label="Changes">
                   <ul className="audit-changes">
                     {shown.map((line) => (
                       <li key={line.field}><span className="audit-field">{line.field}</span> {line.text}</li>
