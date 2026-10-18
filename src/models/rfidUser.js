@@ -15,6 +15,8 @@ export const ACCOUNT_STATUSES = ['Active', 'Inactive']
  * @property {string} plateNumber
  * @property {string} vehicleType
  * @property {string} [vehicleColor]
+ * @property {string} [registrationId] - registrations/{id} this owner was activated from (Google Forms import)
+ * @property {string} [studentId]
  * @property {string} [vehicleBrand] - CAPS make, e.g. "TOYOTA", or "NO VEHICLE"; absent = not specified (constants/vehicleBrands.js)
  * @property {string} department
  * @property {'Student'|'Faculty'|'Staff'|'Visitor'} role
@@ -85,6 +87,9 @@ export function validateRfidUser(data) {
     vehicleColor: toCaps((data.vehicleColor || '').trim()),
     // Only when set: a record saved before brands existed keeps no brand ("Not specified").
     ...(vehicleBrand ? { vehicleBrand } : {}),
+    // Only when the owner came from an imported Google Forms registration (models/registration.js).
+    ...(data.registrationId ? { registrationId: String(data.registrationId) } : {}),
+    ...(data.studentId ? { studentId: toCaps(String(data.studentId).trim()) } : {}),
     department: toCaps((data.department || '').trim()),
     role: data.role || 'Student',
     email: (data.email || '').trim(),

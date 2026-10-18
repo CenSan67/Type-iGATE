@@ -29,7 +29,9 @@ const SEARCH_TYPES = ['Plate No.', 'RFID-ID', 'Name']
 
 const includesText = (value, query) => (value || '').toString().toLowerCase().includes(query)
 
-export default function RegistrationModal({ initialType = 'Registration', onClose, onSubmit }){
+// `prefill` (optional): form fields to start from - Account Management passes an approved Google
+// Forms registration here, so activating it goes through this same fee/documents/consent/card flow.
+export default function RegistrationModal({ initialType = 'Registration', prefill = null, onClose, onSubmit }){
   const { user, profile } = useAuth()
   const staffName = profile?.fullName || profile?.displayName || user?.email || ''
   const users = useRfidUsers()
@@ -53,6 +55,7 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
     docs: {},
     licenseExpiry: '',
     consent: false,
+    ...(prefill || {}),
   })
   const [searchType, setSearchType] = useState(SEARCH_TYPES[0])
   const [searchQuery, setSearchQuery] = useState('')

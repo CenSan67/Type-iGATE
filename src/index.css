@@ -2804,6 +2804,116 @@ html, body, #root {
 }
 
 /* ============================================================
+   Google Forms import & processing (Account Management -> Imported)
+   ============================================================ */
+.badge-warn { background: #d98a00; color: #fff; }
+.badge-info { background: #2f6db5; color: #fff; }
+
+.accounts-scope-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 24px 16px;
+}
+.accounts-scope-row .scope-toggle { padding: 0; }
+
+.registration-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+  padding: 0 24px 16px;
+}
+.registration-filters label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: #777; }
+.registration-filters select,
+.registration-filters input { border: 1px solid #ddd; border-radius: 10px; padding: 8px 10px; font-size: 13px; min-height: 38px; }
+
+.registration-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.process-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.process-fields { border: none; padding: 0; margin: 0; min-width: 0; align-items: start; }
+.process-fields label { align-content: start; }
+.process-fields[disabled] { opacity: 0.75; }
+.field-error { color: #c12d2d; font-size: 12px; font-weight: 600; }
+.registration-submitted { color: #b07200; font-size: 12px; font-weight: 500; }
+.process-missing {
+  background: #fff7e6;
+  border: 1px solid #f1d39a;
+  color: #8a5a00;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.process-original-toggle { justify-self: start; }
+.process-original {
+  display: grid;
+  gap: 4px;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.process-original div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; overflow-wrap: anywhere; }
+.process-original span:first-child { color: #888; }
+.process-card { display: grid; gap: 8px; font-size: 14px; color: #444; }
+.process-hint { margin: 0; font-size: 13px; color: #666; text-align: right; }
+.process-card p { margin: 0; }
+.process-status-actions { justify-content: flex-start; }
+
+.import-step { display: grid; gap: 12px; }
+.import-error { margin-bottom: 10px; }
+.import-file input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.import-file { position: relative; display: inline-block; cursor: pointer; }
+.import-file .btn-primary { display: inline-block; }
+.import-file:focus-within .btn-primary { outline: 2px solid var(--gold); outline-offset: 2px; }
+.import-table-wrap { max-height: 320px; overflow: auto; border: 1px solid #eee; border-radius: 10px; }
+.import-table-wrap.tall { max-height: 420px; }
+.import-table-wrap .activity-table th { position: sticky; top: 0; z-index: 1; }
+.import-map-table select { border: 1px solid #ddd; border-radius: 8px; padding: 6px 8px; font-size: 13px; min-height: 34px; background: #fff; max-width: 100%; }
+.import-sample { color: #777; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.import-reason { color: #555; font-size: 13px; }
+.import-lead { margin: 0; color: #444; }
+.import-howto { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: #444; line-height: 1.5; }
+.import-summary { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.import-summary li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border-left: 5px solid #9a9a9a;
+  background: #f7f7f7;
+}
+.import-summary li strong { font-size: 16px; color: #222; }
+.import-summary li span { font-size: 13px; color: #555; }
+.import-summary li.good { border-left-color: #2da82d; background: #eef8ee; }
+.import-summary li.skip { border-left-color: #d98a00; background: #fff7e6; }
+.import-summary li.bad { border-left-color: #c12d2d; background: #fdeeee; }
+.import-row-invalid td:last-child { color: #c12d2d; }
+.import-row-duplicate td:last-child { color: #8a5a00; }
+.import-columns-link { margin-right: auto; font-size: 13px; }
+.import-progress { display: flex; align-items: center; gap: 10px; padding: 24px 0; font-weight: 600; color: #444; }
+.import-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid #eee;
+  border-top-color: var(--maroon);
+  animation: role-switch-spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .import-spinner { animation: none; } }
+
+/* ============================================================
    Searchable dropdown (shared/SearchableSelect) - Vehicle Brand and any future long list.
    Inherits its input look from the surrounding form (.registration-form / .register-form).
    ============================================================ */
@@ -3115,4 +3225,10 @@ html, body, #root {
     max-height: calc(100dvh - 24px);
   }
   .print-report-overlay { padding: 12px 8px; }
+  .accounts-scope-row, .registration-filters { padding-left: 16px; padding-right: 16px; }
+  .registration-filters label { flex: 1 1 140px; }
+  .import-table-wrap { max-height: 50vh; }
+  /* column matching: header + "Imports as" must both fit - the example value is the one to drop */
+  .import-map-table th:nth-child(2), .import-map-table td.import-sample { display: none; }
+  .import-map-table select { max-width: 160px; }
 }

@@ -10,6 +10,17 @@ import { formatVehicleBrand } from '../../constants/vehicleBrands'
 import PendingApprovalsPanel from './PendingApprovalsPanel'
 import VipGuestsPanel from './VipGuestsPanel'
 import { getErrorMessage } from '../../utils/errors'
+import ImportRegistrationsModal from './ImportRegistrationsModal'
+import ProcessRegistrationModal from './ProcessRegistrationModal'
+import ImportedRegistrationsView from './ImportedRegistrationsView'
+import RegistrationModal from '../modals/RegistrationModal'
+import ReceiptModal from '../modals/ReceiptModal'
+import useRegistrations from '../../hooks/useRegistrations'
+import usePaymentRegistration from '../../hooks/usePaymentRegistration'
+import { markRegistrationActive } from '../../services/firebase'
+import { REGISTRATION_STATUSES } from '../../models/registration'
+import { vehicleBrandFormValue } from '../../constants/vehicleBrands'
+import { getVehicleFee } from '../../constants/fees'
 import { useToast } from '../../context/ToastContext'
 
 const filters = ['All', 'Paid', 'Unpaid', 'Active', 'Expired']
@@ -18,7 +29,8 @@ const filters = ['All', 'Paid', 'Unpaid', 'Active', 'Expired']
 // permanent Student/Faculty/Staff registrations - "Registered" is the default scope so the
 // list a Super Admin/Administrator actually manages day-to-day stays readable; "Visitors" is
 // still one click away for cleanup/lookup.
-const ACCOUNT_SCOPES = ['Registered', 'Visitors', 'All']
+// 'Imported' = Google Forms registrations waiting to be processed (registrations/, not card holders yet).
+const ACCOUNT_SCOPES = ['Registered', 'Visitors', 'All', 'Imported']
 
 const CheckIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -51,6 +63,13 @@ export default function AccountManagementPage(){
   const [editingUser, setEditingUser] = useState(null)
   const [pendingAction, setPendingAction] = useState(null) // { type: 'delete'|'deactivate'|'activate', user }
   const { showError } = useToast()
+  const registrations = useRegistrations()
+  const { register } = usePaymentRegistration()
+  const [showImport, setShowImport] = useState(false)
+  const [processingId, setProcessingId] = useState(null) // registration open in Process (live from the listener)
+  const [activating, setActivating] = useState(null) // approved registration being activated via Payment
+  const [receipt, setReceipt] = useState(null)
+  const processingRegistration = registrations.find((r) => r.id === processingId) || null
 
   // Staff/role management - Super Admin only (task: role assignment must only be
   // manageable here, by a Super Admin; enforced server-side too, see database.rules.json).
@@ -155,7 +174,8 @@ export default function AccountManagementPage(){
     Registered: accounts.filter((a) => a.role !== 'Visitor').length,
     Visitors: accounts.filter((a) => a.role === 'Visitor').length,
     All: accounts.length,
-  }), [accounts])
+    Imported: registrations.length,
+  }), [accounts, registrations])
 
   const scopedAccounts = useMemo(() => {
     if (scope === 'Registered') return accounts.filter((a) => a.role !== 'Visitor')
@@ -177,10 +197,36 @@ export default function AccountManagementPage(){
     return scopedAccounts.filter((a) => {
       const matchesFilter = activeFilter === 'All' || a.payment === activeFilter || a.status === activeFilter
       const q = query.trim().toLowerCase()
-      const matchesQuery = !q || [a.name, a.rfid, a.role, a.vehicle, a.brandRaw].some((field) => (field || '').toLowerCase().includes(q))
+      const matchesQuery = !q || [a.name, a.rfid, a.role, a.vehicle, a.brandRaw, a.raw.studentId].some((field) => (field || '').toLowerCase().includes(q))
       return matchesFilter && matchesQuery
     })
   }, [scopedAccounts, activeFilter, query])
+
+  // Approved registration -> the regular Payment registration, pre-filled (and with the card
+  // reserved during processing, if any). Saving it records the fee/documents/consent and makes the
+  // owner record Active; then the registration is marked Active and linked.
+  const activationPrefill = (r) => {
+    const owner = r.rfidUserId ? users.find((u) => u.id === r.rfidUserId) : null
+    const vehicle = r.vehicleType || 'Car'
+    return {
+      paymentType: 'Registration', rfid: owner?.rfidId || '', name: r.fullName, department: r.department || r.course || '',
+      plate: r.plateNumber || '', vehicle, color: r.vehicleColor || '', brand: vehicleBrandFormValue(r.vehicleBrand),
+      role: r.role || 'Student', email: r.email || '', phone: r.phone || '', tendered: String(getVehicleFee(vehicle)),
+    }
+  }
+
+  const handleActivation = async (form) => {
+    const registration = activating
+    const result = await register(form) // a failure here stays in the form with its error
+    setActivating(null)
+    setReceipt(result)
+    try {
+      const previous = registration.rfidUserId ? users.find((u) => u.id === registration.rfidUserId) : null
+      await markRegistrationActive(registration, result.rfidUserId, { releaseOwner: previous })
+    } catch (err) {
+      showError(`Payment recorded and the owner is active, but the registration could not be marked Active: ${getErrorMessage(err, 'try again from Process.')}`)
+    }
+  }
 
   const runAction = async () => {
     if (!pendingAction) return
@@ -217,6 +263,26 @@ export default function AccountManagementPage(){
       </section>
 
       <div className="dashboard-panels">
+        {scope === 'Imported' ? (
+          <div className="accounts-summary">
+            <div className="summary-pill">
+              <span className="summary-icon neutral"><ListIcon /></span>
+              <div>
+                <div className="summary-value">{registrations.length}</div>
+                <div className="summary-label">Imported</div>
+              </div>
+            </div>
+            {REGISTRATION_STATUSES.filter((st) => st !== 'Rejected').map((st) => (
+              <div key={st} className="summary-pill">
+                <span className={`summary-icon ${st === 'Active' || st === 'Approved' ? 'positive' : 'neutral'}`}>{st === 'Active' || st === 'Approved' ? <CheckIcon /> : <AlertIcon />}</span>
+                <div>
+                  <div className="summary-value">{registrations.filter((r) => r.status === st).length}</div>
+                  <div className="summary-label">{st}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
         <div className="accounts-summary">
           <div className="summary-pill">
             <span className="summary-icon neutral"><ListIcon /></span>
@@ -255,6 +321,8 @@ export default function AccountManagementPage(){
           </div>
         </div>
 
+        )}
+
         <div className="activity-panel">
           <div className="activity-header">
             <h3>Account Management</h3>
@@ -262,9 +330,11 @@ export default function AccountManagementPage(){
               {scope === 'Registered' && 'Permanent Student/Faculty/Staff registrations - visitor passes are kept separate below'}
               {scope === 'Visitors' && 'Temporary visitor passes - one record per visit'}
               {scope === 'All' && 'Every registration and visitor pass, unfiltered'}
+              {scope === 'Imported' && 'Google Forms registrations - imported as Pending Review; not paid, active or carded until processed'}
             </p>
           </div>
 
+          <div className="accounts-scope-row">
           <div className="filter-group scope-toggle">
             {ACCOUNT_SCOPES.map((s) => (
               <button
@@ -277,6 +347,19 @@ export default function AccountManagementPage(){
               </button>
             ))}
           </div>
+          <button type="button" className="btn-primary" onClick={() => setShowImport(true)}>Add from Google Forms</button>
+          </div>
+
+          {scope === 'Imported' ? (
+            <ImportedRegistrationsView
+              registrations={registrations}
+              users={users}
+              payments={payments}
+              onProcess={(r) => setProcessingId(r.id)}
+              onImport={() => setShowImport(true)}
+            />
+          ) : (
+          <>
 
           <div className="accounts-toolbar">
             <div className="accounts-search">
@@ -384,6 +467,8 @@ export default function AccountManagementPage(){
               )}
             </tbody>
           </table>
+          </>
+          )}
         </div>
 
         <PendingApprovalsPanel />
@@ -504,6 +589,30 @@ export default function AccountManagementPage(){
           onClose={() => setPendingRemoval(null)}
         />
       )}
+
+      {showImport && <ImportRegistrationsModal onClose={() => { setShowImport(false); setScope('Imported') }} />}
+
+      {processingRegistration && (
+        <ProcessRegistrationModal
+          key={processingRegistration.id}
+          registration={processingRegistration}
+          users={users}
+          payments={payments}
+          onClose={() => setProcessingId(null)}
+          onActivate={(r) => { setProcessingId(null); setActivating(r) }}
+        />
+      )}
+
+      {activating && (
+        <RegistrationModal
+          initialType="Registration"
+          prefill={activationPrefill(activating)}
+          onClose={() => setActivating(null)}
+          onSubmit={handleActivation}
+        />
+      )}
+
+      {receipt && <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />}
 
       {editingUser && (
         <EditRfidUserModal

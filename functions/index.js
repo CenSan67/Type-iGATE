@@ -11,6 +11,12 @@
 //   2. optionally: functions/.env with SEMAPHORE_SENDER_NAME=<your approved sender name>
 //   3. firebase deploy --only functions   (requires the Blaze plan - Semaphore is an
 //      external HTTP call, which the free Spark plan blocks entirely)
+//
+// Testing with UniSMS while the Semaphore sender name is pending approval:
+//   1. firebase functions:secrets:set UNISMS_API_KEY   (run this yourself, same rule as above)
+//   2. functions/.env: SMS_PROVIDER=unisms  (+ optionally UNISMS_SENDER_ID=<approved sender ID>)
+//   3. firebase deploy --only functions:sendGateScanSms
+// Switch back by removing SMS_PROVIDER (or setting it to semaphore) and deploying again.
 
 const functionsV1 = require('firebase-functions/v1')
 const crypto = require('node:crypto')
@@ -28,6 +34,16 @@ initializeApp()
 const SEMAPHORE_API_KEY = defineSecret('SEMAPHORE_API_KEY')
 const SEMAPHORE_SENDER_NAME = defineString('SEMAPHORE_SENDER_NAME', { default: 'SEMAPHORE' })
 const SEMAPHORE_ENDPOINT = 'https://api.semaphore.co/api/v4/messages'
+
+// SMS provider for sendGateScanSms: 'semaphore' (default) or 'unisms' (testing until the
+// Semaphore sender name is approved). Read from process.env, not defineString, because it also
+// picks which secret the trigger binds - that list is fixed at deploy time, and binding a
+// secret that was never set makes the deploy fail. functions/.env is loaded at deploy and run time.
+const SMS_PROVIDER = (process.env.SMS_PROVIDER || 'semaphore').toLowerCase() === 'unisms' ? 'unisms' : 'semaphore'
+const UNISMS_API_KEY = defineSecret('UNISMS_API_KEY')
+// Without an approved sender ID, UniSMS's default one reaches Globe and DITO numbers only.
+const UNISMS_SENDER_ID = defineString('UNISMS_SENDER_ID', { default: 'UniSMS' })
+const UNISMS_ENDPOINT = 'https://unismsapi.com/api/sms'
 
 function normalizeId(value) {
   return (value ?? '').toString().trim().toLowerCase()
@@ -111,6 +127,30 @@ async function sendSemaphoreSms({ apiKey, senderName, phone, message }) {
   return payload
 }
 
+// UniSMS: Basic auth with the secret key as username and an empty password, JSON body.
+async function sendUniSms({ apiKey, senderId, phone, message }) {
+  const response = await fetch(UNISMS_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ recipient: phone, content: message, sender_id: senderId }),
+  })
+
+  const payload = await response.json().catch(() => null)
+  if (!response.ok) {
+    throw new Error(`UniSMS HTTP ${response.status}: ${JSON.stringify(payload)}`)
+  }
+  return payload
+}
+
+function sendSms({ phone, message }) {
+  return SMS_PROVIDER === 'unisms'
+    ? sendUniSms({ apiKey: UNISMS_API_KEY.value(), senderId: UNISMS_SENDER_ID.value(), phone, message })
+    : sendSemaphoreSms({ apiKey: SEMAPHORE_API_KEY.value(), senderName: SEMAPHORE_SENDER_NAME.value(), phone, message })
+}
+
 // Per-phone SMS limits: at most one text per SMS_MIN_INTERVAL_MS and SMS_DAILY_LIMIT per
 // Manila calendar day. smsRate/{phone} is server-only (database.rules.json). Returns whether
 // this text may be sent.
@@ -136,7 +176,7 @@ exports.sendGateScanSms = onValueCreated(
   {
     ref: '/gateLogs/{logId}',
     region: 'us-central1',
-    secrets: [SEMAPHORE_API_KEY],
+    secrets: [SMS_PROVIDER === 'unisms' ? UNISMS_API_KEY : SEMAPHORE_API_KEY],
   },
   async (event) => {
     const logId = event.params.logId
@@ -168,6 +208,7 @@ exports.sendGateScanSms = onValueCreated(
         status: 'rate-limited',
         errorMessage: null,
         semaphoreResponse: null,
+        provider: SMS_PROVIDER,
         sentAt: Date.now(),
       })
       logger.warn(`gateLogs/${logId}: SMS to ${owner.phone} skipped (rate limit)`)
@@ -175,16 +216,12 @@ exports.sendGateScanSms = onValueCreated(
     }
 
     try {
-      semaphoreResponse = await sendSemaphoreSms({
-        apiKey: SEMAPHORE_API_KEY.value(),
-        senderName: SEMAPHORE_SENDER_NAME.value(),
-        phone: owner.phone,
-        message,
-      })
+      // Field name kept for existing smsLogs readers; holds whichever provider answered.
+      semaphoreResponse = await sendSms({ phone: owner.phone, message })
     } catch (err) {
       status = 'failed'
       errorMessage = err.message
-      logger.error(`gateLogs/${logId}: Semaphore SMS to ${owner.phone} failed`, err)
+      logger.error(`gateLogs/${logId}: ${SMS_PROVIDER} SMS to ${owner.phone} failed`, err)
     }
 
     // Audit trail only - smsLogs has no client .write rule (see database.rules.json),
@@ -197,6 +234,7 @@ exports.sendGateScanSms = onValueCreated(
       status,
       errorMessage,
       semaphoreResponse,
+      provider: SMS_PROVIDER,
       sentAt: Date.now(),
     })
 
@@ -423,7 +461,7 @@ function diffFields(before, after) {
 }
 
 // `skip(changes, action, isAppUser)` drops routine machine traffic so the log stays readable.
-function auditTrigger(refPattern, entity, skip = () => false) {
+function auditTrigger(refPattern, entity, skip = () => false, omitFields = []) {
   return functionsV1.region('us-central1').database.ref(refPattern).onWrite(async (change, context) => {
     const before = change.before.val()
     const after = change.after.val()
@@ -433,6 +471,7 @@ function auditTrigger(refPattern, entity, skip = () => false) {
     const changes = isObject(before) || isObject(after)
       ? diffFields(isObject(before) ? before : {}, isObject(after) ? after : {})
       : { value: { ...(before != null ? { from: before } : {}), ...(after != null ? { to: after } : {}) } }
+    omitFields.forEach((field) => { delete changes[field] })
     if (Object.keys(changes).length === 0 || skip(changes, action, isAppUser)) return
 
     const db = getDatabase()
@@ -462,6 +501,9 @@ exports.auditAdminProfiles = auditTrigger('/adminProfiles/{uid}', 'adminProfiles
 exports.auditRfidUsers = auditTrigger('/rfidUsers/{id}', 'rfidUsers')
 exports.auditPayments = auditTrigger('/payments/{id}', 'payments')
 exports.auditExpectedGuests = auditTrigger('/expectedGuests/{id}', 'expectedGuests')
+// Google Forms imports and their processing (who corrected / approved / activated what, and when).
+// originalJson is the untouched submission - long and never changes, so it isn't repeated here.
+exports.auditRegistrations = auditTrigger('/registrations/{id}', 'registrations', () => false, ['originalJson'])
 // Who pressed Gate Control / Return Pass / auto-close (each command overwrites the last).
 exports.auditScannerCommands = auditTrigger('/devices/scanner/command', 'scannerCommand')
 // Scanner scans and camera photos are routine; staff-made entries and any edit/delete are not.

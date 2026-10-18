@@ -28,7 +28,7 @@ export default function usePaymentRegistration() {
     const receiptNo = await getNextReceiptNo()
 
     // One atomic write: the registration only exists together with its payment (rules).
-    await upsertRfidUser({
+    const rfidUserId = await upsertRfidUser({
       rfidId,
       name,
       department,
@@ -62,6 +62,7 @@ export default function usePaymentRegistration() {
     } })
 
     return {
+      rfidUserId,
       receiptNo,
       name,
       plate: plateNumber,

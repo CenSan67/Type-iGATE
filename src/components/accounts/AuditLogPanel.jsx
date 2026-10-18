@@ -2,6 +2,10 @@ import React, { useMemo, useState } from 'react'
 import useAuditLogs from '../../hooks/useAuditLogs'
 import PaginationRow from '../shared/PaginationRow'
 import { downloadCsv } from '../../utils/csv'
+import PrintReportModal from '../shared/PrintReportModal'
+import useDateRangeFilter from '../../hooks/useDateRangeFilter'
+import { QUICK_SELECTS } from '../../utils/dateRange'
+import { dayStartMs, dayEndMs, formatDateRange } from '../../utils/reportBuilders'
 
 const PAGE_SIZE = 10
 const CHANGES_SHOWN = 3 // longer change lists collapse behind "Show N more"
@@ -14,6 +18,7 @@ const ENTITY_LABELS = {
   expectedGuests: 'VIP guest',
   scannerCommand: 'Gate command',
   settings: 'App settings',
+  registrations: 'Imported registration',
 }
 
 const ACTION_BADGES = { create: 'badge-positive', update: 'badge-neutral', delete: 'badge-negative' }
@@ -55,25 +60,62 @@ function recordLabel(log, names) {
 const actorName = (log) => log.byName && log.by !== 'system' ? log.byName : 'System'
 const actorDetail = (log) => log.by === 'system' ? 'Device, server or Firebase console' : log.byRole
 
+const PRINT_COLUMNS = [
+  { key: 'time', label: 'Time' },
+  { key: 'by', label: 'By' },
+  { key: 'action', label: 'Action' },
+  { key: 'record', label: 'Record' },
+  { key: 'changes', label: 'Changes' },
+]
+
 export default function AuditLogPanel({ names = {} }){
   const logs = useAuditLogs()
   const [entity, setEntity] = useState('')
+  const [action, setAction] = useState('')
+  const [actor, setActor] = useState('')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [expanded, setExpanded] = useState({})
+  const [showPrint, setShowPrint] = useState(false)
+  const { dateFrom, dateTo, activeQuick, maxDate, changeFrom, changeTo, applyQuick } = useDateRangeFilter()
+  const fromMs = dayStartMs(dateFrom)
+  const toMs = dayEndMs(dateTo)
+
+  // Everyone who appears in the loaded entries, for the "Changed by" filter.
+  const actors = useMemo(() => [...new Set(logs.map(actorName))].sort(), [logs])
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
     return logs.filter((log) => {
       if (entity && log.entity !== entity) return false
+      if (action && log.action !== action) return false
+      if (actor && actorName(log) !== actor) return false
+      if (fromMs && log.at < fromMs) return false
+      if (toMs && log.at > toMs) return false
       if (!term) return true
       return [actorName(log), log.byRole, log.entityId, recordLabel(log, names), ...changeLines(log).map((l) => `${l.field} ${l.text}`)]
         .some((v) => (v || '').toString().toLowerCase().includes(term))
     })
-  }, [logs, entity, search, names])
+  }, [logs, entity, action, actor, fromMs, toMs, search, names])
 
   const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const chooseEntity = (key) => { setEntity(key); setPage(1) }
+  // Every filter change goes back to page 1.
+  const withReset = (fn) => (value) => { fn(value); setPage(1) }
+  const hasFilters = entity || action || actor || dateFrom || dateTo || search
+  const clearFilters = () => {
+    setEntity(''); setAction(''); setActor(''); setSearch(''); setPage(1)
+    if (activeQuick) applyQuick(activeQuick) // clicking the active quick select clears the range
+    else { changeFrom(''); changeTo('') }
+  }
+
+  const printRows = filtered.map((log) => ({
+    time: new Date(log.at).toLocaleString(),
+    by: [actorName(log), actorDetail(log)].filter(Boolean).join(' - '),
+    action: ACTION_LABELS[log.action] || log.action,
+    record: [ENTITY_LABELS[log.entity] || log.entity, recordLabel(log, names)].filter(Boolean).join(': '),
+    changes: changeLines(log).map((l) => `${l.field}: ${l.text}`).join('; ') || '—',
+  }))
+  const countOf = (a) => filtered.filter((log) => log.action === a).length
 
   const exportCsv = () => {
     downloadCsv(
@@ -105,12 +147,38 @@ export default function AuditLogPanel({ names = {} }){
           <input type="text" placeholder="Search person, record or value..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} />
         </div>
         <div className="filter-group">
-          <button type="button" className={`filter-btn ${entity === '' ? 'active' : ''}`} onClick={() => chooseEntity('')}>All</button>
-          {Object.entries(ENTITY_LABELS).map(([key, label]) => (
-            <button key={key} type="button" className={`filter-btn ${entity === key ? 'active' : ''}`} onClick={() => chooseEntity(key)}>{label}</button>
-          ))}
           <button type="button" className="btn-secondary" onClick={exportCsv} disabled={filtered.length === 0}>Export CSV</button>
+          <button type="button" className="btn-secondary" onClick={() => setShowPrint(true)} disabled={filtered.length === 0}>Print / Save as PDF</button>
         </div>
+      </div>
+
+      <div className="registration-filters">
+        <label>From<input type="date" value={dateFrom} max={dateTo || maxDate} onChange={(e) => withReset(changeFrom)(e.target.value)} /></label>
+        <label>To<input type="date" value={dateTo} min={dateFrom || undefined} max={maxDate} onChange={(e) => withReset(changeTo)(e.target.value)} /></label>
+        <div className="quick-select-row">
+          {QUICK_SELECTS.map((q) => (
+            <button key={q} type="button" className={`quick-select-btn ${activeQuick === q ? 'active' : ''}`} onClick={() => withReset(applyQuick)(q)}>{q}</button>
+          ))}
+        </div>
+        <label>Type
+          <select value={entity} onChange={(e) => withReset(setEntity)(e.target.value)}>
+            <option value="">All</option>
+            {Object.entries(ENTITY_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+        </label>
+        <label>Action
+          <select value={action} onChange={(e) => withReset(setAction)(e.target.value)}>
+            <option value="">All</option>
+            {Object.entries(ACTION_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+        </label>
+        <label>Changed by
+          <select value={actor} onChange={(e) => withReset(setActor)(e.target.value)}>
+            <option value="">Everyone</option>
+            {actors.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </label>
+        {hasFilters && <button type="button" className="btn-secondary" onClick={clearFilters}>Clear filters</button>}
       </div>
 
       <table className="activity-table audit-table">
@@ -165,6 +233,22 @@ export default function AuditLogPanel({ names = {} }){
       </table>
 
       <PaginationRow page={page} pageSize={PAGE_SIZE} total={filtered.length} onPageChange={setPage} />
+
+      {showPrint && (
+        <PrintReportModal
+          title={entity ? `Audit Log - ${ENTITY_LABELS[entity]}` : 'Audit Log'}
+          dateRange={formatDateRange(fromMs, toMs)}
+          columns={PRINT_COLUMNS}
+          rows={printRows}
+          summary={[
+            { label: 'Total Changes', value: filtered.length },
+            { label: 'Created', value: countOf('create') },
+            { label: 'Updated', value: countOf('update') },
+            { label: 'Deleted', value: countOf('delete') },
+          ]}
+          onClose={() => setShowPrint(false)}
+        />
+      )}
     </div>
   )
 }

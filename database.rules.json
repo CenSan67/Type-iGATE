@@ -44,6 +44,12 @@
         },
         "vehicleBrand": {
           ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 40"
+        },
+        "registrationId": {
+          ".validate": "newData.isString()"
+        },
+        "studentId": {
+          ".validate": "newData.isString() && newData.val().length <= 20"
         }
       }
     },
@@ -199,6 +205,60 @@
     "usernameLoginThrottle": {
       ".read": false,
       ".write": false
+    },
+    "registrations": {
+      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
+      ".indexOn": [
+        "status",
+        "importedAt"
+      ],
+      "$regId": {
+        ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator') && newData.exists()",
+        ".validate": "newData.hasChildren(['fullName', 'status', 'originalJson', 'importedAt', 'importedBy'])",
+        "fullName": {
+          ".validate": "newData.isString() && newData.val().length <= 80 && newData.val().length > 0"
+        },
+        "status": {
+          ".validate": "(newData.val() === 'Pending Review' || newData.val() === 'Under Processing' || newData.val() === 'Approved' || newData.val() === 'Active' || newData.val() === 'Rejected') && ((!data.exists() && newData.val() === 'Pending Review') || data.val() === newData.val() || (data.val() === 'Pending Review' && (newData.val() === 'Under Processing' || newData.val() === 'Approved' || newData.val() === 'Rejected')) || (data.val() === 'Under Processing' && (newData.val() === 'Pending Review' || newData.val() === 'Approved' || newData.val() === 'Rejected')) || (data.val() === 'Approved' && ((newData.val() === 'Under Processing' || newData.val() === 'Rejected') || (newData.val() === 'Active' && (newData.parent().child('rfidUserId').isString() && root.child('rfidUsers').child(newData.parent().child('rfidUserId').val()).child('status').val() === 'Active')))) || (data.val() === 'Rejected' && newData.val() === 'Pending Review')) && ((newData.val() !== 'Approved' && newData.val() !== 'Active') || (newData.parent().child('fullName').isString() && newData.parent().child('fullName').val() !== '' && (newData.parent().child('role').val() === 'Student' || newData.parent().child('role').val() === 'Faculty' || newData.parent().child('role').val() === 'Staff') && newData.parent().child('vehicleType').isString() && newData.parent().child('vehicleType').val() !== '' && (newData.parent().child('plateNumber').isString() && newData.parent().child('plateNumber').val() !== '' || newData.parent().child('vehicleType').val() === 'E-Bike' || newData.parent().child('vehicleType').val() === 'E-Scooter') && (newData.parent().child('email').isString() && newData.parent().child('email').val() !== '' || newData.parent().child('phone').isString() && newData.parent().child('phone').val() !== '')))"
+        },
+        "originalJson": {
+          ".validate": "newData.isString() && newData.val().length <= 20000 && (!data.exists() || data.val() === newData.val())"
+        },
+        "importedAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000 && (!data.exists() || data.val() === newData.val())"
+        },
+        "importedBy": {
+          ".validate": "(!data.exists() && newData.val() === auth.uid) || data.val() === newData.val()"
+        },
+        "importBatchId": {
+          ".validate": "!data.exists() || data.val() === newData.val()"
+        },
+        "updatedBy": {
+          ".validate": "newData.val() === auth.uid"
+        },
+        "approvedBy": {
+          ".validate": "newData.val() === auth.uid || data.val() === newData.val()"
+        },
+        "rejectedBy": {
+          ".validate": "newData.val() === auth.uid || data.val() === newData.val()"
+        },
+        "activatedBy": {
+          ".validate": "newData.val() === auth.uid || data.val() === newData.val()"
+        },
+        "rfidUserId": {
+          ".validate": "newData.isString()"
+        },
+        "$field": {
+          ".validate": "(newData.isString() && newData.val().length <= 200) || newData.isNumber()"
+        }
+      }
+    },
+    "registrationKeys": {
+      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
+      "$key": {
+        ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
+        ".validate": "newData.isString() && (!data.exists() || data.val() === newData.val())"
+      }
     }
   }
 }

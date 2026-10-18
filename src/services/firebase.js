@@ -15,6 +15,8 @@ import { ROLES } from '../constants/roles'
 import { getErrorMessage } from '../utils/errors'
 import { currentHolder, renewableRecord } from '../utils/cardHolder'
 import { toCaps } from '../utils/textCase'
+import { registrationFieldValues, registrationKeys, encodeKey } from '../models/registration'
+import { isValidRfid } from '../utils/validators'
 
 // TODO: replace with your Firebase project values
 const firebaseConfig = {
@@ -632,6 +634,201 @@ export async function markProfileEmailVerified(uid) {
 // new address; this brings the profile's display copy in line. Targeted leaf update only.
 export async function syncProfileEmail(uid, email) {
   await update(ref(rtdb, `adminProfiles/${uid}`), { email })
+}
+
+// ---- Imported registrations (Google Forms) ----------------------------------------------
+// registrations/{id} = an applicant who is not a card holder yet (models/registration.js);
+// registrationKeys/{encoded key} = id, one per Student ID / email (or name fallback), written in the
+// SAME update as the registration - database.rules.json refuses a key that already points at a
+// different registration, so a duplicate can't be created even by a second import running at once.
+// Admin-only (rules). Nothing here marks anyone Paid or Active: activation goes through the existing
+// Payment registration (usePaymentRegistration), then markRegistrationActive links the result.
+
+const IMPORT_CHUNK = 50 // rows per atomic update - well inside RTDB's write limits
+
+export function listenToRegistrations(callback) {
+  return onValue(ref(rtdb, 'registrations'), (snapshot) => {
+    const rows = Object.entries(snapshot.val() || {}).map(([id, v]) => ({ id, ...v }))
+    callback(rows.sort((a, b) => (b.importedAt || 0) - (a.importedAt || 0)))
+  }, () => callback([]))
+}
+
+// encoded key -> registration id, for duplicate checks before an import.
+export async function getRegistrationKeys() {
+  return (await get(ref(rtdb, 'registrationKeys'))).val() || {}
+}
+
+function actorFields() {
+  return { updatedAt: Date.now(), updatedBy: auth.currentUser?.uid || '' }
+}
+
+// rows: preview rows from utils/registrationImport.js#buildImportPreview (valid/incomplete only).
+// Returns { imported: [rowNumber], failed: [{ rowNumber, error }] }. A chunk that fails as a whole
+// (e.g. someone imported the same person a second earlier) is retried row by row, so one bad row
+// never blocks the others and nothing is left half-written.
+export async function importRegistrations(rows, { fileName, actorName }) {
+  assertOnline('importing registrations')
+  const uid = auth.currentUser?.uid || ''
+  const batchId = push(ref(rtdb, 'registrations')).key
+  const now = Date.now()
+  const writesFor = (row) => {
+    const id = push(ref(rtdb, 'registrations')).key
+    const updates = {
+      [`registrations/${id}`]: {
+        ...registrationFieldValues(row.values),
+        status: 'Pending Review',
+        // The untouched submission: the sheet row as written + the fields as first imported.
+        originalJson: JSON.stringify({ columns: row.original, fields: registrationFieldValues(row.values) }),
+        importedAt: now,
+        importedBy: uid,
+        importedByName: actorName || '',
+        importBatchId: batchId,
+        sourceFile: (fileName || '').slice(0, 120),
+        sourceRow: row.rowNumber,
+        ...actorFields(),
+      },
+    }
+    row.keys.forEach((k) => { updates[`registrationKeys/${encodeKey(k)}`] = id })
+    return updates
+  }
+
+  const imported = []
+  const failed = []
+  for (let i = 0; i < rows.length; i += IMPORT_CHUNK) {
+    const chunk = rows.slice(i, i + IMPORT_CHUNK)
+    const perRow = chunk.map(writesFor)
+    try {
+      await update(ref(rtdb), Object.assign({}, ...perRow))
+      imported.push(...chunk.map((r) => r.rowNumber))
+    } catch {
+      for (let j = 0; j < chunk.length; j++) {
+        try {
+          await update(ref(rtdb), perRow[j])
+          imported.push(chunk[j].rowNumber)
+        } catch (err) {
+          failed.push({ rowNumber: chunk[j].rowNumber, error: err?.code === 'PERMISSION_DENIED' || /permission/i.test(err?.message || '') ? 'Already imported (duplicate Student ID or email)' : getErrorMessage(err, 'Could not be saved') })
+        }
+      }
+    }
+  }
+  return { imported, failed, batchId }
+}
+
+// Save corrected fields (and optionally a new processing status). Keeps registrationKeys in step
+// with a changed Student ID / email, refusing one that another registration already uses.
+export async function updateRegistration(registration, values, { status } = {}) {
+  assertOnline('saving the registration')
+  const oldKeys = registration.fullName ? registrationKeys(registration) : []
+  const newKeys = registrationKeys(values)
+  const updates = {}
+  for (const k of newKeys.filter((k) => !oldKeys.includes(k))) {
+    const owner = (await get(ref(rtdb, `registrationKeys/${encodeKey(k)}`))).val()
+    if (owner && owner !== registration.id) {
+      throw new Error(`Another imported registration already uses this ${k.startsWith('sid:') ? 'Student ID' : k.startsWith('email:') ? 'email' : 'name'}.`)
+    }
+    updates[`registrationKeys/${encodeKey(k)}`] = registration.id
+  }
+  oldKeys.filter((k) => !newKeys.includes(k)).forEach((k) => { updates[`registrationKeys/${encodeKey(k)}`] = null })
+  const base = `registrations/${registration.id}`
+  Object.entries({ ...registrationFieldValues(values), ...actorFields() }).forEach(([k, v]) => { updates[`${base}/${k}`] = v })
+  if (status && status !== registration.status) Object.assign(updates, statusWrites(base, status))
+  await update(ref(rtdb), updates)
+}
+
+function statusWrites(base, status) {
+  const uid = auth.currentUser?.uid || ''
+  const writes = { [`${base}/status`]: status, [`${base}/updatedAt`]: Date.now(), [`${base}/updatedBy`]: uid }
+  if (status === 'Approved') Object.assign(writes, { [`${base}/approvedAt`]: Date.now(), [`${base}/approvedBy`]: uid })
+  if (status === 'Rejected') Object.assign(writes, { [`${base}/rejectedAt`]: Date.now(), [`${base}/rejectedBy`]: uid })
+  return writes
+}
+
+export async function setRegistrationStatus(registration, status) {
+  assertOnline('changing the registration status')
+  await update(ref(rtdb), statusWrites(`registrations/${registration.id}`, status))
+}
+
+// Links a physical card to the applicant. Creates their rfidUsers record as INACTIVE - the ESP32
+// refuses an Inactive card, so the card is reserved but opens nothing until the Payment step
+// activates it. Refuses a card that someone holds now or that is reserved for another applicant.
+// `replace` = swap the card on a not-yet-activated assignment (the caller confirms first).
+export async function assignRegistrationCard(registration, rfidId, users, { replace = false } = {}) {
+  assertOnline('assigning the RFID card')
+  const card = (rfidId || '').trim()
+  if (!isValidRfid(card)) throw new Error('That RFID looks invalid - scan the card again.')
+  const current = registration.rfidUserId ? users.find((u) => u.id === registration.rfidUserId) : null
+  if (current && (current.status || 'Active') === 'Active') throw new Error('This registration is already activated - change its card from the owner record (Edit).')
+  if (current && !replace) throw new Error('A card is already assigned - confirm replacing it.')
+
+  const holder = currentHolder(users, card)
+  if (holder && holder.id !== current?.id) throw new Error(`Card ${card} is in use by ${holder.name || 'another owner'}.`)
+  const reserved = users.find((u) => u.id !== current?.id && u.registrationId && u.registrationId !== registration.id
+    && (u.rfidId || '').toLowerCase() === card.toLowerCase() && (u.status || 'Active') !== 'Active' && !u.returnedAt)
+  if (reserved) throw new Error(`Card ${card} is already assigned to ${reserved.name} (not activated yet).`)
+
+  if (current) {
+    await update(ref(rtdb), { [`rfidUsers/${current.id}/rfidId`]: card, ...registrationTouch(registration.id) })
+    return current.id
+  }
+  const ownerRef = push(ref(rtdb, 'rfidUsers'))
+  const owner = validateRfidUser({
+    name: registration.fullName,
+    rfidId: card,
+    plateNumber: registration.plateNumber,
+    vehicleType: registration.vehicleType || 'Car',
+    vehicleColor: registration.vehicleColor,
+    vehicleBrand: registration.vehicleBrand,
+    department: registration.department || registration.course,
+    role: registration.role || 'Student',
+    email: registration.email,
+    phone: registration.phone,
+    status: 'Inactive',
+    createdAt: Date.now(),
+    registrationId: registration.id,
+    studentId: registration.studentId,
+  })
+  await update(ref(rtdb), {
+    [`rfidUsers/${ownerRef.key}`]: owner,
+    [`registrations/${registration.id}/rfidUserId`]: ownerRef.key,
+    ...registrationTouch(registration.id),
+  })
+  return ownerRef.key
+}
+
+// Takes a not-yet-activated card back (the reserved Inactive record is removed - it never opened
+// anything and has no payments).
+export async function unassignRegistrationCard(registration, users) {
+  assertOnline('removing the RFID card')
+  const current = users.find((u) => u.id === registration.rfidUserId)
+  if (current && (current.status || 'Active') === 'Active') throw new Error('This registration is already activated - its card is managed from the owner record.')
+  await update(ref(rtdb), {
+    ...(current ? { [`rfidUsers/${current.id}`]: null } : {}),
+    [`registrations/${registration.id}/rfidUserId`]: null,
+    ...registrationTouch(registration.id),
+  })
+}
+
+function registrationTouch(id) {
+  return { [`registrations/${id}/updatedAt`]: Date.now(), [`registrations/${id}/updatedBy`]: auth.currentUser?.uid || '' }
+}
+
+// After the Payment registration made the owner record Active (paid, card scanned, documents and
+// consent recorded): mark the registration Active and link both ways. The rules accept 'Active' only
+// when that rfidUsers record really is Active.
+// releaseOwner: the card reserved earlier, when a different card was scanned at payment - its
+// Inactive placeholder is removed in the same update so it doesn't keep that card reserved.
+export async function markRegistrationActive(registration, rfidUserId, { releaseOwner = null } = {}) {
+  const base = `registrations/${registration.id}`
+  const release = releaseOwner && releaseOwner.id !== rfidUserId && (releaseOwner.status || 'Active') !== 'Active'
+  await update(ref(rtdb), {
+    ...(release ? { [`rfidUsers/${releaseOwner.id}`]: null } : {}),
+    ...statusWrites(base, 'Active'),
+    [`${base}/rfidUserId`]: rfidUserId,
+    [`${base}/activatedAt`]: Date.now(),
+    [`${base}/activatedBy`]: auth.currentUser?.uid || '',
+    [`rfidUsers/${rfidUserId}/registrationId`]: registration.id,
+    ...(registration.studentId ? { [`rfidUsers/${rfidUserId}/studentId`]: registration.studentId } : {}),
+  })
 }
 
 // ---- VIP pre-clearance (expectedGuests) ------------------------------------------------
