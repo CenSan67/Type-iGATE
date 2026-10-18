@@ -3,6 +3,7 @@ import StatsCards from './StatsCards'
 import ScannerStatusBadge from './ScannerStatusBadge'
 import AutoCloseControl from './AutoCloseControl'
 import RecentActivityTable from './RecentActivityTable'
+import CameraSnapshotCard from './CameraSnapshotCard'
 import GuestClearancePanel from './GuestClearancePanel'
 import VisitorPassesPanel from './VisitorPassesPanel'
 import SimulateScanModal from './SimulateScanModal'
@@ -51,6 +52,7 @@ export default function DashboardPage(){
             <ScannerStatusBadge />
             {ADMIN_ROLES.includes(role) && <AutoCloseControl />}
           </div>
+          <CameraSnapshotCard />
           {ADMIN_ROLES.includes(role) && (
             <div className="overview-card">
               <h4>Hardware Testing</h4>
