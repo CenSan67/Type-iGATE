@@ -1,3 +1,4 @@
+import { normalizePlate } from '../utils/validators'
 import { toCaps } from '../utils/textCase'
 
 export const PAYMENT_TYPES = ['Registration', 'Renewal']
@@ -52,7 +53,7 @@ export function validatePayment(data) {
     rfidId: data.rfidId,
     name: toCaps((data.name || '').trim()),
     department: toCaps((data.department || '').trim()),
-    plateNumber: toCaps((data.plateNumber || '').trim()),
+    plateNumber: normalizePlate(data.plateNumber),
     paymentType: data.paymentType || 'Registration',
     amount: data.amount,
     status: data.status || 'Paid',

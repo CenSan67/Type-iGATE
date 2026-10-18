@@ -3,9 +3,15 @@
 // we don't control the hardware's exact format, so this only rejects obviously-bad input.
 export const RFID_PATTERN = /^[A-Za-z0-9-]{3,40}$/
 
-// Philippine plate formats vary (cars vs motorcycles vs e-bikes), so this accepts the
-// common "ABC1234" / "ABC-1234" / "ABC 1234" shapes rather than one exact layout.
-export const PLATE_PATTERN = /^[A-Z0-9]{2,4}[- ]?[A-Z0-9]{3,4}$/
+// Plate numbers are letters and digits only - no spaces, hyphens or other symbols - so one
+// vehicle has one spelling ("ABC1234", "123ABC", "AB12345"). Formats vary (cars vs motorcycles
+// vs conduction stickers, vanity plates), so any length of letters/digits is accepted - 20 is
+// only a cap against junk input.
+export const PLATE_PATTERN = /^[A-Z0-9]{1,20}$/
+
+// Uppercase and drop every non-alphanumeric character. Used while typing and on save, so older
+// "ABC-1234" records are stored clean the next time they're saved.
+export const normalizePlate = (value) => (value || '').toString().toUpperCase().replace(/[^A-Z0-9]/g, '')
 
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -24,6 +30,8 @@ export function generateDummyRfid() {
 export function isValidPlate(value) {
   return PLATE_PATTERN.test((value || '').trim().toUpperCase())
 }
+
+export const PLATE_FORMAT_HINT = 'letters and numbers only - no spaces, commas or symbols (e.g. ABC1234)'
 
 // Email is optional on rfidUsers, so an empty value is valid; only a non-empty,
 // malformed value is rejected.

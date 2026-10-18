@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { approvalProblems, checkRegistration, deriveRegistrationStatus, REGISTRATION_FIELDS } from '../models/registration'
+import { approvalProblems, checkRegistration, deriveRegistrationStatus, REGISTRATION_FIELDS, uploadedFileLinks } from '../models/registration'
 import { resolveVehicleBrand, vehicleBrandFormValue } from '../constants/vehicleBrands'
 import { assignRegistrationCard, setRegistrationStatus, unassignRegistrationCard, updateRegistration } from '../services/firebase'
 import { getErrorMessage } from '../utils/errors'
@@ -22,6 +22,7 @@ export default function useRegistrationProcessing(registration, users, payments)
   const [errors, setErrors] = useState({})
 
   const original = useMemo(() => parseOriginal(registration.originalJson), [registration.originalJson])
+  const uploadedFiles = useMemo(() => uploadedFileLinks(original.columns), [original])
   const derived = deriveRegistrationStatus(registration, users, payments)
   const editable = registration.status !== 'Active' && registration.status !== 'Rejected'
   const dirty = JSON.stringify(formFrom(registration)) !== JSON.stringify(form)
@@ -83,5 +84,5 @@ export default function useRegistrationProcessing(registration, users, payments)
     return approvalProblems(checkRegistration({ ...form, vehicleBrand: brand.value || '' }))
   }, [form])
 
-  return { form, setField, errors, saving, dirty, editable, derived, original, missingNow, save, changeStatus, assignCard, removeCard }
+  return { form, setField, errors, saving, dirty, editable, derived, original, uploadedFiles, missingNow, save, changeStatus, assignCard, removeCard }
 }

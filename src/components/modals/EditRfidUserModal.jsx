@@ -5,7 +5,7 @@ import useRfidScanner from '../../hooks/useRfidScanner'
 import DummyFillButton from '../shared/DummyFillButton'
 import VehicleBrandField from '../shared/VehicleBrandField'
 import { resolveVehicleBrand, vehicleBrandFormValue } from '../../constants/vehicleBrands'
-import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, generateDummyRfid } from '../../utils/validators'
+import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, generateDummyRfid, normalizePlate, PLATE_FORMAT_HINT } from '../../utils/validators'
 import { VEHICLE_OWNER_ROLES, VEHICLE_TYPES } from '../../models/rfidUser'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
@@ -15,7 +15,7 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
   const [form, setForm] = useState({
     name: user.name || '',
     rfidId: user.rfidId || '',
-    plateNumber: user.plateNumber || '',
+    plateNumber: normalizePlate(user.plateNumber),
     vehicleType: user.vehicleType || 'Car',
     vehicleColor: user.vehicleColor || '',
     brand: vehicleBrandFormValue(user.vehicleBrand),
@@ -55,7 +55,7 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
       return
     }
     if (form.plateNumber.trim() && !isValidPlate(form.plateNumber)) {
-      showError('Plate Number format looks invalid (expected e.g. ABC-1234).')
+      showError(`Plate Number: ${PLATE_FORMAT_HINT}.`)
       return
     }
     const brand = resolveVehicleBrand(form.brand)
@@ -121,7 +121,7 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
 
         <label>
           Plate Number
-          <input name="plateNumber" value={form.plateNumber} onChange={handleChange} placeholder="ABC-1234" />
+          <input name="plateNumber" value={form.plateNumber} onChange={handleChange} placeholder="ABC1234" />
         </label>
 
         <label>

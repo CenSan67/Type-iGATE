@@ -9,7 +9,7 @@ import useRfidScanner from '../../hooks/useRfidScanner'
 import { REGISTRATION_ROLES } from '../../models/registration'
 import { PLATE_OPTIONAL_TYPES } from '../../constants/fees'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
-import { capsInputValue } from '../../utils/textCase'
+import { capsInputValue, plateInputValue, PLATE_FIELDS } from '../../utils/textCase'
 import { formatPhoneInput, generateDummyRfid } from '../../utils/validators'
 
 // Same sections, order and wording as the Payment "New Registration" form. Student ID / Course /
@@ -20,7 +20,7 @@ const FIELDS = {
   phone: { label: 'Contact Number (enables SMS gate alerts)', phone: true, placeholder: '09171234567' },
   department: { label: 'Department', caps: true, placeholder: 'BSIT' },
   vehicleColor: { label: 'Vehicle Color', caps: true, placeholder: 'White' },
-  plateNumber: { label: 'Plate Number', caps: true, span: true, placeholder: 'ABC-1234' },
+  plateNumber: { label: 'Plate Number', caps: true, span: true, placeholder: 'ABC1234' },
 }
 
 // Account Management -> Imported -> Process: review / correct / approve one Google Forms registration,
@@ -59,7 +59,7 @@ export default function ProcessRegistrationModal({ registration, users, payments
           maxLength={80}
           placeholder={f.placeholder}
           aria-invalid={Boolean(p.errors[key])}
-          onChange={(e) => p.setField(key, f.phone ? formatPhoneInput(e.target.value) : f.caps ? capsInputValue(e) : e.target.value)}
+          onChange={(e) => p.setField(key, f.phone ? formatPhoneInput(e.target.value) : PLATE_FIELDS.has(key) ? plateInputValue(e) : f.caps ? capsInputValue(e) : e.target.value)}
         />
         {p.errors[key] && <span className="field-error">{p.errors[key]}</span>}
         {submitted(key)}
@@ -114,6 +114,17 @@ export default function ProcessRegistrationModal({ registration, users, payments
         {p.editable && p.missingNow.length > 0 && (
           <div className="process-missing">Before approval: {p.missingNow.join('; ')}.</div>
         )}
+
+        <div className="process-files">
+          <span>Uploaded files</span>
+          {p.uploadedFiles.length === 0 ? (
+            <span className="process-files-none">None in the Google Forms answers.</span>
+          ) : p.uploadedFiles.map((url, i) => (
+            <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="btn-secondary">
+              View uploaded file{p.uploadedFiles.length > 1 ? ` ${i + 1}` : ''}
+            </a>
+          ))}
+        </div>
 
         <button type="button" className="link-btn process-original-toggle" onClick={() => setShowOriginal((v) => !v)}>
           {showOriginal ? 'Hide' : 'Show'} original Google Forms answers

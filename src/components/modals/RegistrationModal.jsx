@@ -7,7 +7,7 @@ import { resolveVehicleBrand, vehicleBrandFormValue } from '../../constants/vehi
 import useRfidScanner from '../../hooks/useRfidScanner'
 import useRfidUsers from '../../hooks/useRfidUsers'
 import { useAuth } from '../../context/AuthContext'
-import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, formatPhoneInput, generateDummyRfid } from '../../utils/validators'
+import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, formatPhoneInput, generateDummyRfid, normalizePlate, PLATE_FORMAT_HINT } from '../../utils/validators'
 import { getErrorMessage } from '../../utils/errors'
 import { toLocalISODate } from '../../utils/dateRange'
 import { useToast } from '../../context/ToastContext'
@@ -105,7 +105,7 @@ export default function RegistrationModal({ initialType = 'Registration', prefil
         rfid: existing.rfidId || f.rfid,
         name: existing.name || '',
         department: existing.department || f.department,
-        plate: existing.plateNumber || '',
+        plate: normalizePlate(existing.plateNumber),
         vehicle,
         color: existing.vehicleColor || '',
         brand: vehicleBrandFormValue(existing.vehicleBrand),
@@ -159,7 +159,7 @@ export default function RegistrationModal({ initialType = 'Registration', prefil
       return
     }
     if (form.plate.trim() && !isValidPlate(form.plate)) {
-      showError('Plate Number format looks invalid (expected e.g. ABC-1234).')
+      showError(`Plate Number: ${PLATE_FORMAT_HINT}.`)
       return
     }
     if (!isValidEmail(form.email)) {
@@ -310,7 +310,7 @@ export default function RegistrationModal({ initialType = 'Registration', prefil
             </label>
             <label className="span-2">
               Plate Number{plateOptional ? ' (optional for this vehicle type)' : ''}
-              <input value={form.plate} onChange={update('plate')} placeholder="ABC-1234" />
+              <input value={form.plate} onChange={update('plate')} placeholder="ABC1234" />
             </label>
           </div>
 

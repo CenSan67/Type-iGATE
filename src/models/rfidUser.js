@@ -1,4 +1,4 @@
-import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, normalizePhone } from '../utils/validators'
+import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, normalizePhone, normalizePlate, PLATE_FORMAT_HINT } from '../utils/validators'
 import { toCaps } from '../utils/textCase'
 import { isValidVehicleBrand, normalizeVehicleBrand } from '../constants/vehicleBrands'
 
@@ -51,8 +51,9 @@ export function validateRfidUser(data) {
   if (!data.name || typeof data.name !== 'string' || !data.name.trim()) {
     throw new Error('RfidUser: name is required')
   }
-  if (data.plateNumber && !isValidPlate(data.plateNumber)) {
-    throw new Error('RfidUser: plateNumber format looks invalid (expected e.g. ABC-1234)')
+  const plateNumber = normalizePlate(data.plateNumber)
+  if (plateNumber && !isValidPlate(plateNumber)) {
+    throw new Error(`RfidUser: plate number must be ${PLATE_FORMAT_HINT}`)
   }
   if (data.email && !isValidEmail(data.email)) {
     throw new Error('RfidUser: email format looks invalid')
@@ -82,7 +83,7 @@ export function validateRfidUser(data) {
   return {
     name: toCaps(data.name.trim()),
     rfidId: data.rfidId.trim(),
-    plateNumber: (data.plateNumber || '').trim().toUpperCase(),
+    plateNumber,
     vehicleType: data.vehicleType || 'Car',
     vehicleColor: toCaps((data.vehicleColor || '').trim()),
     // Only when set: a record saved before brands existed keeps no brand ("Not specified").

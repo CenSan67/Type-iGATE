@@ -1,4 +1,4 @@
-import { isValidEmail, isValidPhone, isValidPlate, normalizePhone } from '../utils/validators'
+import { isValidEmail, isValidPhone, isValidPlate, normalizePhone, normalizePlate, PLATE_FORMAT_HINT } from '../utils/validators'
 import { VEHICLE_TYPES } from './rfidUser'
 import { PLATE_OPTIONAL_TYPES } from '../constants/fees'
 import { VEHICLE_BRANDS, NO_VEHICLE_VALUE, isValidVehicleBrand, normalizeVehicleBrand } from '../constants/vehicleBrands'
@@ -112,8 +112,8 @@ export function checkRegistration(raw) {
     else errors.vehicleType = `Vehicle Type must be one of ${VEHICLE_TYPES.join(', ')}`
   }
 
-  values.plateNumber = values.plateNumber.replace(/\s+/g, ' ')
-  if (values.plateNumber && !isValidPlate(values.plateNumber)) errors.plateNumber = 'Plate Number looks invalid (e.g. ABC-1234)'
+  values.plateNumber = normalizePlate(values.plateNumber)
+  if (values.plateNumber && !isValidPlate(values.plateNumber)) errors.plateNumber = `Plate Number: ${PLATE_FORMAT_HINT}`
 
   if (values.vehicleBrand) {
     if (NO_VEHICLE_WORDS.includes(values.vehicleBrand.toLowerCase())) values.vehicleBrand = NO_VEHICLE_VALUE
@@ -176,6 +176,23 @@ export function deriveRegistrationStatus(registration, users, payments) {
     rfidId: owner?.rfidId || '',
     owner,
   }
+}
+
+// Files the applicant uploaded with the Google Form: the sheet only holds Drive links (the files stay
+// private in the form owner's Drive), one cell can list several, comma-separated. Only https links
+// on Google's own Drive/Docs hosts are returned, so a crafted cell can't become a javascript: link.
+const DRIVE_HOSTS = ['drive.google.com', 'docs.google.com']
+export function uploadedFileLinks(columns) {
+  const links = []
+  for (const value of Object.values(columns || {})) {
+    for (const part of String(value).split(/[,\s]+/)) {
+      try {
+        const url = new URL(part)
+        if (url.protocol === 'https:' && DRIVE_HOSTS.includes(url.hostname) && !links.includes(url.href)) links.push(url.href)
+      } catch { /* not a URL */ }
+    }
+  }
+  return links
 }
 
 // The editable fields as stored (strings, '' when empty) for a write.

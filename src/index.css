@@ -2867,6 +2867,10 @@ html, body, #root {
 .process-original div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; overflow-wrap: anywhere; }
 .process-original span:first-child { color: #888; }
 .process-card { display: grid; gap: 8px; font-size: 14px; color: #444; }
+.process-files { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+.process-files > span:first-child { font-weight: 600; color: #444; }
+.process-files a { text-decoration: none; }
+.process-files-none { color: #888; }
 .process-hint { margin: 0; font-size: 13px; color: #666; text-align: right; }
 .process-card p { margin: 0; }
 .process-status-actions { justify-content: flex-start; }

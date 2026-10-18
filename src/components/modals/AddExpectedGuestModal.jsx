@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { createExpectedGuest } from '../../services/firebase'
 import { GUEST_CATEGORIES } from '../../models/expectedGuest'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
-import { isValidPlate } from '../../utils/validators'
+import { isValidPlate, normalizePlate, PLATE_FORMAT_HINT } from '../../utils/validators'
 import { toLocalInputDateTime, fromLocalInputDateTime } from '../../utils/dateRange'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
@@ -49,7 +49,7 @@ export default function AddExpectedGuestModal({ onClose, onCreated }){
       return
     }
     if (form.plateNumber.trim() && !isValidPlate(form.plateNumber)) {
-      showError('Plate Number format looks invalid (expected e.g. ABC-1234).')
+      showError(`Plate Number: ${PLATE_FORMAT_HINT}.`)
       return
     }
     const validFrom = fromLocalInputDateTime(form.validFrom)
@@ -103,7 +103,7 @@ export default function AddExpectedGuestModal({ onClose, onCreated }){
         </label>
         <label>
           Plate Number (optional - fill in at the gate if unknown)
-          <input value={form.plateNumber} onChange={update('plateNumber')} placeholder="ABC-1234" />
+          <input value={form.plateNumber} onChange={update('plateNumber')} placeholder="ABC1234" />
         </label>
         <label>
           Vehicle Type

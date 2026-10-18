@@ -4,10 +4,10 @@ import useRfidScanner from '../../hooks/useRfidScanner'
 import { useAuth } from '../../context/AuthContext'
 import { checkInGuest } from '../../services/firebase'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
-import { isValidRfid, isValidPlate } from '../../utils/validators'
+import { isValidRfid, isValidPlate, normalizePlate, PLATE_FORMAT_HINT } from '../../utils/validators'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
-import { capsInputValue } from '../../utils/textCase'
+import { plateInputValue } from '../../utils/textCase'
 
 // Any staff role, from the Dashboard's GuestClearancePanel: issues the pre-cleared guest a
 // temporary pass at the gate. Plate/vehicle are pre-filled from the pre-clearance record but
@@ -18,7 +18,7 @@ export default function CheckInGuestModal({ guest, onClose, onCheckedIn }){
   const { showError } = useToast()
   const { scanning, startScan, stopScan } = useRfidScanner()
   const [rfidId, setRfidId] = useState('')
-  const [plateNumber, setPlateNumber] = useState(guest.plateNumber || '')
+  const [plateNumber, setPlateNumber] = useState(normalizePlate(guest.plateNumber))
   const [vehicleType, setVehicleType] = useState(guest.vehicleType || 'Car')
   const [submitting, setSubmitting] = useState(false)
 
@@ -33,7 +33,7 @@ export default function CheckInGuestModal({ guest, onClose, onCheckedIn }){
       return
     }
     if (plateNumber.trim() && !isValidPlate(plateNumber)) {
-      showError('Plate Number format looks invalid (expected e.g. ABC-1234).')
+      showError(`Plate Number: ${PLATE_FORMAT_HINT}.`)
       return
     }
 
@@ -74,7 +74,7 @@ export default function CheckInGuestModal({ guest, onClose, onCheckedIn }){
         </label>
         <label>
           Plate Number
-          <input value={plateNumber} onChange={(e) => setPlateNumber(capsInputValue(e))} placeholder="ABC-1234" />
+          <input value={plateNumber} onChange={(e) => setPlateNumber(plateInputValue(e))} placeholder="ABC1234" />
         </label>
         <label>
           Vehicle Type

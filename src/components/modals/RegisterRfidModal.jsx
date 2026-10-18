@@ -6,7 +6,7 @@ import useRfidUsers from '../../hooks/useRfidUsers'
 import DummyFillButton from '../shared/DummyFillButton'
 import VehicleBrandField from '../shared/VehicleBrandField'
 import { resolveVehicleBrand, vehicleBrandFormValue } from '../../constants/vehicleBrands'
-import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, formatPhoneInput, generateDummyRfid } from '../../utils/validators'
+import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, formatPhoneInput, generateDummyRfid, normalizePlate, PLATE_FORMAT_HINT } from '../../utils/validators'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
 import { fieldInputValue } from '../../utils/textCase'
@@ -74,7 +74,7 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
 
     setForm((f) => ({
       ...f,
-      plateNumber: match.plateNumber || f.plateNumber,
+      plateNumber: normalizePlate(match.plateNumber) || f.plateNumber,
       vehicleType: match.vehicleType || f.vehicleType,
       brand: match.vehicleBrand ? vehicleBrandFormValue(match.vehicleBrand) : f.brand,
       email: match.email || f.email,
@@ -97,7 +97,7 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
       return
     }
     if (form.plateNumber.trim() && !isValidPlate(form.plateNumber)) {
-      showError('Plate Number format looks invalid (expected e.g. ABC-1234).')
+      showError(`Plate Number: ${PLATE_FORMAT_HINT}.`)
       return
     }
     const brand = resolveVehicleBrand(form.brand)
@@ -188,7 +188,7 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
 
           <label>
             Plate Number
-            <input name="plateNumber" value={form.plateNumber} onChange={handleChange} placeholder="ABC-1234" />
+            <input name="plateNumber" value={form.plateNumber} onChange={handleChange} placeholder="ABC1234" />
           </label>
 
           <label>
