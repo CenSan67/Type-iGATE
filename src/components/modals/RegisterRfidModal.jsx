@@ -4,6 +4,8 @@ import { VEHICLE_TYPES } from '../../models/rfidUser'
 import useRfidScanner from '../../hooks/useRfidScanner'
 import useRfidUsers from '../../hooks/useRfidUsers'
 import DummyFillButton from '../shared/DummyFillButton'
+import VehicleBrandField from '../shared/VehicleBrandField'
+import { resolveVehicleBrand, vehicleBrandFormValue } from '../../constants/vehicleBrands'
 import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, formatPhoneInput, generateDummyRfid } from '../../utils/validators'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
@@ -14,6 +16,7 @@ const initialForm = {
   rfidId: '',
   plateNumber: '',
   vehicleType: 'Car',
+  brand: { choice: '', custom: '' },
   role: 'Visitor',
   email: '',
   phone: '',
@@ -73,6 +76,7 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
       ...f,
       plateNumber: match.plateNumber || f.plateNumber,
       vehicleType: match.vehicleType || f.vehicleType,
+      brand: match.vehicleBrand ? vehicleBrandFormValue(match.vehicleBrand) : f.brand,
       email: match.email || f.email,
       phone: match.phone || f.phone,
       hostName: match.hostName || f.hostName,
@@ -96,6 +100,11 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
       showError('Plate Number format looks invalid (expected e.g. ABC-1234).')
       return
     }
+    const brand = resolveVehicleBrand(form.brand)
+    if (brand.error) {
+      showError(brand.error)
+      return
+    }
     if (!isValidEmail(form.email)) {
       showError('Email format looks invalid.')
       return
@@ -117,6 +126,7 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
         rfidId: form.rfidId.trim(),
         plateNumber: form.plateNumber.trim(),
         vehicleType: form.vehicleType,
+        vehicleBrand: brand.value,
         department: '',
         role: form.role,
         email: form.email.trim(),
@@ -187,6 +197,8 @@ export default function RegisterRfidModal({ onClose, onRegistered }) {
               {VEHICLE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </label>
+
+          <VehicleBrandField value={form.brand} onChange={(brand) => setForm((f) => ({ ...f, brand }))} />
 
           <label>
             Email (optional)

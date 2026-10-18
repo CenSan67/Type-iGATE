@@ -137,7 +137,7 @@ export async function logGateEntry({ cardId, cardHex, direction = 'IN', source =
   return entryRef.key
 }
 
-export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, phone, expiresAt, hostName, purpose, guestId }) {
+export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType, vehicleBrand, department, role, email, phone, expiresAt, hostName, purpose, guestId }) {
   const usersRef = ref(rtdb, 'rfidUsers')
   const snapshot = await get(usersRef)
   const existingUsers = snapshot.exists() ? Object.values(snapshot.val() || {}) : []
@@ -154,7 +154,7 @@ export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType,
   }
 
   const newUserRef = push(usersRef)
-  await set(newUserRef, validateRfidUser({ name, rfidId, plateNumber, vehicleType, department, role, email, phone, expiresAt, hostName, purpose, guestId, createdAt: Date.now() }))
+  await set(newUserRef, validateRfidUser({ name, rfidId, plateNumber, vehicleType, vehicleBrand, department, role, email, phone, expiresAt, hostName, purpose, guestId, createdAt: Date.now() }))
 
   return newUserRef.key
 }
@@ -165,7 +165,7 @@ export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType,
 // With `payment`, the record and its payments/{id} entry are written in ONE atomic update,
 // and the record carries that paymentId: database.rules.json only lets a non-admin create a
 // non-visitor record together with a brand-new payment for the same card, received by them.
-export async function upsertRfidUser({ rfidId, name, department, plateNumber, vehicleType, vehicleColor, role, email, phone }, { payment } = {}) {
+export async function upsertRfidUser({ rfidId, name, department, plateNumber, vehicleType, vehicleColor, vehicleBrand, role, email, phone }, { payment } = {}) {
   const paymentId = payment ? push(ref(rtdb, 'payments')).key : null
   const save = async (id, record) => {
     const value = validateRfidUser({ ...record, ...(paymentId ? { paymentId } : {}) })
@@ -196,6 +196,7 @@ export async function upsertRfidUser({ rfidId, name, department, plateNumber, ve
       plateNumber: plateNumber || value.plateNumber,
       vehicleType: vehicleType || value.vehicleType,
       vehicleColor: vehicleColor || value.vehicleColor,
+      vehicleBrand: vehicleBrand || value.vehicleBrand, // renewal without a brand keeps the one on file
       role: finalRole,
       email: email || value.email,
       phone: phone || value.phone,
@@ -216,7 +217,7 @@ export async function upsertRfidUser({ rfidId, name, department, plateNumber, ve
   }
 
   const newUserRef = push(usersRef)
-  await save(newUserRef.key, { name, rfidId, plateNumber, vehicleType, vehicleColor, department, role, email, phone, createdAt: Date.now() })
+  await save(newUserRef.key, { name, rfidId, plateNumber, vehicleType, vehicleColor, vehicleBrand, department, role, email, phone, createdAt: Date.now() })
 
   return newUserRef.key
 }

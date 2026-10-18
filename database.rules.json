@@ -41,6 +41,9 @@
         },
         "imageUrl": {
           ".validate": "newData.val() == '' || newData.val().matches(/^https:\\/\\//)"
+        },
+        "vehicleBrand": {
+          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 40"
         }
       }
     },

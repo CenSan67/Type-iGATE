@@ -1,5 +1,6 @@
 import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, normalizePhone } from '../utils/validators'
 import { toCaps } from '../utils/textCase'
+import { isValidVehicleBrand, normalizeVehicleBrand } from '../constants/vehicleBrands'
 
 // This is the vehicle-owner "role" (who the card belongs to), unrelated to the
 // admin login roles in src/constants/roles.js. Security guards register under 'Staff'.
@@ -14,6 +15,7 @@ export const ACCOUNT_STATUSES = ['Active', 'Inactive']
  * @property {string} plateNumber
  * @property {string} vehicleType
  * @property {string} [vehicleColor]
+ * @property {string} [vehicleBrand] - CAPS make, e.g. "TOYOTA", or "NO VEHICLE"; absent = not specified (constants/vehicleBrands.js)
  * @property {string} department
  * @property {'Student'|'Faculty'|'Staff'|'Visitor'} role
  * @property {string} email
@@ -71,12 +73,18 @@ export function validateRfidUser(data) {
   if (data.returnedAt != null && typeof data.returnedAt !== 'number') {
     throw new Error('RfidUser: returnedAt must be a timestamp (ms)')
   }
+  if (!isValidVehicleBrand(data.vehicleBrand)) {
+    throw new Error('RfidUser: vehicle brand looks invalid (2-40 letters or numbers)')
+  }
+  const vehicleBrand = normalizeVehicleBrand(data.vehicleBrand)
   return {
     name: toCaps(data.name.trim()),
     rfidId: data.rfidId.trim(),
     plateNumber: (data.plateNumber || '').trim().toUpperCase(),
     vehicleType: data.vehicleType || 'Car',
     vehicleColor: toCaps((data.vehicleColor || '').trim()),
+    // Only when set: a record saved before brands existed keeps no brand ("Not specified").
+    ...(vehicleBrand ? { vehicleBrand } : {}),
     department: toCaps((data.department || '').trim()),
     role: data.role || 'Student',
     email: (data.email || '').trim(),

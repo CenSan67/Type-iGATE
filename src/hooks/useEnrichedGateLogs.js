@@ -36,6 +36,7 @@ export default function useEnrichedGateLogs(){
       name: user?.name || 'Unknown',
       plateNumber: user?.plateNumber || '—',
       vehicleType: user?.vehicleType || '—',
+      vehicleBrand: user?.vehicleBrand || '',
       department: user?.department || '—',
       role: user?.role || '—',
       // The scan's own snapshot (this specific entry/exit moment) takes priority;

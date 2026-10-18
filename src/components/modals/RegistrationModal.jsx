@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import Modal from './Modal'
 import ReceiptSummary from '../shared/ReceiptSummary'
 import DummyFillButton from '../shared/DummyFillButton'
+import VehicleBrandField from '../shared/VehicleBrandField'
+import { resolveVehicleBrand, vehicleBrandFormValue } from '../../constants/vehicleBrands'
 import useRfidScanner from '../../hooks/useRfidScanner'
 import useRfidUsers from '../../hooks/useRfidUsers'
 import { useAuth } from '../../context/AuthContext'
@@ -42,6 +44,7 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
     plate: '',
     vehicle: 'Car',
     color: '',
+    brand: { choice: '', custom: '' },
     role: 'Student',
     email: '',
     phone: '',
@@ -102,6 +105,7 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
         plate: existing.plateNumber || '',
         vehicle,
         color: existing.vehicleColor || '',
+        brand: vehicleBrandFormValue(existing.vehicleBrand),
         role: PAYMENT_ROLES.includes(existing.role) ? existing.role : f.role,
         email: existing.email || '',
         phone: existing.phone || '',
@@ -163,6 +167,11 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
       showError('Contact number looks invalid (expected a PH mobile number, e.g. 09171234567).')
       return
     }
+    const brand = resolveVehicleBrand(form.brand)
+    if (brand.error) {
+      showError(brand.error)
+      return
+    }
     if (requiredDocs.some((doc) => !form.docs[doc])) {
       showError('Check and tick every required document before saving.')
       return
@@ -188,7 +197,7 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
 
     setSubmitting(true)
     try {
-      await onSubmit(form)
+      await onSubmit({ ...form, vehicleBrand: brand.value })
     } catch (err) {
       showError(getErrorMessage(err, 'Unable to record the payment right now.'))
     } finally {
@@ -202,6 +211,7 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
     department: form.department.trim(),
     rfid: form.rfid,
     vehicle: form.vehicle,
+    vehicleBrand: resolveVehicleBrand(form.brand).value,
     paymentType: form.paymentType,
     amountDue: fee,
     amountPaid: tendered,
@@ -290,6 +300,7 @@ export default function RegistrationModal({ initialType = 'Registration', onClos
                 {VEHICLE_TYPES.map((t) => <option key={t}>{t}</option>)}
               </select>
             </label>
+            <VehicleBrandField value={form.brand} onChange={(brand) => setForm((f) => ({ ...f, brand }))} />
             <label>
               Vehicle Color
               <input value={form.color} onChange={update('color')} placeholder="White" />

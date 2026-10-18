@@ -7,6 +7,7 @@ import ImagePreviewModal from '../modals/ImagePreviewModal'
 import { RemarkAddButton, RemarkTick } from '../shared/RemarkBadge'
 import { listenToNewGateLogs } from '../../services/firebase'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
+import { formatVehicleBrand } from '../../constants/vehicleBrands'
 
 const FLASH_DURATION_MS = 4000
 
@@ -116,7 +117,7 @@ export default function RecentActivityTable(){
                   {entryHasRemark(row) && <RemarkTick onClick={() => setActiveRow(row)} />}
                 </span>
               </td>
-              <td>{row.vehicleType || '—'}</td>
+              <td>{row.vehicleType || '—'}{row.vehicleType && row.vehicleType !== '—' && <span className="cell-sub">{formatVehicleBrand(row.vehicleBrand)}</span>}</td>
               <td>{row.department || '—'}</td>
               <td>{row.role || '—'}</td>
               <td>{row.direction === 'OUT' ? <span className="direction-out">- OUT</span> : <span className="direction-in">+ IN</span>}</td>

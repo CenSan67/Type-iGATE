@@ -3,6 +3,8 @@ import Modal from './Modal'
 import { updateRfidUser } from '../../services/firebase'
 import useRfidScanner from '../../hooks/useRfidScanner'
 import DummyFillButton from '../shared/DummyFillButton'
+import VehicleBrandField from '../shared/VehicleBrandField'
+import { resolveVehicleBrand, vehicleBrandFormValue } from '../../constants/vehicleBrands'
 import { isValidRfid, isValidPlate, isValidEmail, isValidPhone, generateDummyRfid } from '../../utils/validators'
 import { VEHICLE_OWNER_ROLES, VEHICLE_TYPES } from '../../models/rfidUser'
 import { getErrorMessage } from '../../utils/errors'
@@ -16,6 +18,7 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
     plateNumber: user.plateNumber || '',
     vehicleType: user.vehicleType || 'Car',
     vehicleColor: user.vehicleColor || '',
+    brand: vehicleBrandFormValue(user.vehicleBrand),
     department: user.department || '',
     role: user.role || 'Student',
     email: user.email || '',
@@ -55,6 +58,11 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
       showError('Plate Number format looks invalid (expected e.g. ABC-1234).')
       return
     }
+    const brand = resolveVehicleBrand(form.brand)
+    if (brand.error) {
+      showError(brand.error)
+      return
+    }
     if (!isValidEmail(form.email)) {
       showError('Email format looks invalid.')
       return
@@ -72,6 +80,7 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
         plateNumber: form.plateNumber.trim(),
         vehicleType: form.vehicleType,
         vehicleColor: form.vehicleColor.trim(),
+        vehicleBrand: brand.value, // '' = cleared -> "Not specified"
         department: form.department.trim(),
         role: form.role,
         email: form.email.trim(),
@@ -121,6 +130,8 @@ export default function EditRfidUserModal({ user, onClose, onSaved }){
             {VEHICLE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </label>
+
+        <VehicleBrandField value={form.brand} onChange={(brand) => setForm((f) => ({ ...f, brand }))} />
 
         <label>
           Vehicle Color

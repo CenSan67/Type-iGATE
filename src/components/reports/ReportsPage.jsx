@@ -45,6 +45,7 @@ export default function ReportsPage(){
     department: entry.department,
     userType: entry.role,
     vehicle: entry.vehicleType,
+    brand: entry.vehicleBrand,
     direction: entry.direction,
     entry,
   })), [entries])
@@ -52,7 +53,7 @@ export default function ReportsPage(){
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return records.filter((r) => {
-      const matchesQuery = !q || [r.name, r.plate, r.department, r.userType, r.vehicle].some((f) => (f || '').toLowerCase().includes(q))
+      const matchesQuery = !q || [r.name, r.plate, r.department, r.userType, r.vehicle, r.brand].some((f) => (f || '').toLowerCase().includes(q))
       const matchesStatus = status === 'All' || r.direction === status
       const matchesUserType = userType === 'All' || r.userType === userType
       const matchesVehicle = vehicleType === 'All' || r.vehicle === vehicleType

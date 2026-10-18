@@ -8,6 +8,7 @@ import { listenToRfidUsers } from '../../services/firebase'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 import { VEHICLE_TYPES } from '../../models/rfidUser'
 import { downloadCsv } from '../../utils/csv'
+import { BRAND_NOT_SPECIFIED, formatVehicleBrand } from '../../constants/vehicleBrands'
 import { buildPageList } from '../../utils/pagination'
 import PrintReportModal from '../shared/PrintReportModal'
 import { buildGateLogReport, dayStartMs, dayEndMs } from '../../utils/reportBuilders'
@@ -54,6 +55,7 @@ export default function SearchHistoryPage(){
   // All Entry & Exit Logs section state
   const { dateFrom, dateTo, maxDate, changeFrom, changeTo } = useDateRangeFilter()
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('All')
+  const [brandFilter, setBrandFilter] = useState('All')
   const [directionFilter, setDirectionFilter] = useState('All') // 'All' | 'IN' | 'OUT'
   const [rfidFilter, setRfidFilter] = useState('')
   const [driverFilter, setDriverFilter] = useState('')
@@ -152,10 +154,11 @@ export default function SearchHistoryPage(){
       const matchesFrom = !dateFrom || (entryDate && entryDate >= dateFrom)
       const matchesTo = !dateTo || (entryDate && entryDate <= dateTo)
       const matchesVehicle = vehicleTypeFilter === 'All' || entry.vehicleType === vehicleTypeFilter
+      const matchesBrand = brandFilter === 'All' || formatVehicleBrand(entry.vehicleBrand) === brandFilter
       const matchesRfid = !rfidQ || (entry.rfidId || '').toLowerCase().includes(rfidQ)
       const matchesDriver = !driverQ || (entry.name || '').toLowerCase().includes(driverQ)
       const matchesDirection = directionFilter === 'All' || entry.direction === directionFilter
-      return matchesFrom && matchesTo && matchesVehicle && matchesRfid && matchesDriver && matchesDirection
+      return matchesFrom && matchesTo && matchesVehicle && matchesBrand && matchesRfid && matchesDriver && matchesDirection
     })
 
     const sorted = filtered.slice().sort((a, b) => {
@@ -166,9 +169,15 @@ export default function SearchHistoryPage(){
     })
 
     return sorted
-  }, [entries, dateFrom, dateTo, vehicleTypeFilter, rfidFilter, driverFilter, directionFilter, sortKey, sortDir])
+  }, [entries, dateFrom, dateTo, vehicleTypeFilter, brandFilter, rfidFilter, driverFilter, directionFilter, sortKey, sortDir])
 
-  useEffect(() => { setPage(1) }, [dateFrom, dateTo, vehicleTypeFilter, rfidFilter, driverFilter, directionFilter])
+  // Brand filter options: the brands that actually appear in the logs, then "Not specified".
+  const brandOptions = useMemo(() => {
+    const found = [...new Set(entries.map((e) => e.vehicleBrand).filter(Boolean))].sort()
+    return [...found, BRAND_NOT_SPECIFIED]
+  }, [entries])
+
+  useEffect(() => { setPage(1) }, [dateFrom, dateTo, vehicleTypeFilter, brandFilter, rfidFilter, driverFilter, directionFilter])
 
   const totalPages = Math.max(1, Math.ceil(filteredLogs.length / PAGE_SIZE))
   const pageItems = filteredLogs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -179,7 +188,7 @@ export default function SearchHistoryPage(){
   }
 
   const exportCsv = () => {
-    const headers = ['Date', 'Time', 'RFID-ID', 'Name', 'Plate Number', 'Vehicle Type', 'Department', 'Role', 'Direction']
+    const headers = ['Date', 'Time', 'RFID-ID', 'Name', 'Plate Number', 'Vehicle Type', 'Vehicle Brand', 'Department', 'Role', 'Direction']
     const rows = filteredLogs.map((entry) => [
       entry.timestamp ? new Date(entry.timestamp).toLocaleDateString() : '',
       entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : '',
@@ -187,6 +196,7 @@ export default function SearchHistoryPage(){
       entry.name || '',
       entry.plateNumber || '',
       entry.vehicleType || '',
+      formatVehicleBrand(entry.vehicleBrand),
       entry.department || '',
       entry.role || '',
       entry.direction || '',
@@ -262,6 +272,7 @@ export default function SearchHistoryPage(){
                 <span className="plate-pill">{person.plateNumber || '—'}</span>
                 <span className="tag-pill">{person.role || '—'}</span>
                 <span className="tag-pill">{person.vehicleType || '—'}</span>
+                <span className="tag-pill">{formatVehicleBrand(person.vehicleBrand)}</span>
                 <span className="tag-pill">{person.department || '—'}</span>
               </div>
 
@@ -312,7 +323,7 @@ export default function SearchHistoryPage(){
                     <tr key={u.id} className="activity-row">
                       <td>{u.rfidId}</td>
                       <td>{u.plateNumber || '—'}</td>
-                      <td>{u.vehicleType || '—'}</td>
+                      <td>{u.vehicleType || '—'}<span className="cell-sub">{formatVehicleBrand(u.vehicleBrand)}</span></td>
                       <td>{u.role || '—'}</td>
                       <td><span className={`status-badge ${u.status === 'Inactive' ? 'badge-neutral' : 'badge-positive'}`}>{u.status || 'Active'}</span></td>
                       <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—'}</td>
@@ -354,6 +365,7 @@ export default function SearchHistoryPage(){
                   <div className="info-row"><span>RFID-ID:</span><span>{person.rfidId}</span></div>
                   <div className="info-row"><span>Plate No:</span><span className="plate-pill">{person.plateNumber || '—'}</span></div>
                   <div className="info-row"><span>Vehicle Type:</span><span>{person.vehicleType || '—'}</span></div>
+                  <div className="info-row"><span>Vehicle Brand:</span><span>{formatVehicleBrand(person.vehicleBrand)}</span></div>
                   <div className="info-row"><span>Department:</span><span>{person.department || '—'}</span></div>
                   <div className="info-row"><span>Date Registered:</span><span>{person.createdAt ? new Date(person.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—'}</span></div>
                 </div>
@@ -380,6 +392,12 @@ export default function SearchHistoryPage(){
           <select value={vehicleTypeFilter} onChange={(e) => setVehicleTypeFilter(e.target.value)}>
             <option value="All">All</option>
             {VEHICLE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+
+          <label className="filter-label">Vehicle Brand</label>
+          <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
+            <option value="All">All</option>
+            {brandOptions.map((b) => <option key={b} value={b}>{b}</option>)}
           </select>
 
           <label className="filter-label">Direction</label>
@@ -429,7 +447,7 @@ export default function SearchHistoryPage(){
                 <td>{entry.rfidId || 'N/A'}</td>
                 <td>{entry.name || 'Unknown'}</td>
                 <td>{entry.plateNumber || '—'}</td>
-                <td>{entry.vehicleType || '—'}</td>
+                <td>{entry.vehicleType || '—'}{entry.vehicleType && entry.vehicleType !== '—' && <span className="cell-sub">{formatVehicleBrand(entry.vehicleBrand)}</span>}</td>
                 <td>{entry.department || '—'}</td>
                 <td>{entry.role || '—'}</td>
                 <td>{entry.direction === 'OUT' ? <span className="direction-out">- OUT</span> : <span className="direction-in">+ IN</span>}</td>

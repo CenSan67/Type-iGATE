@@ -1,4 +1,5 @@
 import React from 'react'
+import { formatVehicleBrand } from '../../constants/vehicleBrands'
 
 const peso = (n) => `₱${(Number(n) || 0).toFixed(2)}`
 
@@ -13,6 +14,7 @@ export default function ReceiptSummary({ receipt }){
     ['Department', receipt.department || '—'],
     ['RFID-ID', receipt.rfid || '—'],
     ['Vehicle Type', receipt.vehicle || '—'],
+    ['Vehicle Brand', formatVehicleBrand(receipt.vehicleBrand)],
     ['Payment Type', receipt.paymentType === 'Renewal' ? 'Renewal' : 'New Registration'],
     ['Amount Due', peso(receipt.amountDue)],
     ['Amount Paid', peso(receipt.amountPaid)],

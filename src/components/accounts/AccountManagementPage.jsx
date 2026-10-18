@@ -6,6 +6,7 @@ import ConfirmModal from '../modals/ConfirmModal'
 import { useAuth } from '../../context/AuthContext'
 import { ASSIGNABLE_ROLES } from '../../constants/roles'
 import AuditLogPanel from './AuditLogPanel'
+import { formatVehicleBrand } from '../../constants/vehicleBrands'
 import PendingApprovalsPanel from './PendingApprovalsPanel'
 import VipGuestsPanel from './VipGuestsPanel'
 import { getErrorMessage } from '../../utils/errors'
@@ -139,6 +140,8 @@ export default function AccountManagementPage(){
       rfid: user.rfidId || 'N/A',
       role: user.role || '—',
       vehicle: user.vehicleType || '—',
+      brand: formatVehicleBrand(user.vehicleBrand),
+      brandRaw: user.vehicleBrand || '',
       payment: userPayments.length > 0 ? 'Paid' : 'Unpaid',
       status: isActive ? 'Active' : 'Expired',
       validUntil: latestPayment?.validUntil ? new Date(latestPayment.validUntil).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—',
@@ -174,7 +177,7 @@ export default function AccountManagementPage(){
     return scopedAccounts.filter((a) => {
       const matchesFilter = activeFilter === 'All' || a.payment === activeFilter || a.status === activeFilter
       const q = query.trim().toLowerCase()
-      const matchesQuery = !q || [a.name, a.rfid, a.role, a.vehicle].some((field) => (field || '').toLowerCase().includes(q))
+      const matchesQuery = !q || [a.name, a.rfid, a.role, a.vehicle, a.brandRaw].some((field) => (field || '').toLowerCase().includes(q))
       return matchesFilter && matchesQuery
     })
   }, [scopedAccounts, activeFilter, query])
@@ -280,7 +283,7 @@ export default function AccountManagementPage(){
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
               <input
                 type="text"
-                placeholder="Search name, RFID, role, vehicle..."
+                placeholder="Search name, RFID, role, vehicle, brand..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -321,7 +324,7 @@ export default function AccountManagementPage(){
                   <td>{row.name}</td>
                   <td>{row.rfid}</td>
                   <td>{row.role}</td>
-                  <td>{row.vehicle}</td>
+                  <td>{row.vehicle}<span className="cell-sub">{row.brand}</span></td>
                   <td>
                     <span className={`status-badge ${row.payment === 'Paid' ? 'badge-positive' : 'badge-negative'}`}>
                       {row.payment === 'Paid' ? <CheckIcon /> : <AlertIcon />} {row.payment}

@@ -6,6 +6,7 @@ import { returnTemporaryPass } from '../../services/firebase'
 import { getErrorMessage } from '../../utils/errors'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
+import { formatVehicleBrand } from '../../constants/vehicleBrands'
 
 // Any staff role - walk-in visitor passes only (see useVisitorPasses for why VIP guest
 // passes are excluded; those return via GuestClearancePanel's Check Out instead). A guard
@@ -61,7 +62,7 @@ export default function VisitorPassesPanel(){
             <tr key={p.id} className="activity-row">
               <td>{p.name || 'Unknown'}</td>
               <td>{p.rfidId}</td>
-              <td>{p.plateNumber || '—'}</td>
+              <td>{p.plateNumber || '—'}<span className="cell-sub">{formatVehicleBrand(p.vehicleBrand)}</span></td>
               <td>{p.hostName || '—'}</td>
               <td>{p.expiresAt ? new Date(p.expiresAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
               <td>

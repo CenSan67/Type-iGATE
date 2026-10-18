@@ -35,6 +35,7 @@ export default function usePaymentRegistration() {
       plateNumber,
       vehicleType: form.vehicle,
       vehicleColor: form.color,
+      vehicleBrand: form.vehicleBrand, // resolved by RegistrationModal (constants/vehicleBrands.js)
       role: form.role,
       email: form.email?.trim() || '',
       phone: form.phone,
@@ -67,6 +68,7 @@ export default function usePaymentRegistration() {
       department,
       rfid: rfidId,
       vehicle: form.vehicle,
+      vehicleBrand: form.vehicleBrand,
       paymentType: form.paymentType,
       amountDue,
       amountPaid,
