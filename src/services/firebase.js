@@ -1,10 +1,11 @@
 // Firebase v9 modular SDK setup
 import { initializeApp } from 'firebase/app'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
-import { getDatabase, connectDatabaseEmulator, ref, set, update, push, get, remove, query, orderByChild, equalTo, limitToLast, onValue, onChildAdded, runTransaction } from 'firebase/database'
+import { getDatabase, connectDatabaseEmulator, ref, set, update, push, get, remove, query, orderByChild, equalTo, limitToLast, onValue, onChildAdded, runTransaction, serverTimestamp } from 'firebase/database'
 import { getStorage, connectStorageEmulator, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getFunctions, connectFunctionsEmulator, httpsCallable } from 'firebase/functions'
 import { validateGateLog } from '../models/gateLog'
+import { validateVisitRemark } from '../models/visitRemark'
 import { validateRfidUser } from '../models/rfidUser'
 import { validatePayment } from '../models/payment'
 import { validateAdminProfile } from '../models/adminProfile'
@@ -306,6 +307,27 @@ export function listenToAuditLogs(callback, count = 500) {
     },
     () => callback([]),
   )
+}
+
+// Visit remarks (models/visitRemark.js): { [personKey]: { text, at, by, byName } }.
+export function listenToVisitRemarks(callback) {
+  return onValue(ref(rtdb, 'visitRemarks'), (snapshot) => callback(snapshot.val() || {}), () => callback({}))
+}
+
+// RTDB keys can't contain . # $ [ ] / - a card id never should, but a corrupted read might.
+const remarkPath = (personKey) => `visitRemarks/${personKey.replace(/[.#$[\]/]/g, '_')}`
+
+// Saves (or, with empty text, removes) one person's visit remark. `at` is Firebase server time so
+// it compares correctly with scan times from the ESP32. Touches only visitRemarks/{personKey}.
+export async function saveVisitRemark(personKey, text, actor) {
+  assertOnline('saving the remark')
+  if (!personKey) throw new Error('No person selected for this remark.')
+  if (!(text ?? '').toString().trim()) {
+    await remove(ref(rtdb, remarkPath(personKey)))
+    return
+  }
+  const remark = validateVisitRemark({ text, by: auth.currentUser?.uid, byName: actor?.name })
+  await set(ref(rtdb, remarkPath(personKey)), { ...remark, at: serverTimestamp() })
 }
 
 export function listenToOverrideLogs(callback, count = 5) {

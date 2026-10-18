@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useRemarks } from '../../hooks/useRemarks'
 import PaginationRow from '../shared/PaginationRow'
 import RemarkModal from '../modals/RemarkModal'
-import { RemarkTick } from '../shared/RemarkBadge'
+import { RemarkTick, RemarkPreview } from '../shared/RemarkBadge'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
 import { listenToRfidUsers } from '../../services/firebase'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
@@ -268,6 +268,7 @@ export default function SearchHistoryPage(){
                     {personRemark && <RemarkTick onClick={() => setShowRemarkModal(true)} title="View remark" />}
                   </span>
                   <div className="result-rfid">{person.rfidId}</div>
+                  {personRemark && <RemarkPreview text={personRemark.text} onClick={() => setShowRemarkModal(true)} />}
                 </div>
                 <span className="plate-pill">{person.plateNumber || '—'}</span>
                 <span className="tag-pill">{person.role || '—'}</span>
@@ -482,7 +483,7 @@ export default function SearchHistoryPage(){
         <RemarkModal
           name={person.name}
           rfid={person.rfidId}
-          initialRemark={personRemark?.text}
+          remark={personRemark}
           onClose={() => setShowRemarkModal(false)}
           onSave={(text) => saveRemark(person.id, text)}
         />

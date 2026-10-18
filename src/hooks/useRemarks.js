@@ -1,4 +1,6 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { listenToVisitRemarks, saveVisitRemark } from '../services/firebase'
+import { useAuth } from '../context/AuthContext'
 
 // Visit-scoped remarks, shared by the Dashboard (RecentActivityTable) and Search History.
 //
@@ -8,18 +10,9 @@ import { useCallback, useMemo, useState } from 'react'
 // remark written on the Dashboard shows on that person in Search History too, and both
 // pages agree on when it disappears.
 //
-// Stored in this browser's localStorage, like the previous per-row/per-card remarks (which
-// lived under a different key and are no longer read).
-const STORAGE_KEY = 'igate_visit_remarks'
-
-function loadRemarks(){
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
+// Stored in the Realtime Database (visitRemarks/{personKey}, models/visitRemark.js), so every
+// staff member and device sees the same remark. It used to live in each browser's
+// localStorage (igate_visit_remarks), which is no longer read.
 
 // Who a scan row is for remark purposes: the rfidUsers record it's attributed to, else the
 // card number (a scan whose holder is unknown). For an rfidUsers record itself (Search
@@ -32,7 +25,13 @@ export function remarkKeyOf(entry){
 
 // `entries` = enriched gate logs (useEnrichedGateLogs) - needed to know each person's IN times.
 export function useRemarks(entries = []){
-  const [remarks, setRemarks] = useState(loadRemarks) // { [personKey]: { text, at } }
+  const [remarks, setRemarks] = useState({}) // { [personKey]: { text, at, by, byName } }
+  const { user, profile } = useAuth()
+
+  useEffect(() => {
+    const unsub = listenToVisitRemarks(setRemarks)
+    return () => unsub && unsub()
+  }, [])
 
   // Every IN timestamp per person, ascending.
   const insByPerson = useMemo(() => {
@@ -48,7 +47,7 @@ export function useRemarks(entries = []){
   }, [entries])
 
   // The remark still in force for this person: none of their INs happened after it.
-  // Returns { text, at, visitStart } - visitStart = the IN that began the remarked visit.
+  // Returns { text, at, by, byName, visitStart } - visitStart = the IN that began the remarked visit.
   const remarkFor = useCallback((key) => {
     const remark = remarks[key]
     if (!remark?.text) return null
@@ -64,15 +63,10 @@ export function useRemarks(entries = []){
     return !!active && (entry.timestamp || 0) >= active.visitStart
   }, [remarkFor])
 
-  const saveRemark = useCallback((key, text) => {
-    setRemarks((prev) => {
-      const next = { ...prev }
-      if (text && text.trim()) next[key] = { text: text.trim(), at: Date.now() }
-      else delete next[key]
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { /* storage unavailable - kept in memory */ }
-      return next
-    })
-  }, [])
+  // Saves the remark (empty text removes it). Throws on failure so the caller can show it.
+  const saveRemark = useCallback((key, text) => (
+    saveVisitRemark(key, text, { name: profile?.fullName || profile?.displayName || user?.email || '' })
+  ), [profile, user])
 
   return { remarkFor, entryHasRemark, saveRemark }
 }

@@ -19,6 +19,7 @@ const ENTITY_LABELS = {
   scannerCommand: 'Gate command',
   settings: 'App settings',
   registrations: 'Imported registration',
+  visitRemarks: 'Visit remark',
 }
 
 const ACTION_BADGES = { create: 'badge-positive', update: 'badge-neutral', delete: 'badge-negative' }

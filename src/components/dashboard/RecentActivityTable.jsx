@@ -4,7 +4,7 @@ import RemarkModal from '../modals/RemarkModal'
 import RegisterRfidModal from '../modals/RegisterRfidModal'
 import SimulateUserScanModal from '../modals/SimulateUserScanModal'
 import ImagePreviewModal from '../modals/ImagePreviewModal'
-import { RemarkAddButton, RemarkTick } from '../shared/RemarkBadge'
+import { RemarkAddButton, RemarkTick, RemarkPreview } from '../shared/RemarkBadge'
 import { listenToNewGateLogs } from '../../services/firebase'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 import { formatVehicleBrand } from '../../constants/vehicleBrands'
@@ -116,6 +116,7 @@ export default function RecentActivityTable(){
                   <RemarkAddButton onClick={() => setActiveRow(row)} />
                   {entryHasRemark(row) && <RemarkTick onClick={() => setActiveRow(row)} />}
                 </span>
+                {entryHasRemark(row) && <RemarkPreview large text={remarkFor(remarkKeyOf(row))?.text} onClick={() => setActiveRow(row)} />}
               </td>
               <td>{row.vehicleType || '—'}{row.vehicleType && row.vehicleType !== '—' && <span className="cell-sub">{formatVehicleBrand(row.vehicleBrand)}</span>}</td>
               <td>{row.department || '—'}</td>
@@ -132,7 +133,7 @@ export default function RecentActivityTable(){
         <RemarkModal
           name={activeRow.name || activeRow.rfidId || 'Unknown'}
           rfid={activeRow.id}
-          initialRemark={remarkFor(remarkKeyOf(activeRow))?.text}
+          remark={remarkFor(remarkKeyOf(activeRow))}
           onClose={() => setActiveRow(null)}
           onSave={(text) => saveRemark(remarkKeyOf(activeRow), text)}
         />

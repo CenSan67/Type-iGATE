@@ -2149,14 +2149,54 @@ html, body, #root {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  color: #aaa;
+  color: var(--maroon);
+  background: #f6eaea;
 }
 
-.remark-btn:hover { color: var(--maroon); background: #f4e4e4; }
+.remark-btn:hover { color: #fff; background: var(--maroon); }
 .remark-tick-btn { color: #2da82d; background: #e3f6e3; }
+.remark-preview {
+  display: block;
+  max-width: 220px;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #8a5a00;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.remark-preview:hover { text-decoration: underline; }
+.remark-preview.remark-preview-large {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  width: max-content;
+  min-width: 160px;
+  max-width: 280px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-left: 4px solid #e0a800;
+  border-radius: 6px;
+  background: #fff6d6;
+  color: #5c4100;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.remark-preview.remark-preview-large:hover { text-decoration: none; background: #ffefb8; }
+.remark-counter { display: block; text-align: right; }
 
 /* ============================================================
    Settings page

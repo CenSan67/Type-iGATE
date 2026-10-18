@@ -118,6 +118,16 @@
         ".validate": "newData.hasChild('displayName')"
       }
     },
+    "visitRemarks": {
+      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
+      "$personKey": {
+        ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
+        ".validate": "newData.hasChildren(['text', 'at', 'by']) && newData.child('text').isString() && newData.child('text').val().length >= 1 && newData.child('text').val().length <= 500 && newData.child('at').val() === now && newData.child('by').val() === auth.uid && (!newData.hasChild('byName') || (newData.child('byName').isString() && newData.child('byName').val().length <= 80))",
+        "$other": {
+          ".validate": "$other === 'text' || $other === 'at' || $other === 'by' || $other === 'byName'"
+        }
+      }
+    },
     "smsLogs": {
       ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
       ".write": false

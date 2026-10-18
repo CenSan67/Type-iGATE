@@ -503,6 +503,7 @@ exports.auditPayments = auditTrigger('/payments/{id}', 'payments')
 exports.auditExpectedGuests = auditTrigger('/expectedGuests/{id}', 'expectedGuests')
 // Google Forms imports and their processing (who corrected / approved / activated what, and when).
 // originalJson is the untouched submission - long and never changes, so it isn't repeated here.
+exports.auditVisitRemarks = auditTrigger('/visitRemarks/{key}', 'visitRemarks', (changes) => onlyFields(changes, ['at']))
 exports.auditRegistrations = auditTrigger('/registrations/{id}', 'registrations', () => false, ['originalJson'])
 // Who pressed Gate Control / Return Pass / auto-close (each command overwrites the last).
 exports.auditScannerCommands = auditTrigger('/devices/scanner/command', 'scannerCommand')
