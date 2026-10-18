@@ -31,16 +31,16 @@ const { getStorage } = require('firebase-admin/storage')
 
 initializeApp()
 
-const SEMAPHORE_API_KEY = defineSecret('SEMAPHORE_API_KEY')
 const SEMAPHORE_SENDER_NAME = defineString('SEMAPHORE_SENDER_NAME', { default: 'SEMAPHORE' })
 const SEMAPHORE_ENDPOINT = 'https://api.semaphore.co/api/v4/messages'
 
 // SMS provider for sendGateScanSms: 'semaphore' (default) or 'unisms' (testing until the
 // Semaphore sender name is approved). Read from process.env, not defineString, because it also
-// picks which secret the trigger binds - that list is fixed at deploy time, and binding a
-// secret that was never set makes the deploy fail. functions/.env is loaded at deploy and run time.
+// picks which secret is declared: every defineSecret() is checked at deploy time (even one no
+// function binds), so declaring the other provider's never-set key fails the whole deploy.
+// functions/.env is loaded at deploy and run time.
 const SMS_PROVIDER = (process.env.SMS_PROVIDER || 'semaphore').toLowerCase() === 'unisms' ? 'unisms' : 'semaphore'
-const UNISMS_API_KEY = defineSecret('UNISMS_API_KEY')
+const SMS_API_KEY = defineSecret(SMS_PROVIDER === 'unisms' ? 'UNISMS_API_KEY' : 'SEMAPHORE_API_KEY')
 // Without an approved sender ID, UniSMS's default one reaches Globe and DITO numbers only.
 const UNISMS_SENDER_ID = defineString('UNISMS_SENDER_ID', { default: 'UniSMS' })
 const UNISMS_ENDPOINT = 'https://unismsapi.com/api/sms'
@@ -147,8 +147,8 @@ async function sendUniSms({ apiKey, senderId, phone, message }) {
 
 function sendSms({ phone, message }) {
   return SMS_PROVIDER === 'unisms'
-    ? sendUniSms({ apiKey: UNISMS_API_KEY.value(), senderId: UNISMS_SENDER_ID.value(), phone, message })
-    : sendSemaphoreSms({ apiKey: SEMAPHORE_API_KEY.value(), senderName: SEMAPHORE_SENDER_NAME.value(), phone, message })
+    ? sendUniSms({ apiKey: SMS_API_KEY.value(), senderId: UNISMS_SENDER_ID.value(), phone, message })
+    : sendSemaphoreSms({ apiKey: SMS_API_KEY.value(), senderName: SEMAPHORE_SENDER_NAME.value(), phone, message })
 }
 
 // Per-phone SMS limits: at most one text per SMS_MIN_INTERVAL_MS and SMS_DAILY_LIMIT per
@@ -176,7 +176,7 @@ exports.sendGateScanSms = onValueCreated(
   {
     ref: '/gateLogs/{logId}',
     region: 'us-central1',
-    secrets: [SMS_PROVIDER === 'unisms' ? UNISMS_API_KEY : SEMAPHORE_API_KEY],
+    secrets: [SMS_API_KEY],
   },
   async (event) => {
     const logId = event.params.logId
