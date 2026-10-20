@@ -6,11 +6,12 @@ import RecentActivityTable from './RecentActivityTable'
 import CameraSnapshotCard from './CameraSnapshotCard'
 import GuestClearancePanel from './GuestClearancePanel'
 import VisitorPassesPanel from './VisitorPassesPanel'
+import LongStayAlertsPanel from './LongStayAlertsPanel'
 import SimulateScanModal from './SimulateScanModal'
 import UploadSnapshotModal from './UploadSnapshotModal'
 import { listenToNewGateLogs } from '../../services/firebase'
 import { useAuth } from '../../context/AuthContext'
-import { ADMIN_ROLES } from '../../constants/roles'
+import { ADMIN_ROLES, ROLES } from '../../constants/roles'
 
 export default function DashboardPage(){
   const [now, setNow] = useState(new Date())
@@ -43,6 +44,8 @@ export default function DashboardPage(){
         </div>
 
         <StatsCards />
+
+        {ROLES.includes(role) && <LongStayAlertsPanel />}
 
         <div className="overview-grid">
           <div className="overview-card accent">

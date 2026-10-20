@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 import { useAuth } from '../../context/AuthContext'
-import { ADMIN_ROLES } from '../../constants/roles'
+import { ADMIN_ROLES, ROLES } from '../../constants/roles'
 import LogoutConfirmModal from '../modals/LogoutConfirmModal'
 import MobileMenuButton from './MobileMenuButton'
 import RoleSwitchOverlay from '../shared/RoleSwitchOverlay'
 import useRoleSwitch from '../../hooks/useRoleSwitch'
+import useLongStayAlerts from '../../hooks/useLongStayAlerts'
 
 const BellIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -46,6 +47,8 @@ export default function TopHeader(){
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const entries = useEnrichedGateLogs()
   const recent = entries.slice(0, RECENT_COUNT)
+  // Every staff role (guards included): unacknowledged long-stay warnings, above the gate activity.
+  const { needsAttention: longStays } = useLongStayAlerts(ROLES.includes(role))
 
   return (
     <header className="app-topbar">
@@ -67,13 +70,38 @@ export default function TopHeader(){
             onClick={() => setShowNotifications((v) => !v)}
           >
             <BellIcon />
-            {recent.length > 0 && <span className="app-topbar-bell-dot" />}
+            {longStays.length > 0
+              ? <span className="app-topbar-bell-count">{longStays.length}</span>
+              : recent.length > 0 && <span className="app-topbar-bell-dot" />}
           </button>
 
           {showNotifications && (
             <>
               <div className="notification-backdrop" onClick={() => setShowNotifications(false)} />
               <div className="notification-dropdown">
+                {longStays.length > 0 && (
+                  <>
+                    <div className="notification-dropdown-header">Long-Stay Warnings</div>
+                    <ul className="notification-list">
+                      {longStays.slice(0, RECENT_COUNT).map((alert) => (
+                        <li key={alert.id} className="notification-item">
+                          <span className="notification-dot danger" />
+                          <div className="notification-item-body">
+                            <div className="notification-item-title">{alert.name} <strong>no exit recorded</strong></div>
+                            <div className="notification-item-time">Entered {timeAgo(alert.entryAt)}</div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      className="notification-view-all"
+                      onClick={() => { setShowNotifications(false); navigate('/dashboard') }}
+                    >
+                      Review on the Dashboard
+                    </button>
+                  </>
+                )}
                 <div className="notification-dropdown-header">Recent Gate Activity</div>
                 {recent.length === 0 ? (
                   <div className="notification-empty">No recent activity yet.</div>

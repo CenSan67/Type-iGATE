@@ -22,12 +22,15 @@ const functionsV1 = require('firebase-functions/v1')
 const crypto = require('node:crypto')
 const { onValueCreated, onValueUpdated, onValueWritten, onValueDeleted } = require('firebase-functions/v2/database')
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
+const { onSchedule } = require('firebase-functions/v2/scheduler')
 const { defineSecret, defineString } = require('firebase-functions/params')
 const logger = require('firebase-functions/logger')
 const { initializeApp } = require('firebase-admin/app')
 const { getDatabase } = require('firebase-admin/database')
 const { getAuth } = require('firebase-admin/auth')
 const { getStorage } = require('firebase-admin/storage')
+const { holderAtTime } = require('./cardHolder')
+const { runLongStayCheck, resolveAlertsForScan } = require('./longStay')
 
 initializeApp()
 
@@ -55,44 +58,21 @@ function normalizeId(value) {
 // package/runtime from src/ (no bundler wiring the two together) - if that match logic
 // ever changes in useEnrichedGateLogs.js, mirror the change here too.
 async function findOwnerByCard(db, entry) {
-  const cardId = normalizeId(entry.cardId)
-  const cardHex = normalizeId(entry.cardHex)
-  if (!cardId && !cardHex) return null
+  if (!normalizeId(entry.cardId) && !normalizeId(entry.cardHex)) return null
 
   const snapshot = await db.ref('rfidUsers').get()
   if (!snapshot.exists()) return null
 
-  // The university lends from a limited pool of physical cards, so more than one
-  // rfidUsers record can share the same rfidId over time (one per past/current holder -
-  // see src/services/firebase.js#registerRfidUser). This scan must stay attributed to
-  // whoever actually held the card AT THAT TIME, not whoever holds it now - otherwise a
-  // card's older scans silently relabel themselves (and misdirect SMS/snapshot reuse) to
-  // the newest holder the moment the card gets reissued. So this picks whichever record
-  // was the most recently created one that still existed at or before this entry's own
-  // timestamp - the registration actually in effect then - falling back to the earliest
-  // record if the entry is somehow older than all of them. Mirrors
-  // useEnrichedGateLogs.js's identical fix for the same bug.
-  const candidates = []
+  // The university lends from a limited pool of physical cards, so more than one rfidUsers
+  // record can share the same rfidId over time. This scan must stay attributed to whoever
+  // held the card AT THAT TIME (cardHolder.js#holderAtTime, a hand copy of
+  // src/utils/cardHolder.js), never to whoever holds it now.
+  const users = []
   snapshot.forEach((child) => {
-    const value = child.val() || {}
-    const rfid = normalizeId(value.rfidId)
-    if (rfid === cardId || rfid === cardHex) candidates.push({ id: child.key, ...value })
+    users.push({ id: child.key, ...(child.val() || {}) })
     return false
   })
-  if (candidates.length === 0) return null
-
-  // A returned visitor pass (returnedAt) only covers scans up to and including the OUT
-  // that returned it - a scan while the card sat unassigned belongs to nobody, never to
-  // its previous visitor. Only a scan older than every record falls back to the earliest.
-  // HAND-COPY of src/utils/cardHolder.js#holderAtTime - keep the two in sync.
-  const entryTime = entry.timestamp ?? Infinity
-  const created = candidates.filter((c) => (c.createdAt || 0) <= entryTime)
-  if (created.length === 0) {
-    return candidates.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0]
-  }
-  return created
-    .filter((c) => c.returnedAt == null || entryTime <= c.returnedAt)
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0] || null
+  return holderAtTime(users, entry.cardId, entry.cardHex, entry.timestamp ?? Infinity)
 }
 
 function buildMessage({ plateNumber, direction, timestamp }) {
@@ -241,6 +221,39 @@ exports.sendGateScanSms = onValueCreated(
     if (status === 'sent') {
       logger.info(`gateLogs/${logId}: SMS sent to ${owner.phone}`)
     }
+  }
+)
+
+// ---------------------------------------------------------------------------------------
+// Long-stay warnings (longStay.js): a scheduled check, every 5 minutes, creates one warning
+// per visit whose IN is older than the allowed stay with no exit recorded, resolves warnings
+// whose visit ended, and - only when an admin turned it on in System Settings - texts the
+// configured management numbers through the same provider, secret and per-phone rate limit as
+// sendGateScanSms. A failed or unconfigured SMS never stops the dashboard warning. Requires
+// the Blaze plan (Cloud Scheduler), like the SMS functions.
+exports.checkLongStays = onSchedule(
+  { schedule: 'every 5 minutes', timeZone: 'Asia/Manila', region: 'us-central1', secrets: [SMS_API_KEY] },
+  async () => {
+    const summary = await runLongStayCheck({
+      db: getDatabase(),
+      now: Date.now(),
+      sms: { send: sendSms, reserve: reserveSmsSlot, provider: SMS_PROVIDER },
+      logger,
+    })
+    if (summary.created.length || summary.resolved.length || summary.sms.length) {
+      logger.info('long-stay check', summary)
+    }
+  }
+)
+
+// Resolves a long-stay warning the moment the person's exit (or a new entry) is logged,
+// instead of waiting for the next scheduled check.
+exports.resolveLongStayOnScan = onValueCreated(
+  { ref: '/gateLogs/{logId}', region: 'us-central1' },
+  async (event) => {
+    const scan = { id: event.params.logId, ...(event.data.val() || {}) }
+    const resolved = await resolveAlertsForScan({ db: getDatabase(), scan, now: Date.now() })
+    if (resolved.length) logger.info(`gateLogs/${scan.id}: resolved long-stay warning(s) ${resolved.join(', ')}`)
   }
 )
 
@@ -513,6 +526,10 @@ exports.auditGateLogs = auditTrigger('/gateLogs/{id}', 'gateLogs', (changes, act
 // The ESP32 rewrites gateStatus on every barrier move, and App.jsx's initializeFirebaseCollections
 // re-stamps createdAt on every admin login - neither is a settings change.
 exports.auditAppSettings = auditTrigger('/settings/app', 'settings', (changes) => onlyFields(changes, ['gateStatus', 'createdAt']))
+// Who changed the long-stay limits / SMS switch, and who acknowledged which warning (the
+// warnings themselves are created and resolved by checkLongStays - not app-user writes).
+exports.auditLongStaySettings = auditTrigger('/settings/longStay', 'longStaySettings')
+exports.auditLongStayAlerts = auditTrigger('/longStayAlerts/{id}', 'longStayAlerts', (_changes, _action, isAppUser) => !isAppUser)
 
 // ---------------------------------------------------------------------------------------
 // Username login. Firebase Authentication only signs in with email + password, so a username

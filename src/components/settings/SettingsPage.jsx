@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import GateStatusCard from '../dashboard/GateStatusCard'
+import LongStaySettingsCard from './LongStaySettingsCard'
+import { ADMIN_ROLES } from '../../constants/roles'
 import ChangePasswordModal from '../modals/ChangePasswordModal'
 import LogoutConfirmModal from '../modals/LogoutConfirmModal'
 import LogoutIcon from '../shared/LogoutIcon'
@@ -41,7 +43,7 @@ const KeyIcon = () => (
 
 export default function SettingsPage(){
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, role } = useAuth()
   const [now, setNow] = useState(new Date())
   const [sessionLogs, setSessionLogs] = useState([])
   const [showAllLogs, setShowAllLogs] = useState(false)
@@ -97,6 +99,8 @@ export default function SettingsPage(){
         <h2>Settings</h2>
 
         <GateStatusCard />
+
+        {ADMIN_ROLES.includes(role) && <LongStaySettingsCard />}
 
         <div className="settings-bottom-grid">
           <div>

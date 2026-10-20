@@ -1,6 +1,9 @@
 {
   "rules": {
     "gateLogs": {
+      ".indexOn": [
+        "timestamp"
+      ],
       ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
       "$logId": {
         ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (!data.exists() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator' || (newData.exists() && data.child('cardId').val() === newData.child('cardId').val() && data.child('cardHex').val() === newData.child('cardHex').val() && data.child('direction').val() === newData.child('direction').val() && data.child('timestamp').val() === newData.child('timestamp').val() && data.child('source').val() === newData.child('source').val()))",
@@ -109,6 +112,44 @@
             ".validate": false
           }
         }
+      },
+      "longStay": {
+        ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
+        ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && (root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator')",
+        ".validate": "newData.hasChildren(['enabled', 'registeredHours', 'visitorHours', 'vipHours', 'repeatMinutes', 'smsEnabled', 'smsRecipients', 'updatedAt', 'updatedBy'])",
+        "enabled": {
+          ".validate": "newData.isBoolean()"
+        },
+        "registeredHours": {
+          ".validate": "newData.isNumber() && newData.val() >= 0.5 && newData.val() <= 72"
+        },
+        "visitorHours": {
+          ".validate": "newData.isNumber() && newData.val() >= 0.5 && newData.val() <= 72"
+        },
+        "vipHours": {
+          ".validate": "newData.isNumber() && newData.val() >= 0.5 && newData.val() <= 72"
+        },
+        "repeatMinutes": {
+          ".validate": "newData.isNumber() && (newData.val() === 0 || (newData.val() >= 30 && newData.val() <= 1440))"
+        },
+        "smsEnabled": {
+          ".validate": "newData.isBoolean() && (newData.val() === false || newData.parent().child('smsRecipients').val().matches(/^09[0-9]{9}(,09[0-9]{9}){0,4}$/))"
+        },
+        "smsRecipients": {
+          ".validate": "newData.isString() && (newData.val() === '' || newData.val().matches(/^09[0-9]{9}(,09[0-9]{9}){0,4}$/))"
+        },
+        "updatedAt": {
+          ".validate": "newData.val() === now"
+        },
+        "updatedBy": {
+          ".validate": "newData.val() === auth.uid"
+        },
+        "updatedByName": {
+          ".validate": "newData.isString() && newData.val().length <= 80"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     },
     "users": {
@@ -138,6 +179,28 @@
       ],
       ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
       ".write": false
+    },
+    "longStayAlerts": {
+      ".indexOn": [
+        "status",
+        "cardKey",
+        "createdAt"
+      ],
+      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
+      "$alertId": {
+        "acknowledgedAt": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().child('status').val() === 'active' && !data.exists()",
+          ".validate": "newData.val() === now"
+        },
+        "acknowledgedBy": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().child('status').val() === 'active' && !data.exists()",
+          ".validate": "newData.val() === auth.uid"
+        },
+        "acknowledgedByName": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().child('status').val() === 'active' && !data.exists()",
+          ".validate": "newData.isString() && newData.val().length <= 80"
+        }
+      }
     },
     "lastEntryImages": {
       ".read": false,

@@ -1,11 +1,12 @@
 // Firebase v9 modular SDK setup
 import { initializeApp } from 'firebase/app'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
-import { getDatabase, connectDatabaseEmulator, ref, set, update, push, get, remove, query, orderByChild, equalTo, limitToLast, onValue, onChildAdded, runTransaction, serverTimestamp } from 'firebase/database'
+import { getDatabase, connectDatabaseEmulator, ref, set, update, push, get, remove, query, orderByChild, equalTo, startAt, limitToLast, onValue, onChildAdded, runTransaction, serverTimestamp } from 'firebase/database'
 import { getStorage, connectStorageEmulator, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getFunctions, connectFunctionsEmulator, httpsCallable } from 'firebase/functions'
 import { validateGateLog } from '../models/gateLog'
 import { validateVisitRemark } from '../models/visitRemark'
+import { validateLongStaySettings } from '../models/longStay'
 import { validateRfidUser } from '../models/rfidUser'
 import { validatePayment } from '../models/payment'
 import { validateAdminProfile } from '../models/adminProfile'
@@ -328,6 +329,52 @@ export async function saveVisitRemark(personKey, text, actor) {
   }
   const remark = validateVisitRemark({ text, by: auth.currentUser?.uid, byName: actor?.name })
   await set(ref(rtdb, remarkPath(personKey)), { ...remark, at: serverTimestamp() })
+}
+
+// Long-stay settings (models/longStay.js). null until an admin first saves them - the
+// Cloud Function uses LONG_STAY_DEFAULTS meanwhile. Rules: active admins read/write.
+export function listenToLongStaySettings(callback) {
+  return onValue(ref(rtdb, 'settings/longStay'), (snapshot) => callback(snapshot.val()), () => callback(null))
+}
+
+export async function saveLongStaySettings(values, actor) {
+  assertOnline('saving the long-stay settings')
+  await set(ref(rtdb, 'settings/longStay'), {
+    ...validateLongStaySettings(values),
+    updatedAt: serverTimestamp(),
+    updatedBy: auth.currentUser?.uid,
+    updatedByName: (actor?.name || '').toString().slice(0, 80),
+  })
+}
+
+// Long-stay warnings (functions/longStay.js): every active one, plus anything created in the
+// last `historyMs` (resolved history). Two queries merged, so an old warning that is still
+// active never drops off. Rules: any active staff.
+export function listenToLongStayAlerts(callback, historyMs = 7 * 24 * 60 * 60 * 1000) {
+  let active = {}
+  let recent = {}
+  const emit = () => {
+    const rows = Object.entries({ ...recent, ...active }).map(([id, v]) => ({ id, ...v }))
+    callback(rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)))
+  }
+  const unsubActive = onValue(query(ref(rtdb, 'longStayAlerts'), orderByChild('status'), equalTo('active')),
+    (snapshot) => { active = snapshot.val() || {}; emit() }, () => { active = {}; emit() })
+  const unsubRecent = onValue(query(ref(rtdb, 'longStayAlerts'), orderByChild('createdAt'), startAt(serverNow() - historyMs)),
+    (snapshot) => { recent = snapshot.val() || {}; emit() }, () => { recent = {}; emit() })
+  return () => { unsubActive(); unsubRecent() }
+}
+
+// "Seen, someone is following up" - stops repeat SMS; the warning stays until the exit is
+// recorded. The rules only let active staff add these three fields, once, to an active warning.
+export async function acknowledgeLongStayAlerts(ids, actor) {
+  assertOnline('acknowledging the warning')
+  const writes = {}
+  for (const id of ids) {
+    writes[`longStayAlerts/${id}/acknowledgedAt`] = serverTimestamp()
+    writes[`longStayAlerts/${id}/acknowledgedBy`] = auth.currentUser?.uid
+    writes[`longStayAlerts/${id}/acknowledgedByName`] = (actor?.name || '').toString().slice(0, 80)
+  }
+  await update(ref(rtdb), writes)
 }
 
 export function listenToOverrideLogs(callback, count = 5) {

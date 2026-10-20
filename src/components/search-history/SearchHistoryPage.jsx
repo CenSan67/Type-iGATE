@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useRemarks } from '../../hooks/useRemarks'
 import PaginationRow from '../shared/PaginationRow'
 import RemarkModal from '../modals/RemarkModal'
@@ -45,9 +46,12 @@ const toDateInputValue = toLocalISODate
 
 export default function SearchHistoryPage(){
   const [now, setNow] = useState(new Date())
-  const [searchType, setSearchType] = useState('Plate No.')
-  const [query, setQuery] = useState('')
-  const [submittedQuery, setSubmittedQuery] = useState('')
+  // Another page can open this one on a person (Dashboard long-stay warning -> View record).
+  const { state: linkState } = useLocation()
+  const initialType = searchTypes.includes(linkState?.searchType) ? linkState.searchType : 'Plate No.'
+  const [searchType, setSearchType] = useState(initialType)
+  const [query, setQuery] = useState(linkState?.query || '')
+  const [submittedQuery, setSubmittedQuery] = useState(linkState?.query || '')
   const [showRemarkModal, setShowRemarkModal] = useState(false)
   const [users, setUsers] = useState([])
   const entries = useEnrichedGateLogs()

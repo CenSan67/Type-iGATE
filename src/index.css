@@ -3109,6 +3109,37 @@ div.snapshot-card-thumb { cursor: default; }
   .snapshot-card-thumb { width: 100%; height: 160px; }
 }
 
+/* Long-stay warnings (Dashboard panel, top-bar count, System Settings card) */
+.long-stay-panel.has-warnings { border-color: #e7b4b4; }
+.long-stay-panel.has-warnings .activity-header { background: #fdf3f3; }
+.long-stay-count { margin-left: 8px; padding: 2px 9px; vertical-align: middle; }
+.long-stay-tabs { flex-wrap: wrap; padding: 16px 24px 0; margin-bottom: 8px; }
+.long-stay-row { background: #fff8f8; }
+.long-stay-elapsed { color: #c12d2d; font-weight: 700; white-space: nowrap; }
+.long-stay-nowrap,
+.long-stay-panel .status-badge { white-space: nowrap; }
+.long-stay-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.long-stay-thresholds { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+.notification-dot.danger { background: #c12d2d; }
+.app-topbar-bell-count {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  border: 1.5px solid var(--maroon);
+  background: #c12d2d;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* ============================================================
    Mobile & tablet layout. Kept at the END of the file on purpose: these overrides must
    come after the base rules they adjust (the 1100px block used to sit above
