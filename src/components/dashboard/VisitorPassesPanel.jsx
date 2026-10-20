@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import useExpectedGuests from '../../hooks/useExpectedGuests'
 import useVisitorPasses from '../../hooks/useVisitorPasses'
 import ConfirmModal from '../modals/ConfirmModal'
@@ -22,6 +22,12 @@ export default function VisitorPassesPanel(){
   const { user, profile } = useAuth()
   const staffName = profile?.fullName || profile?.displayName || user?.email || ''
   const [pendingReturn, setPendingReturn] = useState(null)
+  // Re-checked every 30 s so a pass flips to "Expired" without a page refresh.
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30000)
+    return () => clearInterval(timer)
+  }, [])
 
   const runReturn = async () => {
     if (!pendingReturn) return
@@ -64,7 +70,10 @@ export default function VisitorPassesPanel(){
               <td>{p.rfidId}</td>
               <td>{p.plateNumber || '—'}<span className="cell-sub">{formatVehicleBrand(p.vehicleBrand)}</span></td>
               <td>{p.hostName || '—'}</td>
-              <td>{p.expiresAt ? new Date(p.expiresAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+              <td>
+                {p.expiresAt ? new Date(p.expiresAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                {p.expiresAt && p.expiresAt < now && <> <span className="status-badge badge-negative">Expired</span></>}
+              </td>
               <td>
                 <button type="button" className="btn-secondary" onClick={() => setPendingReturn(p)}>Return Pass</button>
               </td>
