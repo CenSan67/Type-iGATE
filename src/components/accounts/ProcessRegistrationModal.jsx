@@ -78,7 +78,7 @@ export default function ProcessRegistrationModal({ registration, users, payments
       </div>
 
       <form className="registration-form" onSubmit={(e) => { e.preventDefault(); p.save() }} noValidate>
-        {!p.editable && <p className="form-hint-plain">{status === 'Active' ? 'Activated - edit this person from their owner record (Registered tab).' : 'Rejected - reopen it to make changes.'}</p>}
+        {!p.editable && <p className="form-hint-plain">{p.derived.ownerDeleted ? 'Activated, but the owner record was deleted - reopen it to card and activate this person again.' : status === 'Active' ? 'Activated - edit this person from their owner record (Registered tab).' : 'Rejected - reopen it to make changes.'}</p>}
         <h4 className="registration-section">Registration Information</h4>
         <fieldset className="registration-fields process-fields" disabled={!p.editable || p.saving}>
           {textField('fullName')}
@@ -172,7 +172,9 @@ export default function ProcessRegistrationModal({ registration, users, payments
 
       <h4 className="registration-section">Activation</h4>
       <div className="process-card">
-        {status === 'Active' ? (
+        {p.derived.ownerDeleted ? (
+          <p>Was activated{registration.activatedAt ? ` on ${new Date(registration.activatedAt).toLocaleString()}` : ''}, but its owner record has since been deleted, so this person has no card. Reopen moves it back to Approved: assign a card, then Record Payment &amp; Activate as usual.</p>
+        ) : status === 'Active' ? (
           <p>Activated{registration.activatedAt ? ` on ${new Date(registration.activatedAt).toLocaleString()}` : ''} - paid, card scanned and documents verified through the Payment registration.</p>
         ) : status === 'Approved' ? (
           <>
@@ -186,6 +188,7 @@ export default function ProcessRegistrationModal({ registration, users, payments
         )}
         <div className="modal-actions process-status-actions">
           {status === 'Rejected' && <button type="button" className="btn-secondary" onClick={() => p.changeStatus('Pending Review', 'Reopened as Pending Review.')}>Reopen</button>}
+          {p.derived.ownerDeleted && <button type="button" className="btn-primary" disabled={p.saving} onClick={p.reopen}>Reopen</button>}
           {status === 'Approved' && <button type="button" className="btn-secondary" onClick={() => p.changeStatus('Under Processing', 'Moved back to Under Processing.')}>Undo approval</button>}
           {status !== 'Rejected' && status !== 'Active' && <button type="button" className="btn-danger" onClick={() => setConfirmReject(true)}>Reject</button>}
         </div>

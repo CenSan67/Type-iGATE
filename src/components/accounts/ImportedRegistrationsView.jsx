@@ -54,7 +54,7 @@ export default function ImportedRegistrationsView({ registrations, users, paymen
       </div>
       <div className="registration-filters">
         <label>Payment<select value={payment} onChange={(e) => setPayment(e.target.value)}><option>All</option><option>Pending</option><option>Paid</option></select></label>
-        <label>Account<select value={account} onChange={(e) => setAccount(e.target.value)}><option>All</option><option>Pending Activation</option><option>Active</option><option>Inactive</option></select></label>
+        <label>Account<select value={account} onChange={(e) => setAccount(e.target.value)}><option>All</option><option>Pending Activation</option><option>Active</option><option>Inactive</option><option>Owner deleted</option></select></label>
         <label>RFID<select value={rfid} onChange={(e) => setRfid(e.target.value)}><option>All</option><option>Unassigned</option><option>Assigned</option></select></label>
         <label>Imported from<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
         <label>to<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
@@ -83,7 +83,7 @@ export default function ImportedRegistrationsView({ registrations, users, paymen
               <td><span className={`status-badge ${processingBadge(status.processing)}`}>{status.processing}</span></td>
               <td><span className={`status-badge ${paymentBadge(status.payment)}`}>{status.payment}</span></td>
               <td><span className={`status-badge ${accountBadge(status.account)}`}>{status.account}</span></td>
-              <td><button type="button" className="btn-secondary" onClick={() => onProcess(r)}>{r.status === 'Active' || r.status === 'Rejected' ? 'View' : 'Process'}</button></td>
+              <td><button type="button" className="btn-secondary" onClick={() => onProcess(r)}>{(r.status === 'Active' && !status.ownerDeleted) || r.status === 'Rejected' ? 'View' : 'Process'}</button></td>
             </tr>
           ))}
           {filtered.length === 0 && (

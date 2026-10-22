@@ -168,9 +168,12 @@ export function deriveRegistrationStatus(registration, users, payments) {
     ? payments.some((p) => (p.rfidId || '').toLowerCase() === (owner.rfidId || '').toLowerCase() && (p.timestamp || 0) >= (owner.createdAt || 0))
     : false
   const ownerActive = owner && (owner.status || 'Active') === 'Active'
+  // Activated, but its owner record was deleted (Account Management -> Delete): can be reopened.
+  const ownerDeleted = registration.status === 'Active' && !owner
   return {
     processing: registration.status,
-    account: ownerActive ? 'Active' : owner && registration.status === 'Active' ? 'Inactive' : 'Pending Activation',
+    account: ownerActive ? 'Active' : ownerDeleted ? 'Owner deleted' : owner && registration.status === 'Active' ? 'Inactive' : 'Pending Activation',
+    ownerDeleted,
     payment: paid ? 'Paid' : 'Pending',
     rfid: owner?.rfidId ? 'Assigned' : 'Unassigned',
     rfidId: owner?.rfidId || '',

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { approvalProblems, checkRegistration, deriveRegistrationStatus, REGISTRATION_FIELDS, uploadedFileLinks } from '../models/registration'
 import { resolveVehicleBrand, vehicleBrandFormValue } from '../constants/vehicleBrands'
-import { assignRegistrationCard, setRegistrationStatus, unassignRegistrationCard, updateRegistration } from '../services/firebase'
+import { assignRegistrationCard, reopenRegistration, setRegistrationStatus, unassignRegistrationCard, updateRegistration } from '../services/firebase'
 import { getErrorMessage } from '../utils/errors'
 import { useToast } from '../context/ToastContext'
 
@@ -79,10 +79,12 @@ export default function useRegistrationProcessing(registration, users, payments)
 
   const removeCard = () => run(() => unassignRegistrationCard(registration, users), 'Card removed - registration is unassigned again.')
 
+  const reopen = () => run(() => reopenRegistration(registration), 'Reopened as Approved - assign a card and activate it again.')
+
   const missingNow = useMemo(() => {
     const brand = resolveVehicleBrand(form.brand)
     return approvalProblems(checkRegistration({ ...form, vehicleBrand: brand.value || '' }))
   }, [form])
 
-  return { form, setField, errors, saving, dirty, editable, derived, original, uploadedFiles, missingNow, save, changeStatus, assignCard, removeCard }
+  return { form, setField, errors, saving, dirty, editable, derived, original, uploadedFiles, missingNow, save, changeStatus, assignCard, removeCard, reopen }
 }
