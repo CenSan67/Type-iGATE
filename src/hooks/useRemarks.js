@@ -1,31 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { listenToVisitRemarks, saveVisitRemark } from '../services/firebase'
 import { useAuth } from '../context/AuthContext'
+import { buildVisitIndex, remarksByVisit } from '../utils/visitRemarks'
 
-// Visit-scoped remarks, shared by the Dashboard (RecentActivityTable) and Search History.
+export { remarkKeyOf } from '../utils/visitRemarks'
+
+// Visit remarks, shared by the Dashboard (RecentActivityTable) and Search History.
 //
-// A remark belongs to a PERSON (their rfidUsers record id - so a pooled visitor card's next
-// holder never inherits it), not to one scan row, and lasts for that person's current
-// visit: it stays through their OUT and is cleared automatically by their NEXT IN. So a
-// remark written on the Dashboard shows on that person in Search History too, and both
-// pages agree on when it disappears.
+// A remark belongs to ONE VISIT of one person: their IN scan and the OUT that follows it. It is
+// stored under that IN's gateLogs id (visitRemarks/{inLogId}, models/visitRemark.js), so:
+//   - it shows on that visit's IN row and on its OUT row (still there after they exit)
+//   - their next IN is a new visit with no remark, and the old remark stays with the old visit
+//     (Search History shows it when that visit's IN or OUT row is selected)
+// "Person" = the rfidUsers record the scan is attributed to (so a pooled visitor card's next
+// holder never inherits a remark), else the card number for an unknown holder.
 //
-// Stored in the Realtime Database (visitRemarks/{personKey}, models/visitRemark.js), so every
-// staff member and device sees the same remark. It used to live in each browser's
-// localStorage (igate_visit_remarks), which is no longer read.
+// Older remarks were stored one per person (visitRemarks/{personKey}, no personKey field) and
+// overwritten every visit; each is shown on the visit it was written during until someone edits
+// it, which moves it to the per-visit key (utils/visitRemarks.js).
 
-// Who a scan row is for remark purposes: the rfidUsers record it's attributed to, else the
-// card number (a scan whose holder is unknown). For an rfidUsers record itself (Search
-// History's person) the key is simply its own id.
-export function remarkKeyOf(entry){
-  if (!entry) return ''
-  if (entry.rfidUserId) return entry.rfidUserId
-  return `card:${(entry.rfidId ?? '').toString().toLowerCase()}`
-}
-
-// `entries` = enriched gate logs (useEnrichedGateLogs) - needed to know each person's IN times.
+// `entries` = ALL enriched gate logs (useEnrichedGateLogs) - visits need each person's full history.
 export function useRemarks(entries = []){
-  const [remarks, setRemarks] = useState({}) // { [personKey]: { text, at, by, byName } }
+  const [remarks, setRemarks] = useState({})
   const { user, profile } = useAuth()
 
   useEffect(() => {
@@ -33,40 +29,23 @@ export function useRemarks(entries = []){
     return () => unsub && unsub()
   }, [])
 
-  // Every IN timestamp per person, ascending.
-  const insByPerson = useMemo(() => {
-    const map = new Map()
-    for (const e of entries) {
-      if (e.direction !== 'IN' || !e.timestamp) continue
-      const key = remarkKeyOf(e)
-      if (!map.has(key)) map.set(key, [])
-      map.get(key).push(e.timestamp)
-    }
-    for (const list of map.values()) list.sort((a, b) => a - b)
-    return map
-  }, [entries])
+  const { visits, insByPerson } = useMemo(() => buildVisitIndex(entries), [entries])
+  const byVisit = useMemo(() => remarksByVisit(remarks, insByPerson), [remarks, insByPerson])
 
-  // The remark still in force for this person: none of their INs happened after it.
-  // Returns { text, at, by, byName, visitStart } - visitStart = the IN that began the remarked visit.
-  const remarkFor = useCallback((key) => {
-    const remark = remarks[key]
-    if (!remark?.text) return null
-    const ins = insByPerson.get(key) || []
-    if (ins.some((t) => t > remark.at)) return null // they came back in - cleared
-    const visitStart = ins.filter((t) => t <= remark.at).pop() ?? 0
-    return { ...remark, visitStart }
-  }, [remarks, insByPerson])
+  // The remark of the visit this scan row belongs to, or null.
+  const remarkFor = useCallback((entryId) => {
+    const visit = visits.get(entryId)
+    return (visit && byVisit.get(visit.visitId)) || null
+  }, [visits, byVisit])
 
-  // True for scan rows that belong to the remarked visit (its IN and everything after).
-  const entryHasRemark = useCallback((entry) => {
-    const active = remarkFor(remarkKeyOf(entry))
-    return !!active && (entry.timestamp || 0) >= active.visitStart
-  }, [remarkFor])
+  // Saves (empty text removes) the remark of the visit this scan row belongs to. Throws on
+  // failure so the caller can show it.
+  const saveRemark = useCallback((entryId, text) => {
+    const visit = visits.get(entryId)
+    if (!visit) return Promise.reject(new Error('This scan could not be matched to a visit.'))
+    const legacyKey = byVisit.get(visit.visitId)?.legacyKey || null
+    return saveVisitRemark(visit.visitId, text, { name: profile?.fullName || profile?.displayName || user?.email || '' }, { personKey: visit.personKey, legacyKey })
+  }, [visits, byVisit, profile, user])
 
-  // Saves the remark (empty text removes it). Throws on failure so the caller can show it.
-  const saveRemark = useCallback((key, text) => (
-    saveVisitRemark(key, text, { name: profile?.fullName || profile?.displayName || user?.email || '' })
-  ), [profile, user])
-
-  return { remarkFor, entryHasRemark, saveRemark }
+  return { remarkFor, saveRemark }
 }

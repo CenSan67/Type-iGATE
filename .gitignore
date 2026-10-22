@@ -6,3 +6,9 @@ dist/
 
 # Firebase CLI deploy cache
 .firebase/
+
+# Firebase CLI / emulator logs (can contain secret values fetched from Secret Manager)
+firebase-debug.log*
+database-debug.log*
+firestore-debug.log*
+ui-debug.log*

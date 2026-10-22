@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useRemarks } from '../../hooks/useRemarks'
 import PaginationRow from '../shared/PaginationRow'
 import RemarkModal from '../modals/RemarkModal'
-import { RemarkTick, RemarkPreview } from '../shared/RemarkBadge'
+import { RemarkTick, RemarkAddButton } from '../shared/RemarkBadge'
 import bsuLogo from '../../assets/bsu_logo-removebg-preview.png'
 import { listenToRfidUsers } from '../../services/firebase'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
@@ -15,6 +15,7 @@ import PrintReportModal from '../shared/PrintReportModal'
 import { buildGateLogReport, dayStartMs, dayEndMs } from '../../utils/reportBuilders'
 import { toLocalISODate } from '../../utils/dateRange'
 import useDateRangeFilter from '../../hooks/useDateRangeFilter'
+import EmergencyRecordsSection from './EmergencyRecordsSection'
 
 const searchTypes = ['Plate No.', 'RFID-ID', 'Name']
 const PAGE_SIZE = 10
@@ -143,10 +144,10 @@ export default function SearchHistoryPage(){
   useEffect(() => { setPersonPage(1) }, [person?.id])
   const personPageLogs = logs.slice((personPage - 1) * PERSON_LOG_PAGE_SIZE, personPage * PERSON_LOG_PAGE_SIZE)
 
-  // Visit-scoped remark (hooks/useRemarks.js): the same one the Dashboard writes for this
-  // person, shown until their next IN.
+  // One remark per visit (an IN and its OUT - hooks/useRemarks.js), the same ones the Dashboard
+  // writes: the Information card shows only the remark of the visit the selected row belongs to.
   const { remarkFor, saveRemark } = useRemarks(entries)
-  const personRemark = person ? remarkFor(person.id) : null
+  const selectedRemark = selectedLog ? remarkFor(selectedLog.id) : null
 
   // --- All Entry & Exit Logs: filter -> sort -> paginate ---
   const filteredLogs = useMemo(() => {
@@ -269,10 +270,8 @@ export default function SearchHistoryPage(){
                 <div>
                   <span className="name-with-remark">
                     <strong>{person.name || 'Unknown'}</strong>
-                    {personRemark && <RemarkTick onClick={() => setShowRemarkModal(true)} title="View remark" />}
                   </span>
                   <div className="result-rfid">{person.rfidId}</div>
-                  {personRemark && <RemarkPreview text={personRemark.text} onClick={() => setShowRemarkModal(true)} />}
                 </div>
                 <span className="plate-pill">{person.plateNumber || '—'}</span>
                 <span className="tag-pill">{person.role || '—'}</span>
@@ -303,7 +302,12 @@ export default function SearchHistoryPage(){
                       <td>{log.time}</td>
                       <td>{log.date}</td>
                       <td>{log.role}</td>
-                      <td>{log.direction === 'IN' ? <span className="direction-in">+ IN</span> : <span className="direction-out">- OUT</span>}</td>
+                      <td>
+                        <span className="name-with-remark">
+                          {log.direction === 'IN' ? <span className="direction-in">+ IN</span> : <span className="direction-out">- OUT</span>}
+                          {remarkFor(log.id) && <RemarkTick onClick={() => setSelectedLogId(log.id)} title="This visit has a remark" />}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -358,7 +362,10 @@ export default function SearchHistoryPage(){
               </div>
 
               <div className="info-card">
-                <h4>Information</h4>
+                <div className="info-card-head">
+                  <h4>Information</h4>
+                  {selectedLog && !selectedRemark && <RemarkAddButton onClick={() => setShowRemarkModal(true)} title="Add a remark to this visit" />}
+                </div>
                 <div className="info-person">
                   <span className="result-avatar"><PersonIcon /></span>
                   <div>
@@ -374,6 +381,13 @@ export default function SearchHistoryPage(){
                   <div className="info-row"><span>Department:</span><span>{person.department || '—'}</span></div>
                   <div className="info-row"><span>Date Registered:</span><span>{person.createdAt ? new Date(person.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—'}</span></div>
                 </div>
+                {selectedRemark && (
+                  <button type="button" className="info-remark" onClick={() => setShowRemarkModal(true)} title="Edit remark">
+                    <span className="info-remark-label">Remark · {selectedLog.direction} {selectedLog.time}, {selectedLog.date}</span>
+                    <span className="info-remark-text">{selectedRemark.text}</span>
+                    <span className="info-remark-by">{selectedRemark.byName || 'Staff'}{selectedRemark.at ? ` · ${new Date(selectedRemark.at).toLocaleString()}` : ''}</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -475,6 +489,8 @@ export default function SearchHistoryPage(){
         </div>
       </div>
 
+      <EmergencyRecordsSection focused={linkState?.section === 'emergency'} initialEventId={linkState?.eventId} />
+
       {showPrintReport && (
         <PrintReportModal
           title={directionFilter === 'IN' ? 'Vehicle Access Report - Entries Only' : directionFilter === 'OUT' ? 'Vehicle Access Report - Exits Only' : 'Vehicle Access Report'}
@@ -483,13 +499,14 @@ export default function SearchHistoryPage(){
         />
       )}
 
-      {showRemarkModal && (
+      {showRemarkModal && selectedLog && (
         <RemarkModal
           name={person.name}
           rfid={person.rfidId}
-          remark={personRemark}
+          scan={`${selectedLog.direction} · ${selectedLog.date}, ${selectedLog.time}`}
+          remark={selectedRemark}
           onClose={() => setShowRemarkModal(false)}
-          onSave={(text) => saveRemark(person.id, text)}
+          onSave={(text) => saveRemark(selectedLog.id, text)}
         />
       )}
     </div>

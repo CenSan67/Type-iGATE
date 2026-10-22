@@ -4,9 +4,10 @@ import { REMARK_MAX_LENGTH, normalizeRemarkText } from '../../models/visitRemark
 import { useToast } from '../../context/ToastContext'
 import { getErrorMessage } from '../../utils/errors'
 
-// View / write / edit / remove one person's visit remark. `remark` = the current one
-// ({ text, at, byName }) or null. `onSave(text)` returns a promise ('' removes the remark).
-export default function RemarkModal({ name, rfid, remark, onClose, onSave }){
+// View / write / edit / remove the remark of ONE visit (an IN and its OUT). `remark` = the current one
+// ({ text, at, byName }) or null. `scan` = which row it was opened from, e.g. "IN · 10/18/2026, 9:02 PM".
+// `onSave(text)` returns a promise ('' removes the remark).
+export default function RemarkModal({ name, rfid, scan, remark, onClose, onSave }){
   const { showError, showInfo } = useToast()
   const [text, setText] = useState(remark?.text || '')
   const [saving, setSaving] = useState(false)
@@ -33,6 +34,12 @@ export default function RemarkModal({ name, rfid, remark, onClose, onSave }){
           RFID-ID
           <input value={rfid} readOnly />
         </label>
+        {scan && (
+          <label>
+            Scan
+            <input value={scan} readOnly />
+          </label>
+        )}
         <label>
           Remark
           <textarea
@@ -48,7 +55,7 @@ export default function RemarkModal({ name, rfid, remark, onClose, onSave }){
             {text.length}/{REMARK_MAX_LENGTH}
           </span>
         </label>
-        <p className="form-hint">Shared with all staff. It stays for this visit and clears on their next entry.</p>
+        <p className="form-hint">Shared with all staff. Saved with this visit only - its entry and exit. Their next entry starts without a remark; this one stays in Search History on this visit.</p>
 
         <div className="modal-actions">
           {remark?.text && <button type="button" className="btn-secondary" onClick={() => save('')} disabled={saving}>Remove</button>}

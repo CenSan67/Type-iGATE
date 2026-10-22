@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react'
-import { useRemarks, remarkKeyOf } from '../../hooks/useRemarks'
+import React, { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useRemarks } from '../../hooks/useRemarks'
 import RemarkModal from '../modals/RemarkModal'
 import RegisterRfidModal from '../modals/RegisterRfidModal'
 import SimulateUserScanModal from '../modals/SimulateUserScanModal'
@@ -8,6 +9,9 @@ import { RemarkAddButton, RemarkTick, RemarkPreview } from '../shared/RemarkBadg
 import { listenToNewGateLogs } from '../../services/firebase'
 import useEnrichedGateLogs from '../../hooks/useEnrichedGateLogs'
 import { formatVehicleBrand } from '../../constants/vehicleBrands'
+import useEmergencyLogs from '../../hooks/useEmergencyLogs'
+import EmergencyStatusBadge from '../shared/EmergencyStatusBadge'
+import { emergencyTypeOf, emergencyScanRows } from '../../models/emergencyLog'
 
 const FLASH_DURATION_MS = 4000
 
@@ -22,11 +26,17 @@ export default function RecentActivityTable(){
   const [justArrivedId, setJustArrivedId] = useState(null)
   const [previewImage, setPreviewImage] = useState(null)
   const entries = useEnrichedGateLogs()
-  // Remarks are per person and per visit (see hooks/useRemarks.js) - shared with Search History.
-  const { remarkFor, entryHasRemark, saveRemark } = useRemarks(entries)
+  // One remark per visit (an IN and its OUT - hooks/useRemarks.js), shared with Search History.
+  const { remarkFor, saveRemark } = useRemarks(entries)
+  // Emergency card scans (emergencyLogs) are listed in time order with the gate logs, IN and OUT
+  // like any card, as their own red rows (emergencyScanRows: the IN tap + the OUT tap once the
+  // vehicle leaves). Not counted as gate entries/exits. Details are edited in Search History.
+  const { all: emergencies, loaded: emergenciesLoaded } = useEmergencyLogs(true)
+  const navigate = useNavigate()
+  const seenEmergencyRows = useRef(null)
+  const emergencyRows = emergencies.flatMap(emergencyScanRows)
 
-  const logs = entries
-    .slice()
+  const logs = [...entries, ...emergencyRows.map((e) => ({ ...e, kind: 'emergency' }))]
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
     .slice(0, 5)
     .map((entry) => ({
@@ -45,6 +55,24 @@ export default function RecentActivityTable(){
     })
     return () => unsub && unsub()
   }, [])
+
+  // Same "just scanned" flash for a new emergency IN or OUT. Rows already there when the page
+  // loaded are only remembered, never flashed.
+  const emergencyRowKeys = emergencyRows.map((r) => r.rowKey).join('|')
+  useEffect(() => {
+    if (!emergenciesLoaded) return undefined
+    const keys = emergencyRowKeys ? emergencyRowKeys.split('|') : []
+    const known = seenEmergencyRows.current
+    seenEmergencyRows.current = new Set(keys)
+    if (!known) return undefined
+    const fresh = keys.find((k) => !known.has(k))
+    if (!fresh) return undefined
+    setJustArrivedId(fresh)
+    const timer = setTimeout(() => setJustArrivedId((cur) => (cur === fresh ? null : cur)), FLASH_DURATION_MS)
+    return () => clearTimeout(timer)
+  }, [emergencyRowKeys, emergenciesLoaded])
+
+  const openEmergency = (row) => navigate('/search-history', { state: { section: 'emergency', eventId: row.id } })
 
   return (
     <div className="activity-panel">
@@ -96,7 +124,30 @@ export default function RecentActivityTable(){
             <tr>
               <td colSpan="9" className="empty-state">No RFID activity yet.</td>
             </tr>
-          ) : logs.map((row) => (
+          ) : logs.map((row) => (row.kind === 'emergency' ? (
+            <tr
+              key={row.rowKey}
+              className={`activity-row emergency-activity-row ${row.rowKey === justArrivedId ? 'just-scanned' : ''}`}
+              onClick={() => openEmergency(row)}
+              title="Open in Search History - Emergency Records"
+            >
+              <td><span className="emergency-row-icon" aria-hidden="true">!</span></td>
+              <td>{row.timestamp ? new Date(row.timestamp).toLocaleString() : 'Pending'}{row.timeApprox && <span className="cell-sub">Approx. time (offline)</span>}</td>
+              <td>{row.cardId || 'N/A'}</td>
+              <td>{row.details?.plateNumber || '—'}</td>
+              <td>
+                <strong className="emergency-row-label">EMERGENCY RFID SCAN</strong>
+                <span className="cell-sub">{emergencyTypeOf(row) || 'Details not provided yet'}{row.details?.agency ? ` · ${row.details.agency}` : ''}</span>
+              </td>
+              <td>{row.details?.destination ? `To ${row.details.destination}` : '—'}</td>
+              <td>—</td>
+              <td>
+                <span className="emergency-role">Emergency</span>
+                <EmergencyStatusBadge status={row.status} />
+              </td>
+              <td>{row.direction === 'OUT' ? <span className="direction-out">- OUT</span> : <span className="direction-in">+ IN</span>}</td>
+            </tr>
+          ) : (
             <tr key={row.id} className={`activity-row ${row.id === justArrivedId ? 'just-scanned' : ''}`}>
               <td>
                 {row.imageUrl ? (
@@ -114,16 +165,16 @@ export default function RecentActivityTable(){
                 <span className="name-with-remark">
                   {row.name || 'Unknown'}
                   <RemarkAddButton onClick={() => setActiveRow(row)} />
-                  {entryHasRemark(row) && <RemarkTick onClick={() => setActiveRow(row)} />}
+                  {remarkFor(row.id) && <RemarkTick onClick={() => setActiveRow(row)} />}
                 </span>
-                {entryHasRemark(row) && <RemarkPreview large text={remarkFor(remarkKeyOf(row))?.text} onClick={() => setActiveRow(row)} />}
+                {remarkFor(row.id) && <RemarkPreview large text={remarkFor(row.id).text} onClick={() => setActiveRow(row)} />}
               </td>
               <td>{row.vehicleType || '—'}{row.vehicleType && row.vehicleType !== '—' && <span className="cell-sub">{formatVehicleBrand(row.vehicleBrand)}</span>}</td>
               <td>{row.department || '—'}</td>
               <td>{row.role || '—'}</td>
               <td>{row.direction === 'OUT' ? <span className="direction-out">- OUT</span> : <span className="direction-in">+ IN</span>}</td>
             </tr>
-          ))}
+          )))}
         </tbody>
       </table>
 
@@ -132,10 +183,11 @@ export default function RecentActivityTable(){
       {activeRow && (
         <RemarkModal
           name={activeRow.name || activeRow.rfidId || 'Unknown'}
-          rfid={activeRow.id}
-          remark={remarkFor(remarkKeyOf(activeRow))}
+          rfid={activeRow.rfidId || 'N/A'}
+          scan={`${activeRow.direction} · ${activeRow.time}`}
+          remark={remarkFor(activeRow.id)}
           onClose={() => setActiveRow(null)}
-          onSave={(text) => saveRemark(remarkKeyOf(activeRow), text)}
+          onSave={(text) => saveRemark(activeRow.id, text)}
         />
       )}
 

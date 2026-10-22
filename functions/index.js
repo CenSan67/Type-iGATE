@@ -530,6 +530,8 @@ exports.auditAppSettings = auditTrigger('/settings/app', 'settings', (changes) =
 // warnings themselves are created and resolved by checkLongStays - not app-user writes).
 exports.auditLongStaySettings = auditTrigger('/settings/longStay', 'longStaySettings')
 exports.auditLongStayAlerts = auditTrigger('/longStayAlerts/{id}', 'longStayAlerts', (_changes, _action, isAppUser) => !isAppUser)
+// Who recorded / resolved an emergency card tap (the taps themselves come from the scanner).
+exports.auditEmergencyLogs = auditTrigger('/emergencyLogs/{id}', 'emergencyLogs', (_changes, _action, isAppUser) => !isAppUser)
 
 // ---------------------------------------------------------------------------------------
 // Username login. Firebase Authentication only signs in with email + password, so a username

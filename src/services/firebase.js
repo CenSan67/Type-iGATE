@@ -6,6 +6,8 @@ import { getStorage, connectStorageEmulator, ref as storageRef, uploadBytes, get
 import { getFunctions, connectFunctionsEmulator, httpsCallable } from 'firebase/functions'
 import { validateGateLog } from '../models/gateLog'
 import { validateVisitRemark } from '../models/visitRemark'
+import { validateEmergencyDetails, validateEmergencyText, validateEmergencyResolution } from '../models/emergencyLog'
+import { EMERGENCY_CARD_ID } from '../constants/emergencyCard'
 import { validateLongStaySettings } from '../models/longStay'
 import { validateRfidUser } from '../models/rfidUser'
 import { validatePayment } from '../models/payment'
@@ -15,7 +17,7 @@ import { validateSystemUser } from '../models/systemUser'
 import { validateExpectedGuest } from '../models/expectedGuest'
 import { ROLES } from '../constants/roles'
 import { getErrorMessage } from '../utils/errors'
-import { currentHolder, renewableRecord } from '../utils/cardHolder'
+import { currentHolder, renewableRecord, normalizeCardId } from '../utils/cardHolder'
 import { toCaps } from '../utils/textCase'
 import { registrationFieldValues, registrationKeys, encodeKey } from '../models/registration'
 import { isValidRfid } from '../utils/validators'
@@ -142,6 +144,7 @@ export async function logGateEntry({ cardId, cardHex, direction = 'IN', source =
 }
 
 export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType, vehicleBrand, department, role, email, phone, expiresAt, hostName, purpose, guestId }) {
+  assertNotEmergencyCard(rfidId)
   const usersRef = ref(rtdb, 'rfidUsers')
   const snapshot = await get(usersRef)
   const existingUsers = snapshot.exists() ? Object.values(snapshot.val() || {}) : []
@@ -170,6 +173,7 @@ export async function registerRfidUser({ name, rfidId, plateNumber, vehicleType,
 // and the record carries that paymentId: database.rules.json only lets a non-admin create a
 // non-visitor record together with a brand-new payment for the same card, received by them.
 export async function upsertRfidUser({ rfidId, name, department, plateNumber, vehicleType, vehicleColor, vehicleBrand, role, email, phone }, { payment } = {}) {
+  assertNotEmergencyCard(rfidId)
   const paymentId = payment ? push(ref(rtdb, 'payments')).key : null
   const save = async (id, record) => {
     const value = validateRfidUser({ ...record, ...(paymentId ? { paymentId } : {}) })
@@ -232,6 +236,7 @@ export async function upsertRfidUser({ rfidId, name, department, plateNumber, ve
 export async function updateRfidUser(id, patch) {
   const existingSnap = await get(ref(rtdb, `rfidUsers/${id}`))
   if (!existingSnap.exists()) throw new Error('RFID user not found.')
+  if (patch.rfidId != null && patch.rfidId !== existingSnap.val().rfidId) assertNotEmergencyCard(patch.rfidId)
 
   await set(ref(rtdb, `rfidUsers/${id}`), validateRfidUser({ ...existingSnap.val(), ...patch }))
   return id
@@ -310,25 +315,30 @@ export function listenToAuditLogs(callback, count = 500) {
   )
 }
 
-// Visit remarks (models/visitRemark.js): { [personKey]: { text, at, by, byName } }.
+// Visit remarks (models/visitRemark.js): { [visitId]: { text, at, by, byName, personKey } }, plus
+// older per-person records { [personKey]: { text, at, by, byName } } (hooks/useRemarks.js).
 export function listenToVisitRemarks(callback) {
   return onValue(ref(rtdb, 'visitRemarks'), (snapshot) => callback(snapshot.val() || {}), () => callback({}))
 }
 
 // RTDB keys can't contain . # $ [ ] / - a card id never should, but a corrupted read might.
-const remarkPath = (personKey) => `visitRemarks/${personKey.replace(/[.#$[\]/]/g, '_')}`
+const remarkPath = (key) => `visitRemarks/${key.replace(/[.#$[\]/]/g, '_')}`
 
-// Saves (or, with empty text, removes) one person's visit remark. `at` is Firebase server time so
-// it compares correctly with scan times from the ESP32. Touches only visitRemarks/{personKey}.
-export async function saveVisitRemark(personKey, text, actor) {
+// Saves (or, with empty text, removes) ONE visit's remark: visitId = the IN gateLogs id that
+// started the visit. `at` is Firebase server time. `legacyKey` = the old per-person record this
+// visit was showing, removed in the same update so it can't reappear. Touches only visitRemarks.
+export async function saveVisitRemark(visitId, text, actor, { personKey, legacyKey } = {}) {
   assertOnline('saving the remark')
-  if (!personKey) throw new Error('No person selected for this remark.')
+  if (!visitId) throw new Error('No visit selected for this remark.')
+  const writes = {}
+  if (legacyKey) writes[remarkPath(legacyKey)] = null
   if (!(text ?? '').toString().trim()) {
-    await remove(ref(rtdb, remarkPath(personKey)))
-    return
+    writes[remarkPath(visitId)] = null
+  } else {
+    const remark = validateVisitRemark({ text, by: auth.currentUser?.uid, byName: actor?.name, personKey })
+    writes[remarkPath(visitId)] = { ...remark, at: serverTimestamp() }
   }
-  const remark = validateVisitRemark({ text, by: auth.currentUser?.uid, byName: actor?.name })
-  await set(ref(rtdb, remarkPath(personKey)), { ...remark, at: serverTimestamp() })
+  await update(ref(rtdb), writes)
 }
 
 // Long-stay settings (models/longStay.js). null until an admin first saves them - the
@@ -382,6 +392,111 @@ export function listenToOverrideLogs(callback, count = 5) {
     const rows = Object.entries(snapshot.val() || {}).map(([id, v]) => ({ id, ...v }))
     callback(rows.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)))
   })
+}
+
+// ---- Emergency RFID card (models/emergencyLog.js) ----
+
+// Every path that puts a card on an rfidUsers record calls this first, for a clear message;
+// database.rules.json refuses the write anyway.
+function assertNotEmergencyCard(rfidId) {
+  const card = normalizeCardId(rfidId)
+  if (card && (card === EMERGENCY_CARD_ID || card === Number(EMERGENCY_CARD_ID).toString(16))) {
+    throw new Error('This is the emergency RFID card - it cannot be registered to a person, vehicle or visitor pass.')
+  }
+}
+
+// Every scan, newest first - the one source for the Dashboard rows, the event modal and
+// Search History. Rules: Active staff read; only the scanner creates them.
+export function listenToEmergencyLogs(callback) {
+  return onValue(query(ref(rtdb, 'emergencyLogs'), orderByChild('timestamp')), (snapshot) => {
+    const rows = Object.entries(snapshot.val() || {}).map(([id, v]) => ({ id, ...v }))
+    callback(rows.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)))
+  }, () => callback([]))
+}
+
+const actorName = (actor) => (actor?.name || '').toString().slice(0, 80)
+
+// One status change / note = one atomic update: the event's fields + an append-only
+// actions/{push} entry, so the history can't drift from the status.
+async function writeEmergencyAction(id, type, actor, { fields = {}, text } = {}) {
+  const uid = auth.currentUser?.uid
+  if (!uid) throw new Error('You need to be signed in.')
+  const actionId = push(ref(rtdb, `emergencyLogs/${id}/actions`)).key
+  const writes = {}
+  for (const [key, value] of Object.entries(fields)) writes[`emergencyLogs/${id}/${key}`] = value
+  writes[`emergencyLogs/${id}/actions/${actionId}`] = { type, at: serverTimestamp(), by: uid, byName: actorName(actor), ...(text ? { text } : {}) }
+  await update(ref(rtdb), writes)
+}
+
+export async function acknowledgeEmergency(id, actor) {
+  assertOnline('acknowledging the emergency')
+  await writeEmergencyAction(id, 'acknowledged', actor, { fields: {
+    status: 'Acknowledged',
+    acknowledgedAt: serverTimestamp(),
+    acknowledgedBy: auth.currentUser?.uid,
+    acknowledgedByName: actorName(actor),
+  } })
+}
+
+export async function markEmergencyInProgress(id, actor) {
+  assertOnline('updating the emergency')
+  await writeEmergencyAction(id, 'in-progress', actor, { fields: { status: 'In Progress' } })
+}
+
+// Incident details (type / unit / plate / destination). Editable until resolved; every save
+// is also logged as an action with a summary, so earlier values stay in the history.
+export async function saveEmergencyDetails(id, values, actor) {
+  assertOnline('saving the emergency details')
+  const details = validateEmergencyDetails({ ...values, recordedBy: auth.currentUser?.uid, recordedByName: actor?.name })
+  const summary = [details.type, details.agency, details.plateNumber && `Plate ${details.plateNumber}`, details.destination && `To ${details.destination}`].filter(Boolean).join(' · ')
+  await writeEmergencyAction(id, 'details', actor, { fields: { details: { ...details, recordedAt: serverTimestamp() } }, text: summary })
+}
+
+export async function addEmergencyRemark(id, text, actor) {
+  assertOnline('saving the remark')
+  await writeEmergencyAction(id, 'remark', actor, { text: validateEmergencyText(text) })
+}
+
+// Any Active staff (rules). Doesn't move the barriers - Gate Control does. resolvedAt/By/Name
+// can be written only once (rules), so a record that already carries them (resolved by the
+// first version of this feature, which wrote no status) keeps its stamp and only gets the
+// status + outcome.
+export async function resolveEmergency(id, values, actor) {
+  assertOnline('resolving the emergency')
+  const resolution = validateEmergencyResolution(values)
+  const stamped = (await get(ref(rtdb, `emergencyLogs/${id}/resolvedAt`))).exists()
+  await writeEmergencyAction(id, 'resolved', actor, {
+    fields: {
+      status: 'Resolved',
+      ...(stamped ? {} : {
+        resolvedAt: serverTimestamp(),
+        resolvedBy: auth.currentUser?.uid,
+        resolvedByName: actorName(actor),
+      }),
+      resolution,
+    },
+    text: [resolution.classification, resolution.summary].filter(Boolean).join(' - '),
+  })
+}
+
+// Resolves several open alerts with the same outcome (e.g. a batch of test taps). A New alert
+// is acknowledged first - the rules only allow Acknowledged/In Progress -> Resolved. One record
+// failing doesn't stop the rest; returns { resolved, failed: [{ id, error }] }.
+export async function resolveEmergencies(logs, values, actor) {
+  assertOnline('resolving the emergencies')
+  validateEmergencyResolution(values)
+  let resolved = 0
+  const failed = []
+  for (const log of logs) {
+    try {
+      if ((log.status || 'New') === 'New') await acknowledgeEmergency(log.id, actor)
+      await resolveEmergency(log.id, values, actor)
+      resolved++
+    } catch (err) {
+      failed.push({ id: log.eventId || log.id, error: getErrorMessage(err, 'Could not be resolved') })
+    }
+  }
+  return { resolved, failed }
 }
 
 // The scanner's answer to the latest command: { id, action, result, executedAt }.
@@ -812,6 +927,14 @@ function statusWrites(base, status) {
   return writes
 }
 
+// An activated registration whose owner record was deleted goes back to Approved with no card, so
+// it can be carded and activated again (the rules allow Active -> Approved only in that case).
+export async function reopenRegistration(registration) {
+  assertOnline('reopening the registration')
+  const base = `registrations/${registration.id}`
+  await update(ref(rtdb), { ...statusWrites(base, 'Approved'), [`${base}/rfidUserId`]: null })
+}
+
 export async function setRegistrationStatus(registration, status) {
   assertOnline('changing the registration status')
   await update(ref(rtdb), statusWrites(`registrations/${registration.id}`, status))
@@ -825,6 +948,7 @@ export async function assignRegistrationCard(registration, rfidId, users, { repl
   assertOnline('assigning the RFID card')
   const card = (rfidId || '').trim()
   if (!isValidRfid(card)) throw new Error('That RFID looks invalid - scan the card again.')
+  assertNotEmergencyCard(card)
   const current = registration.rfidUserId ? users.find((u) => u.id === registration.rfidUserId) : null
   if (current && (current.status || 'Active') === 'Active') throw new Error('This registration is already activated - change its card from the owner record (Edit).')
   if (current && !replace) throw new Error('A card is already assigned - confirm replacing it.')

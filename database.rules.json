@@ -25,7 +25,7 @@
           ".validate": "newData.isString()"
         },
         "rfidId": {
-          ".validate": "!data.exists() || data.val() === newData.val() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator'"
+          ".validate": "(!data.exists() || data.val() === newData.val() || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Super Admin' || root.child('adminProfiles').child(auth.uid).child('role').val() === 'Administrator') && ((data.exists() && data.val() === newData.val()) || (newData.val() !== '42502658' && newData.val() !== '2888a02' && newData.val() !== '2888A02'))"
         },
         "email": {
           ".validate": "newData.val() == '' || newData.val().matches(/^[^@]+@[^@]+\\.[^@]+$/)"
@@ -163,9 +163,9 @@
       ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
       "$personKey": {
         ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
-        ".validate": "newData.hasChildren(['text', 'at', 'by']) && newData.child('text').isString() && newData.child('text').val().length >= 1 && newData.child('text').val().length <= 500 && newData.child('at').val() === now && newData.child('by').val() === auth.uid && (!newData.hasChild('byName') || (newData.child('byName').isString() && newData.child('byName').val().length <= 80))",
+        ".validate": "newData.hasChildren(['text', 'at', 'by']) && newData.child('text').isString() && newData.child('text').val().length >= 1 && newData.child('text').val().length <= 500 && newData.child('at').val() === now && newData.child('by').val() === auth.uid && (!newData.hasChild('byName') || (newData.child('byName').isString() && newData.child('byName').val().length <= 80)) && (!newData.hasChild('personKey') || (newData.child('personKey').isString() && newData.child('personKey').val().length <= 120))",
         "$other": {
-          ".validate": "$other === 'text' || $other === 'at' || $other === 'by' || $other === 'byName'"
+          ".validate": "$other === 'text' || $other === 'at' || $other === 'by' || $other === 'byName' || $other === 'personKey'"
         }
       }
     },
@@ -179,6 +179,107 @@
       ],
       ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
       ".write": false
+    },
+    "emergencyLogs": {
+      ".indexOn": [
+        "timestamp"
+      ],
+      ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
+      "$logId": {
+        "status": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().exists() && newData.exists()",
+          ".validate": "((!data.exists() || data.val() === 'New') && newData.val() === 'Acknowledged' && newData.parent().child('acknowledgedAt').exists()) || (data.val() === 'Acknowledged' && newData.val() === 'In Progress') || ((data.val() === 'Acknowledged' || data.val() === 'In Progress') && newData.val() === 'Resolved' && newData.parent().child('resolvedAt').exists() && newData.parent().child('resolution').exists())"
+        },
+        "acknowledgedAt": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().exists() && !data.exists() && newData.exists()",
+          ".validate": "newData.val() === now"
+        },
+        "acknowledgedBy": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().exists() && !data.exists() && newData.exists()",
+          ".validate": "newData.val() === auth.uid"
+        },
+        "acknowledgedByName": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().exists() && !data.exists() && newData.exists()",
+          ".validate": "newData.isString() && newData.val().length <= 80"
+        },
+        "details": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().exists() && newData.exists() && data.parent().child('status').val() !== 'Resolved'",
+          ".validate": "newData.hasChildren(['type', 'recordedAt', 'recordedBy']) && newData.child('recordedAt').val() === now && newData.child('recordedBy').val() === auth.uid",
+          "type": {
+            ".validate": "newData.val() === 'Ambulance / Medical' || newData.val() === 'Fire' || newData.val() === 'Police' || newData.val() === 'Rescue / Disaster' || newData.val() === 'Other'"
+          },
+          "agency": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 80"
+          },
+          "plateNumber": {
+            ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{1,20}$/)"
+          },
+          "destination": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 80"
+          },
+          "recordedByName": {
+            ".validate": "newData.isString() && newData.val().length >= 0 && newData.val().length <= 80"
+          },
+          "recordedAt": {
+            ".validate": true
+          },
+          "recordedBy": {
+            ".validate": true
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "actions": {
+          "$actionId": {
+            ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().parent().exists() && !data.exists() && newData.exists()",
+            ".validate": "newData.hasChildren(['type', 'at', 'by']) && newData.child('at').val() === now && newData.child('by').val() === auth.uid",
+            "type": {
+              ".validate": "(newData.val() === 'acknowledged' || newData.val() === 'in-progress' || newData.val() === 'details' || newData.val() === 'remark' || newData.val() === 'resolved') && (newData.val() !== 'resolved' || newData.parent().parent().parent().child('status').val() === 'Resolved') && (newData.val() !== 'acknowledged' || newData.parent().parent().parent().child('status').val() === 'Acknowledged')"
+            },
+            "text": {
+              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 600"
+            },
+            "byName": {
+              ".validate": "newData.isString() && newData.val().length >= 0 && newData.val().length <= 80"
+            },
+            "at": {
+              ".validate": true
+            },
+            "by": {
+              ".validate": true
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "resolvedAt": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().exists() && !data.exists() && newData.exists()",
+          ".validate": "newData.val() === now"
+        },
+        "resolvedBy": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().exists() && !data.exists() && newData.exists()",
+          ".validate": "newData.val() === auth.uid"
+        },
+        "resolvedByName": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().exists() && !data.exists() && newData.exists()",
+          ".validate": "newData.isString() && newData.val().length <= 80"
+        },
+        "resolution": {
+          ".write": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active' && data.parent().exists() && !data.exists() && newData.exists()",
+          ".validate": "newData.hasChildren(['classification'])",
+          "classification": {
+            ".validate": "newData.val() === 'Confirmed emergency' || newData.val() === 'False alarm' || newData.val() === 'Test / drill' || newData.val() === 'Other'"
+          },
+          "summary": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 500"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
     },
     "longStayAlerts": {
       ".indexOn": [
@@ -217,7 +318,6 @@
       "scanner": {
         ".read": "auth != null && root.child('adminProfiles').child(auth.uid).child('status').val() === 'Active'",
         ".write": false,
-        ".validate": "newData.hasChildren(['ready', 'updatedAt'])",
         "ready": {
           ".validate": "newData.isBoolean()"
         },
@@ -292,7 +392,7 @@
           ".validate": "newData.isString() && newData.val().length <= 80 && newData.val().length > 0"
         },
         "status": {
-          ".validate": "(newData.val() === 'Pending Review' || newData.val() === 'Under Processing' || newData.val() === 'Approved' || newData.val() === 'Active' || newData.val() === 'Rejected') && ((!data.exists() && newData.val() === 'Pending Review') || data.val() === newData.val() || (data.val() === 'Pending Review' && (newData.val() === 'Under Processing' || newData.val() === 'Approved' || newData.val() === 'Rejected')) || (data.val() === 'Under Processing' && (newData.val() === 'Pending Review' || newData.val() === 'Approved' || newData.val() === 'Rejected')) || (data.val() === 'Approved' && ((newData.val() === 'Under Processing' || newData.val() === 'Rejected') || (newData.val() === 'Active' && (newData.parent().child('rfidUserId').isString() && root.child('rfidUsers').child(newData.parent().child('rfidUserId').val()).child('status').val() === 'Active')))) || (data.val() === 'Rejected' && newData.val() === 'Pending Review')) && ((newData.val() !== 'Approved' && newData.val() !== 'Active') || (newData.parent().child('fullName').isString() && newData.parent().child('fullName').val() !== '' && (newData.parent().child('role').val() === 'Student' || newData.parent().child('role').val() === 'Faculty' || newData.parent().child('role').val() === 'Staff') && newData.parent().child('vehicleType').isString() && newData.parent().child('vehicleType').val() !== '' && (newData.parent().child('plateNumber').isString() && newData.parent().child('plateNumber').val() !== '' || newData.parent().child('vehicleType').val() === 'E-Bike' || newData.parent().child('vehicleType').val() === 'E-Scooter') && (newData.parent().child('email').isString() && newData.parent().child('email').val() !== '' || newData.parent().child('phone').isString() && newData.parent().child('phone').val() !== '')))"
+          ".validate": "(newData.val() === 'Pending Review' || newData.val() === 'Under Processing' || newData.val() === 'Approved' || newData.val() === 'Active' || newData.val() === 'Rejected') && ((!data.exists() && newData.val() === 'Pending Review') || data.val() === newData.val() || (data.val() === 'Pending Review' && (newData.val() === 'Under Processing' || newData.val() === 'Approved' || newData.val() === 'Rejected')) || (data.val() === 'Under Processing' && (newData.val() === 'Pending Review' || newData.val() === 'Approved' || newData.val() === 'Rejected')) || (data.val() === 'Approved' && ((newData.val() === 'Under Processing' || newData.val() === 'Rejected') || (newData.val() === 'Active' && (newData.parent().child('rfidUserId').isString() && root.child('rfidUsers').child(newData.parent().child('rfidUserId').val()).child('status').val() === 'Active')))) || (data.val() === 'Rejected' && newData.val() === 'Pending Review') || (data.val() === 'Active' && newData.val() === 'Approved' && (!data.parent().child('rfidUserId').isString() || !root.child('rfidUsers').child(data.parent().child('rfidUserId').val()).exists()))) && ((newData.val() !== 'Approved' && newData.val() !== 'Active') || (newData.parent().child('fullName').isString() && newData.parent().child('fullName').val() !== '' && (newData.parent().child('role').val() === 'Student' || newData.parent().child('role').val() === 'Faculty' || newData.parent().child('role').val() === 'Staff') && newData.parent().child('vehicleType').isString() && newData.parent().child('vehicleType').val() !== '' && (newData.parent().child('plateNumber').isString() && newData.parent().child('plateNumber').val() !== '' || newData.parent().child('vehicleType').val() === 'E-Bike' || newData.parent().child('vehicleType').val() === 'E-Scooter') && (newData.parent().child('email').isString() && newData.parent().child('email').val() !== '' || newData.parent().child('phone').isString() && newData.parent().child('phone').val() !== '')))"
         },
         "originalJson": {
           ".validate": "newData.isString() && newData.val().length <= 20000 && (!data.exists() || data.val() === newData.val())"

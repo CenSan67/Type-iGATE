@@ -2196,6 +2196,28 @@ html, body, #root {
   overflow-wrap: anywhere;
 }
 .remark-preview.remark-preview-large:hover { text-decoration: none; background: #ffefb8; }
+/* Search History -> Information card: the remark of the selected scan's visit */
+.info-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.info-remark {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: none;
+  border-left: 4px solid #e0a800;
+  border-radius: 8px;
+  background: #fff6d6;
+  color: #5c4100;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.info-remark:hover { background: #ffefb8; }
+.info-remark-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+.info-remark-text { font-size: 15px; font-weight: 600; line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere; }
+.info-remark-by { font-size: 12px; color: #8a6a1f; }
 .remark-counter { display: block; text-align: right; }
 
 /* ============================================================
@@ -3138,6 +3160,55 @@ div.snapshot-card-thumb { cursor: default; }
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Emergency RFID scan (4.6): red rows in Recent Vehicle Activity, the event modal, and Search
+   History -> Emergency Records. Always text + icon as well as red, never color alone. */
+.activity-row.emergency-activity-row { background: #fdecec; box-shadow: inset 5px 0 0 #c12d2d; cursor: pointer; }
+.activity-row.emergency-activity-row:hover { background: #fbdede; }
+.activity-row.emergency-activity-row td { color: #5c1010; }
+.emergency-row-icon,
+.emergency-siren,
+.emergency-records-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 50%;
+  background: #c12d2d;
+  color: #fff;
+  font-weight: 800;
+}
+.emergency-row-icon { width: 40px; height: 40px; font-size: 22px; animation: emergency-blink 1.2s ease-in-out infinite; }
+.emergency-row-label { color: #c12d2d; letter-spacing: 0.5px; white-space: nowrap; }
+.emergency-role { display: block; margin-bottom: 4px; font-weight: 700; color: #c12d2d; }
+.emergency-siren { width: 34px; height: 34px; font-size: 20px; background: #fff; color: #c12d2d; }
+.emergency-records-icon { width: 26px; height: 26px; margin-right: 6px; font-size: 16px; vertical-align: middle; }
+.emergency-missing { color: #8a5a00; font-style: italic; }
+.btn-primary.emergency-primary { background: #c12d2d; border-color: #c12d2d; }
+.emergency-status { white-space: nowrap; }
+.emergency-row { background: #fff8f8; }
+.emergency-records { border-top: 4px solid #c12d2d; }
+.emergency-type-pill { background: #fde4e4; color: #a32222; white-space: nowrap; }
+.emergency-modal { max-width: 640px; }
+.emergency-modal-banner {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+  padding: 10px 14px; margin-bottom: 8px; border-radius: 10px;
+  background: #c12d2d; color: #fff; font-size: 17px; letter-spacing: 0.5px;
+}
+.emergency-info .info-row span:last-child { text-align: right; overflow-wrap: anywhere; white-space: pre-line; }
+.emergency-workflow { justify-content: flex-start; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+.emergency-section { margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee; }
+.emergency-section h4 { margin: 0 0 8px; }
+.emergency-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.emergency-subform { margin-top: 8px; }
+.emergency-subform h4 { margin: 0; }
+.emergency-timeline { list-style: none; margin: 0 0 8px; padding: 0 0 0 14px; border-left: 3px solid #e7b4b4; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.emergency-timeline-when { display: block; font-size: 12px; color: #888; }
+.emergency-timeline-text { white-space: pre-line; overflow-wrap: anywhere; color: #444; }
+@keyframes emergency-blink { 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) {
+  .emergency-row-icon { animation: none; }
 }
 
 /* ============================================================

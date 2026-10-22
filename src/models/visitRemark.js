@@ -1,7 +1,8 @@
-// A gate remark on one person's current visit (visitRemarks/{personKey}), written by any Active
-// staff from the Dashboard's Recent Vehicle Activity or Search History. personKey = the person's
-// rfidUsers record id, or `card:<rfidId>` for a scan whose holder is unknown (hooks/useRemarks.js
-// #remarkKeyOf). Kept in its own node - never on rfidUsers - so saving a remark can't touch the
+// A gate remark on ONE visit (IN + its OUT) of one person: visitRemarks/{IN gateLogs id}, written by
+// any Active staff from the Dashboard's Recent Vehicle Activity or Search History. personKey = the
+// person's rfidUsers record id, or `card:<rfidId>` for a scan whose holder is unknown
+// (hooks/useRemarks.js#remarkKeyOf). Older records are keyed by personKey instead and have no
+// personKey field. Kept in its own node - never on rfidUsers - so saving a remark can't touch the
 // owner record, and editing the owner record can't overwrite the remark.
 //
 // Mirrored in database.rules.json (text 1-500 chars, at = server time, by = the writer's uid).
@@ -12,6 +13,7 @@
  * @property {number} at        server time it was saved (compared against IN scan times)
  * @property {string} by        uid of the staff member who saved it
  * @property {string} byName    their display name at the time
+ * @property {string} personKey whose visit it is (absent on older per-person records)
  */
 
 export const REMARK_MAX_LENGTH = 500
@@ -26,11 +28,13 @@ export function normalizeRemarkText(value) {
     .trim()
 }
 
-/** @returns {{ text: string, by: string, byName: string }} (`at` is added as server time on write) */
-export function validateVisitRemark({ text, by, byName }) {
+/** @returns {{ text: string, by: string, byName: string, personKey?: string }} (`at` is added as server time on write) */
+export function validateVisitRemark({ text, by, byName, personKey }) {
   const clean = normalizeRemarkText(text)
   if (!clean) throw new Error('Remark is empty.')
   if (clean.length > REMARK_MAX_LENGTH) throw new Error(`Remark is too long (max ${REMARK_MAX_LENGTH} characters).`)
   if (!by) throw new Error('Remark needs a signed-in staff member.')
-  return { text: clean, by, byName: (byName || '').toString().slice(0, 80) }
+  const remark = { text: clean, by, byName: (byName || '').toString().slice(0, 80) }
+  if (personKey) remark.personKey = personKey.toString().slice(0, 120)
+  return remark
 }
